@@ -1,0 +1,52 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import MapCard from '../components/MapCard.astro';
+
+const maps = (await getCollection('maps', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+const latest = maps.slice(0, 3);
+---
+
+<BaseLayout
+  title="Amelia Rowland — Maps & Data Stories"
+  description="GIS specialist and cartographer telling stories with data. Maps on sustainability, urban development, and global change."
+>
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-12">
+    <h1 class="font-display text-4xl sm:text-5xl font-bold leading-tight max-w-2xl">
+      Telling stories with <span class="text-primary">maps</span> and data
+    </h1>
+    <p class="mt-6 text-lg text-text-muted max-w-2xl leading-relaxed">
+      I'm Amelia — a GIS specialist and cartographer inspired by sustainability,
+      systems thinking, and the places where data meets people. Here I publish my
+      maps, visualizations, and the stories behind them.
+    </p>
+    <div class="mt-8 flex gap-4">
+      <a
+        href="/maps"
+        class="bg-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+      >
+        Browse the maps
+      </a>
+      <a
+        href="/about"
+        class="px-5 py-2.5 rounded-lg text-sm font-medium border border-border text-text hover:border-primary hover:text-primary transition-colors"
+      >
+        About me
+      </a>
+    </div>
+  </section>
+
+  {latest.length > 0 && (
+    <section class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+      <div class="flex items-baseline justify-between mb-6">
+        <h2 class="font-display text-2xl font-semibold">Latest maps</h2>
+        <a href="/maps" class="text-sm text-primary hover:text-primary-dark font-medium">View all →</a>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {latest.map((map) => <MapCard map={map} />)}
+      </div>
+    </section>
+  )}
+</BaseLayout>

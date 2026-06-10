@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2d6a4f;
+  --color-primary-dark: #1b4332;
+  --color-accent: #d4a373;
+  --color-surface: #f7f5f0;
+  --color-text: #2b2b27;
+  --color-text-muted: #6b6b60;
+  --color-border: #e5e2d9;
+  --font-display: 'Fraunces', Georgia, serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--color-text);
+    background: #fdfcfa;
+  }
+
+  ::selection {
+    background-color: var(--color-primary);
+    color: white;
+  }
+}
+
+@layer components {
+  /* Long-form text on map detail pages */
+  .prose-map {
+    @apply text-text leading-relaxed;
+  }
+  .prose-map h2 {
+    @apply font-display text-2xl font-semibold mt-10 mb-4;
+  }
+  .prose-map h3 {
+    @apply font-display text-xl font-semibold mt-8 mb-3;
+  }
+  .prose-map p {
+    @apply my-4;
+  }
+  .prose-map a {
+    @apply text-primary underline underline-offset-2 hover:text-primary-dark;
+  }
+  .prose-map ul,
+  .prose-map ol {
+    @apply my-4 pl-6 space-y-2;
+  }
+  .prose-map ul {
+    @apply list-disc;
+  }
+  .prose-map ol {
+    @apply list-decimal;
+  }
+  .prose-map blockquote {
+    @apply border-l-4 border-accent pl-4 italic text-text-muted my-6;
+  }
+  .prose-map img {
+    @apply rounded-lg my-6;
+  }
+}

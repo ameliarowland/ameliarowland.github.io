@@ -1,0 +1,44 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  map: CollectionEntry<'maps'>;
+}
+
+const { map } = Astro.props;
+const { title, description, date, image, tools } = map.data;
+const formattedDate = date.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+});
+---
+
+<a
+  href={`/maps/${map.id}`}
+  class="group block bg-white rounded-xl border border-border overflow-hidden hover:shadow-lg hover:border-primary/40 transition-all"
+>
+  <div class="aspect-[4/3] overflow-hidden bg-surface">
+    <img
+      src={image}
+      alt={title}
+      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+      loading="lazy"
+    />
+  </div>
+  <div class="p-5">
+    <p class="text-xs text-text-muted mb-1">{formattedDate}</p>
+    <h3 class="font-display text-lg font-semibold text-text group-hover:text-primary transition-colors">
+      {title}
+    </h3>
+    <p class="text-sm text-text-muted mt-2 line-clamp-2">{description}</p>
+    {tools.length > 0 && (
+      <ul class="flex flex-wrap gap-2 mt-4">
+        {tools.map((tool) => (
+          <li class="text-xs px-2 py-1 rounded-full bg-surface border border-border text-text-muted">
+            {tool}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</a>

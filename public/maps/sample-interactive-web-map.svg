@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#eef2ed"/>
+  <g stroke="#d8ddd4" stroke-width="2">
+    <path d="M0 150 H800 M0 300 H800 M0 450 H800 M200 0 V600 M400 0 V600 M600 0 V600"/>
+  </g>
+  <path d="M120 480 L300 330 L420 410 L590 220 L700 280" fill="none" stroke="#2d6a4f" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="300" cy="330" r="12" fill="#d4a373" stroke="#fdfcfa" stroke-width="4"/>
+  <circle cx="590" cy="220" r="12" fill="#d4a373" stroke="#fdfcfa" stroke-width="4"/>
+  <text x="400" y="110" text-anchor="middle" font-family="Georgia, serif" font-size="34" fill="#2b2b27">Interactive map placeholder</text>
+  <text x="400" y="150" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#6b6b60">Card preview for an embedded web map</text>
+</svg>

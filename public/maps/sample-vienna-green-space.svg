@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#f7f5f0"/>
+  <path d="M0 400 Q200 340 400 390 T800 360 V600 H0 Z" fill="#b7d3c0"/>
+  <path d="M0 470 Q250 430 500 470 T800 450 V600 H0 Z" fill="#8fbf9f"/>
+  <path d="M-50 520 Q300 490 800 530 V600 H-50 Z" fill="#2d6a4f"/>
+  <path d="M0 250 Q220 290 430 240 T800 270" fill="none" stroke="#7da7c4" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="430" cy="240" r="14" fill="#d4a373" stroke="#fdfcfa" stroke-width="4"/>
+  <text x="400" y="120" text-anchor="middle" font-family="Georgia, serif" font-size="34" fill="#2b2b27">Sample map placeholder</text>
+  <text x="400" y="160" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#6b6b60">Replace with an exported map image</text>
+</svg>

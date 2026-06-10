@@ -1,0 +1,35 @@
+---
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/maps', label: 'Maps' },
+  { href: '/about', label: 'About' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
+  <nav class="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+    <a href="/" class="font-display text-xl font-semibold text-text hover:text-primary transition-colors">
+      Amelia Rowland
+    </a>
+
+    <ul class="flex items-center gap-6">
+      {navLinks.map(({ href, label }) => (
+        <li>
+          <a
+            href={href}
+            class:list={[
+              'text-sm font-medium transition-colors',
+              currentPath === href || (href !== '/' && currentPath.startsWith(href))
+                ? 'text-primary'
+                : 'text-text-muted hover:text-text',
+            ]}
+          >
+            {label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</header>
