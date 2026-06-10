@@ -39,10 +39,10 @@ maps are in.
 
 ## Deploy (one-time setup)
 
-1. Create a GitHub repository named `<username>.github.io` (e.g.
-   `ameliarowland09.github.io`) and push this folder to its `main` branch.
+1. Create a GitHub repository named `ameliarowland.github.io` and push this
+   folder to its `main` branch.
 2. In the repo: **Settings → Pages → Source → GitHub Actions**.
-3. If the username differs from `ameliarowland09`, update `site` in
+3. If the username differs from `ameliarowland`, update `site` in
    `astro.config.mjs`.
 
 The site goes live at `https://<username>.github.io` a minute or two after each
