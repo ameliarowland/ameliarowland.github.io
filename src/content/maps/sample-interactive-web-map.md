@@ -7,6 +7,7 @@ embedUrl: https://www.openstreetmap.org/export/embed.html?bbox=16.2570%2C48.1280
 externalUrl: https://www.openstreetmap.org/#map=12/48.2090/16.3810
 tools: [OpenStreetMap]
 tags: [sample, interactive]
+draft: true
 ---
 
 This is a **sample interactive entry**. Set `embedUrl` in the frontmatter to any

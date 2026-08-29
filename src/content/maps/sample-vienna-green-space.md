@@ -5,6 +5,7 @@ date: 2026-06-01
 image: /maps/sample-vienna-green-space.svg
 tools: [QGIS]
 tags: [sample, vienna, sustainability]
+draft: true
 ---
 
 This is a **sample map entry**. To publish a real one:
