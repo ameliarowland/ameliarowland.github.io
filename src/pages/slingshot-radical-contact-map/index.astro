@@ -1,0 +1,59 @@
+---
+const title = 'Slingshot — Radical Contact Map';
+const description = 'An interactive map of active radical spaces listed by the Slingshot Collective.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="/slingshot-radical-contact-map/map.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <div id="map" class="map-canvas" aria-label="Interactive map of radical spaces"></div>
+
+      <header class="topbar">
+        <div class="wordmark" aria-label="Slingshot Radical Contact Map">
+          <span class="wordmark-mark">S</span>
+          <span><strong>Slingshot</strong><small>Radical contact map</small></span>
+        </div>
+        <div class="topbar-meta"><span class="live-dot"></span><span id="place-count">Loading places</span></div>
+      </header>
+
+      <section id="directory-panel" class="directory-panel is-open" aria-label="Map directory">
+        <div class="panel-heading">
+          <div><p class="eyebrow">The radical contact list</p><h1>Find your people.</h1></div>
+          <button id="close-directory" class="panel-close" type="button" aria-label="Close directory">×</button>
+        </div>
+        <p class="intro">Independent bookstores, infoshops, co-ops, social centers and movement spaces—mapped from Slingshot’s public directory.</p>
+        <label class="search-field">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <span class="sr-only">Search the directory</span>
+          <input id="map-search" type="search" placeholder="Search name or place" autocomplete="off" />
+        </label>
+        <div id="region-row" class="region-row" aria-label="Filter by region"></div>
+        <div class="result-meta"><span id="shown-count">0 shown</span><button id="reset-filters" type="button">Reset</button></div>
+        <div id="result-list" class="result-list" aria-live="polite">
+          <p class="status-message">Loading the directory…</p>
+        </div>
+        <footer class="panel-footer">
+          <a href="https://slingshotcollective.org/radical-contact-list/" target="_blank" rel="noreferrer">Directory by Slingshot Collective ↗</a>
+          <p>Defunct entries excluded · OpenStreetMap + HOT</p>
+        </footer>
+      </section>
+
+      <button id="open-directory" class="open-directory" type="button">⌕&nbsp; Open directory</button>
+    </main>
+
+    <script is:inline defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script is:inline defer src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script is:inline defer src="/slingshot-radical-contact-map/map.js"></script>
+  </body>
+</html>
+

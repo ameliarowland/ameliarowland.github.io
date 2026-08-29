@@ -3,9 +3,9 @@ title: "Slingshot Radical Contact Map"
 description: "An interactive, clustered web map of active radical bookstores, infoshops, co-ops, social centers, and movement spaces worldwide."
 date: 2026-08-29
 image: /maps/slingshot-radical-contact-map.svg
-embedUrl: https://slingshot-radical-map.amelia-rowland09.chatgpt.site/
-externalUrl: https://slingshot-radical-map.amelia-rowland09.chatgpt.site/
-tools: [Leaflet, OpenStreetMap, HOT, React]
+embedUrl: https://ameliarowland.github.io/slingshot-radical-contact-map/
+tallEmbed: true
+tools: [Leaflet, OpenStreetMap, HOT, JavaScript]
 tags: [web-gis, mutual-aid, radical-geography, open-data]
 ---
 
@@ -18,4 +18,3 @@ Directory records were reviewed country by country, cleaned, and geocoded agains
 ## Mapping Approach
 
 The interface uses Leaflet-style marker clustering and progressive zoom. OpenStreetMap and Humanitarian OpenStreetMap Team data provide an open, community-oriented geographic foundation. The source directory remains credited to Slingshot Collective, and each mapped record retains a link back to its source or current website when available.
-

@@ -13,6 +13,8 @@ const maps = defineCollection({
     embedUrl: z.string().url().optional(),
     // Optional external link, e.g. a full StoryMap or live app
     externalUrl: z.string().url().optional(),
+    // Use a taller frame for full interactive applications.
+    tallEmbed: z.boolean().default(false),
     tools: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
