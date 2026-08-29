@@ -1,0 +1,128 @@
+---
+const title = 'World Map for Humans';
+const description = 'An interactive, boundary-free world map built from coastlines, water, urban areas, and satellite imagery.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
+    <link rel="preconnect" href="https://titiler.terrascope.be" crossorigin />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css" />
+    <link rel="stylesheet" href="/world-map-for-humans/map.css" />
+  </head>
+  <body>
+    <main class="map-shell">
+      <div id="map" class="map-canvas" aria-label="Interactive world map without political boundaries"></div>
+
+      <header class="map-header">
+        <div>
+          <p class="map-kicker">An atlas without borders</p>
+          <h1>World Map for Humans</h1>
+        </div>
+        <div class="map-position" aria-live="polite">
+          <span id="zoom-readout">World view</span>
+          <span aria-hidden="true">·</span>
+          <span id="coordinate-readout">0.0°, 0.0°</span>
+        </div>
+      </header>
+
+      <section id="layer-panel" class="layer-panel" aria-labelledby="layer-heading">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-number">01 / Layers</p>
+            <h2 id="layer-heading">What makes a place?</h2>
+          </div>
+          <button id="close-layers" class="panel-close" type="button" aria-label="Hide map layers">×</button>
+        </div>
+
+        <p class="panel-intro">Turn geographic context on and off. No countries, borders, or labels are included.</p>
+
+        <div class="layer-section" aria-labelledby="physical-heading">
+          <h3 id="physical-heading">Physical + human</h3>
+          <div class="layer-item">
+            <button class="layer-toggle is-on" type="button" data-layer="coastlines" aria-pressed="true">
+              <span class="layer-swatch swatch-coastline" aria-hidden="true"></span>
+              <span class="layer-copy"><strong>Coastlines</strong></span>
+              <span class="switch" aria-hidden="true"><span></span></span>
+            </button>
+            <a class="layer-source" href="https://osmdata.openstreetmap.de/data/coastlines.html" target="_blank" rel="noreferrer">OSMData · ODbL ↗</a>
+          </div>
+
+          <div class="layer-item">
+            <button class="layer-toggle is-on" type="button" data-layer="water" aria-pressed="true">
+              <span class="layer-swatch swatch-water" aria-hidden="true"></span>
+              <span class="layer-copy"><strong>Water polygons</strong></span>
+              <span class="switch" aria-hidden="true"><span></span></span>
+            </button>
+            <a class="layer-source" href="https://osmdata.openstreetmap.de/data/water-polygons.html" target="_blank" rel="noreferrer">OSMData · ODbL ↗</a>
+          </div>
+
+          <div class="layer-item">
+            <button class="layer-toggle is-on" type="button" data-layer="urban" aria-pressed="true">
+              <span class="layer-swatch swatch-urban" aria-hidden="true"></span>
+              <span class="layer-copy"><strong>Urban areas</strong></span>
+              <span class="switch" aria-hidden="true"><span></span></span>
+            </button>
+            <a class="layer-source" href="https://naciscdn.org/naturalearth/10m/cultural/ne_10m_urban_areas.zip" target="_blank" rel="noreferrer">Natural Earth · public domain ↗</a>
+          </div>
+        </div>
+
+        <div class="layer-section imagery-section" aria-labelledby="imagery-heading">
+          <div class="section-heading-row">
+            <h3 id="imagery-heading">WorldCover</h3>
+            <a href="https://wmts.terrascope.be/?service=WMTS&amp;request=GetCapabilities" target="_blank" rel="noreferrer">WMTS ↗</a>
+          </div>
+          <div class="layer-item">
+            <button class="layer-toggle" type="button" data-layer="land-cover" aria-pressed="false">
+              <span class="layer-swatch swatch-land-cover" aria-hidden="true"></span>
+              <span class="layer-copy"><strong>Land cover · V2 2021</strong></span>
+              <span class="switch" aria-hidden="true"><span></span></span>
+            </button>
+            <a class="layer-source" href="https://esa-worldcover.org/en/data-access" target="_blank" rel="noreferrer">ESA WorldCover ↗</a>
+          </div>
+          <ul id="land-cover-legend" class="land-cover-legend" aria-label="WorldCover land-cover classes" hidden>
+            <li><span style="--legend-color:#006400"></span>Tree cover</li>
+            <li><span style="--legend-color:#ffbb22"></span>Shrubland</li>
+            <li><span style="--legend-color:#ffff4c"></span>Grassland</li>
+            <li><span style="--legend-color:#f096ff"></span>Cropland</li>
+            <li><span style="--legend-color:#fa0000"></span>Built-up</li>
+            <li><span style="--legend-color:#b4b4b4"></span>Bare / sparse vegetation</li>
+            <li><span style="--legend-color:#f0f0f0"></span>Snow and ice</li>
+            <li><span style="--legend-color:#0064c8"></span>Permanent water bodies</li>
+            <li><span style="--legend-color:#0096a0"></span>Herbaceous wetland</li>
+            <li><span style="--legend-color:#00cf75"></span>Mangroves</li>
+            <li><span style="--legend-color:#fae6a0"></span>Moss and lichen</li>
+          </ul>
+
+          <div class="layer-item">
+            <button class="layer-toggle" type="button" data-layer="false-colour" aria-pressed="false">
+              <span class="layer-swatch swatch-false-colour" aria-hidden="true"></span>
+              <span class="layer-copy"><strong>False colour infrared · 2021</strong></span>
+              <span class="switch" aria-hidden="true"><span></span></span>
+            </button>
+            <a class="layer-source" href="https://esa-worldcover.org/en/data-access" target="_blank" rel="noreferrer">ESA WorldCover ↗</a>
+          </div>
+          <p class="imagery-note">Land cover and false colour are alternatives; selecting one switches the other off.</p>
+        </div>
+
+        <div class="panel-actions">
+          <button id="reset-view" type="button">Reset world view</button>
+          <a href="https://github.com/ameliarowland/ameliarowland.github.io/issues/1" target="_blank" rel="noreferrer">Project notes ↗</a>
+        </div>
+      </section>
+
+      <button id="open-layers" class="open-layers" type="button" aria-controls="layer-panel" aria-expanded="true">Layers</button>
+
+      <div id="map-status" class="map-status" role="status">Drawing the world…</div>
+      <p class="map-question">Can you navigate to your hometown? <em>Does it feel different?</em></p>
+    </main>
+
+    <script is:inline defer src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
+    <script is:inline defer src="/world-map-for-humans/map.js?v=4"></script>
+  </body>
+</html>
