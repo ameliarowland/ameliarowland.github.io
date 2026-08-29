@@ -8,14 +8,12 @@ tools: [Leaflet, OpenStreetMap, GeoJSON, JavaScript]
 tags: [urbanism, walkability, web-gis, sustainability]
 ---
 
-Urban Trails Finder explores how US cities could present longer recreational walking loops in the spirit of Vienna's Stadtwanderwege. The prototype includes four city-wander paths for each included city, combining parks, waterfronts, transit access, quieter streets, cultural stops, and memorable urban terrain.
-
-The prototype includes city browsing, scorecards, OSM-routed starter geometries, city zoom controls, basemap switching, and GeoJSON export. It is meant as a portfolio-ready first version: polished enough to demonstrate the product idea, but transparent about where a production workflow would go deeper.
+Urban Trails Finder explores how US cities could present longer recreational walking loops in the spirit of Vienna's Stadtwanderwege. The prototype includes four city-wander paths for each included city, combining parks, waterfronts, transit access, quieter streets, cultural stops, and memorable urban terrain. The prototype includes city browsing, scorecards, OSM-routed starter geometries, city zoom controls, basemap switching, and route export to GPX and KML. 
 
 ## GIS Method
 
-The current routes are generated from route control points using Valhalla pedestrian routing over OpenStreetMap. The exported GeoJSON keeps both the routed vertex geometry and metadata about the geometry source. A fuller version would add municipal sidewalk inventories, then score each segment using tree canopy, slope, public stairways, traffic stress, crossings, transit stops, park access, waterfront proximity, and public amenities.
+The current routes are generated from route control points using Valhalla pedestrian routing over OpenStreetMap. A fuller version could add municipal sidewalk inventories and allow for route editing/development in the app.
 
 ## Why It Matters
 
-Urban trails can make everyday walking feel civic, scenic, and legible. The GIS challenge is not only finding the shortest path, but identifying routes that feel safe, useful, memorable, and worth sharing.
+Urban trails can create a sense of place, offer inspiration for movement in urban spaces, and give a sense of direction (pun intended) for visitors. The GIS challenge is not only finding a feasible path, but identifying routes that feel safe, memorable, and worth repeating.
