@@ -2,7 +2,7 @@
 title: "Slingshot Radical Contact Map"
 description: "An interactive, clustered web map of active radical bookstores, infoshops, co-ops, social centers, and movement spaces worldwide."
 date: 2026-08-29
-image: /maps/slingshot-radical-contact-map.svg
+image: /maps/slingshot.png
 embedUrl: https://ameliarowland.github.io/slingshot-radical-contact-map/
 tallEmbed: true
 tools: [Leaflet, OpenStreetMap, HOT, JavaScript]
