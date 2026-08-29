@@ -17,4 +17,8 @@ Directory records were reviewed country by country, cleaned, and geocoded agains
 
 ## Mapping Approach
 
-The interface uses Leaflet-style marker clustering and progressive zoom. OpenStreetMap and Humanitarian OpenStreetMap Team data provide an open, community-oriented geographic foundation. The source directory remains credited to Slingshot Collective, and each mapped record retains a link back to its source or current website when available.
+The interface uses Leaflet-style marker clustering and progressive zoom. OpenStreetMap ([OSM]([url](https://openstreetmap.org/))) and Humanitarian OpenStreetMap Team ([HOT]([url](https://www.hotosm.org/))) data provide an open, community-oriented geographic foundation. The source directory remains credited to Slingshot Collective, and each mapped record retains a link back to its source or current website when available.
+
+## Lessons Learned
+
+While the OSM HOT basemap has map labels in a local language, the search feature does not support other languages or alphabets to find locations (e.g. cities, radical contacts). This would be a useful update for future development efforts.
