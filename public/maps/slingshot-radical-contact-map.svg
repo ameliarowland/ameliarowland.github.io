@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Slingshot Radical Contact Map preview</title>
+  <desc id="desc">A dark green world map with clustered coral location markers.</desc>
+  <rect width="800" height="600" fill="#0e1d18"/>
+  <g fill="none" stroke="#24473b" stroke-width="2" opacity="0.7">
+    <path d="M0 120H800M0 240H800M0 360H800M0 480H800"/>
+    <path d="M160 0V600M320 0V600M480 0V600M640 0V600"/>
+  </g>
+  <g fill="#17382e" stroke="#315d4d" stroke-width="2">
+    <path d="M77 177l57-52 84-9 48 36 45 5 26 46-31 31-42-8-23 26-18 67-57 20-42-42-32-23-31-54z"/>
+    <path d="M274 348l45-30 36 24 21 66-17 74-37 64-23-52-20-68z"/>
+    <path d="M385 147l55-34 69 11 31 38 44-6 67 39 75 22-22 51-75-1-55 35-39-18-41 36-43-38-49 5-30-50-33-35z"/>
+    <path d="M503 326l62-16 42 28-4 47-37 28-50-28z"/>
+    <path d="M640 410l55-22 51 34-27 43-58 2-34-29z"/>
+  </g>
+  <g fill="#f26b50" stroke="#fff6e9" stroke-width="5">
+    <circle cx="173" cy="205" r="13"/><circle cx="226" cy="278" r="11"/>
+    <circle cx="322" cy="391" r="14"/><circle cx="420" cy="190" r="11"/>
+    <circle cx="474" cy="212" r="15"/><circle cx="527" cy="238" r="12"/>
+    <circle cx="575" cy="288" r="13"/><circle cx="665" cy="242" r="11"/>
+    <circle cx="681" cy="433" r="13"/>
+  </g>
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <rect x="250" y="486" width="300" height="72" rx="36" fill="#fff6e9"/>
+    <text x="400" y="520" font-size="27" font-weight="700" fill="#13251f">SLINGSHOT</text>
+    <text x="400" y="544" font-size="15" letter-spacing="3" fill="#4d665d">RADICAL CONTACT MAP</text>
+  </g>
+</svg>
