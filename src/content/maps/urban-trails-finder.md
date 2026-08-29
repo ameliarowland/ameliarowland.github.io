@@ -2,7 +2,7 @@
 title: "Urban Trails Finder"
 description: "A Stadtwanderweg-inspired interactive map prototype for curated walking loops in US cities."
 date: 2026-07-10
-image: /maps/urban-trails-finder.svg
+image: /maps/city_wander_paths.png
 externalUrl: https://ameliarowland.github.io/urban-trails-finder/
 tools: [Leaflet, OpenStreetMap, GeoJSON, JavaScript]
 tags: [urbanism, walkability, web-gis, sustainability]

@@ -2,7 +2,7 @@
 title: "World Map for Humans"
 description: "An exploratory interactive map that gives geographic context through coastlines, water, urban areas, and satellite imagery—without political boundaries."
 date: 2026-08-29
-image: /maps/world-map-for-humans.svg
+image: /maps/world_map_for_humans.png
 embedUrl: https://ameliarowland.github.io/world-map-for-humans/
 tallEmbed: true
 tools: [MapLibre GL JS, OpenStreetMap, Natural Earth, ESA WorldCover]
