@@ -1,0 +1,118 @@
+[31m[1m12:41:28[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/data.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=2&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+[31m[1m12:41:29[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/app.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=3&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+[31m[1m12:42:06[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/data.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=2&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:06[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/app.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=3&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:12[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/app.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=3&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:12[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/data.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=2&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:12[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/data.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=2&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:12[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/app.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=3&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:14[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/data.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=2&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:15[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/app.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=3&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:15[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/data.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=2&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
+[31m[1m12:42:15[22m [ERROR] [vite][39m [31mInternal server error: 
+
+<script src="/urban-trails-finder/app.js"> references an asset in the "public/" directory. Please add the "is:inline" directive to keep this asset from being bundled.
+
+File: C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/src/pages/urban-trails-finder/index.astro?astro&type=script&index=3&lang.ts[39m
+      at LoadPluginContext.handler (C:\Users\ameli\OneDrive\Desktop\git\ameliarowland.github.io\node_modules\astro\dist\vite-plugin-astro\index.js:143:15)
+      at EnvironmentPluginContainer.load (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:28839:56)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async loadAndTransform (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:22704:21)
+      at async viteTransformMiddleware (file:///C:/Users/ameli/OneDrive/Desktop/git/ameliarowland.github.io/node_modules/vite/dist/node/chunks/config.js:24622:20)
