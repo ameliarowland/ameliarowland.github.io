@@ -4,6 +4,7 @@ description: "An interactive, clustered web map of active radical bookstores, in
 date: 2026-08-29
 image: /maps/slingshot.png
 embedUrl: https://ameliarowland.github.io/slingshot-radical-contact-map/
+externalUrl: https://ameliarowland.github.io/slingshot-radical-contact-map/
 tallEmbed: true
 tools: [Leaflet, OpenStreetMap, HOT, JavaScript]
 tags: [web-gis, mutual-aid, radical-geography, open-data]

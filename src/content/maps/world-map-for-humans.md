@@ -4,6 +4,7 @@ description: "An exploratory interactive map that gives geographic context throu
 date: 2026-08-29
 image: /maps/world_map_for_humans.png
 embedUrl: https://ameliarowland.github.io/world-map-for-humans/
+externalUrl: https://ameliarowland.github.io/world-map-for-humans/
 tallEmbed: true
 tools: [MapLibre GL JS, OpenStreetMap, Natural Earth, ESA WorldCover]
 tags: [web-gis, experimental-cartography, open-data, remote-sensing]

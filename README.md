@@ -13,7 +13,11 @@ npm run build    # static site in dist/
 
 ## Publish a map
 
-1. Export your map as PNG/JPG/SVG and put it in `public/maps/`.
+Every published map article must include an interactive map in the article and
+a link that opens the map full screen. The content schema enforces both fields
+at build time; drafts may omit them while they are being developed.
+
+1. Export a preview image as PNG/JPG/SVG and put it in `public/maps/`.
 2. Add a Markdown file in `src/content/maps/`, e.g. `my-map.md`:
 
    ```markdown
@@ -22,9 +26,10 @@ npm run build    # static site in dist/
    description: "One-sentence summary shown on the card and in search results."
    date: 2026-06-09
    image: /maps/my-map.png
-   # optional — renders an iframe instead of the static image:
-   # embedUrl: https://www.arcgis.com/apps/Embed/index.html?webmap=YOUR_ID
-   # externalUrl: https://storymaps.arcgis.com/stories/YOUR_ID
+   # required for published posts — interactive iframe shown in the article:
+   embedUrl: https://www.arcgis.com/apps/Embed/index.html?webmap=YOUR_ID
+   # required for published posts — destination of the full-screen link:
+   externalUrl: https://www.arcgis.com/apps/mapviewer/index.html?webmap=YOUR_ID
    tools: [QGIS, ArcGIS Pro]
    tags: [sustainability]
    ---
