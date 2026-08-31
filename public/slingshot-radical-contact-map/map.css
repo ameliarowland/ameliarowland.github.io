@@ -76,6 +76,19 @@ button { color: inherit; }
 .map-links { display: flex; flex-wrap: wrap; gap: 11px; }
 .map-links a { color: var(--ink); font: 700 9px/1.2 var(--font-mono); text-decoration-color: var(--signal); text-underline-offset: 3px; }
 
+/* Keep the directory proportional inside article-sized embeds. */
+@media (min-width: 641px) and (max-width: 800px) {
+  .directory-panel { bottom: 64px; width: min(280px, calc(100vw - 32px)); }
+  .panel-heading { padding: 16px 16px 10px; }
+  .panel-close { width: 28px; height: 28px; font-size: 24px; }
+  .intro { padding: 0 16px 14px; font-size: 11px; }
+  .search-field { margin: 0 16px 10px; }
+  .region-row { padding: 0 16px 10px; }
+  .result-meta { padding: 7px 16px; }
+  .result-row { padding: 10px 16px; }
+  .panel-footer { padding: 10px 16px; }
+}
+
 @media (max-width: 640px) {
   .topbar { height: 62px; padding: 0 14px; }
   .topbar-meta { font-size: 8px; }
@@ -89,4 +102,3 @@ button { color: inherit; }
   .region-row, .result-meta { padding-inline: 18px; }
   .result-row { padding-inline: 18px; }
 }
-

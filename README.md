@@ -13,9 +13,15 @@ npm run build    # static site in dist/
 
 ## Publish a map
 
-Every published map article must include an interactive map in the article and
-a link that opens the map full screen. The content schema enforces both fields
-at build time; drafts may omit them while they are being developed.
+Every published map article must meet these requirements:
+
+- Include an interactive map in the article and a link that opens it full
+  screen. The content schema enforces both fields at build time; drafts may
+  omit them while they are being developed.
+- Keep map controls usable at the standard 720 × 540 article size. Overlay
+  panels must use no more than 40% of the map width at article-sized desktop
+  breakpoints and scroll internally instead of covering most of the map.
+- Preserve a roomier control layout for the full-screen map where appropriate.
 
 1. Export a preview image as PNG/JPG/SVG and put it in `public/maps/`.
 2. Add a Markdown file in `src/content/maps/`, e.g. `my-map.md`:
