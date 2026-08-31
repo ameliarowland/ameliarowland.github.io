@@ -140,7 +140,7 @@
       type: 'raster',
       source: 'ghsl-population',
       layout: { visibility: 'none' },
-      paint: { 'raster-opacity': 0.6, 'raster-fade-duration': 140 },
+      paint: { 'raster-opacity': 0.7, 'raster-fade-duration': 140 },
     }, 'water-fill');
   }
 
