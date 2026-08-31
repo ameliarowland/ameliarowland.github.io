@@ -173,6 +173,11 @@ button {
   cursor: pointer;
 }
 
+.embed-panel-close,
+.embed-panel-open {
+  display: none;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(340px, 430px) 1fr;
@@ -562,6 +567,85 @@ button:disabled {
   min-width: 0;
 }
 
+body.article-embed {
+  overflow: hidden;
+}
+
+body.article-embed .app-shell {
+  position: relative;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+}
+
+body.article-embed .map-panel {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+}
+
+body.article-embed .sidebar {
+  position: absolute;
+  top: 92px;
+  bottom: 16px;
+  left: 16px;
+  width: min(350px, calc(100vw - 32px));
+  height: auto;
+  padding-top: 12px;
+  border: 1px solid var(--ink);
+  background: rgba(247, 243, 232, 0.96);
+  box-shadow: 7px 7px 0 rgba(23, 58, 60, 0.16);
+  backdrop-filter: blur(14px);
+  transition: transform 0.28s ease, opacity 0.2s ease;
+}
+
+body.article-embed .sidebar.is-closed {
+  transform: translateX(calc(-100% - 32px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.article-embed .embed-panel-close {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  margin: 0 0 0 auto;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--ink);
+  color: var(--paper);
+  background: var(--ink);
+}
+
+body.article-embed .embed-panel-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+body.article-embed .embed-panel-open {
+  position: absolute;
+  z-index: 750;
+  top: 92px;
+  left: 16px;
+  display: none;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--ink);
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 4px 4px 0 rgba(226, 95, 61, 0.8);
+  font: 700 0.68rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.article-embed .embed-panel-open.is-visible {
+  display: block;
+}
+
 #map {
   width: 100%;
   height: 100%;
@@ -690,5 +774,11 @@ button:disabled {
   .action-row {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.article-embed .sidebar {
+    transition: none;
   }
 }

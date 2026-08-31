@@ -8,6 +8,7 @@ const state = {
 const TRAIL_COLOR = "#e25f3d";
 const DEFAULT_CITY = "Seattle, WA";
 const isArticleEmbed = new URLSearchParams(window.location.search).get("embed") === "article";
+document.body.classList.toggle("article-embed", isArticleEmbed);
 
 const map = L.map("map", {
   zoomControl: false,
@@ -76,7 +77,10 @@ const elements = {
   downloadKml: document.getElementById("downloadKml"),
   downloadAllGpx: document.getElementById("downloadAllGpx"),
   downloadAllKml: document.getElementById("downloadAllKml"),
-  trailList: document.getElementById("trailList")
+  trailList: document.getElementById("trailList"),
+  sidebar: document.querySelector(".sidebar"),
+  closeSidebarButton: document.getElementById("closeSidebarButton"),
+  openSidebarButton: document.getElementById("openSidebarButton")
 };
 
 function init() {
@@ -102,6 +106,11 @@ function hydrateFilters() {
 }
 
 function bindEvents() {
+  if (isArticleEmbed) {
+    elements.closeSidebarButton.addEventListener("click", () => setSidebarOpen(false));
+    elements.openSidebarButton.addEventListener("click", () => setSidebarOpen(true));
+  }
+
   elements.cityFilter.addEventListener("change", () => {
     applyFilters();
     goToSelectedCity();
@@ -127,6 +136,12 @@ function bindEvents() {
   window.addEventListener("resize", () => map.invalidateSize());
 }
 
+function setSidebarOpen(isOpen) {
+  elements.sidebar.classList.toggle("is-closed", !isOpen);
+  elements.openSidebarButton.classList.toggle("is-visible", !isOpen);
+  elements.openSidebarButton.setAttribute("aria-expanded", String(isOpen));
+}
+
 function setInitialMapExtent() {
   window.requestAnimationFrame(() => {
     map.invalidateSize();
@@ -137,7 +152,7 @@ function setInitialMapExtent() {
 
     const activeLayer = state.activeTrailId ? state.trailLayers.get(state.activeTrailId) : null;
     if (activeLayer) {
-      map.fitBounds(activeLayer.getBounds(), { padding: [42, 42], maxZoom: 13 });
+      map.fitBounds(activeLayer.getBounds(), { ...mapFitOptions(42), maxZoom: 13 });
     }
   });
 }
@@ -296,7 +311,7 @@ function selectTrail(trailId, options = { fit: false }) {
 
   if (options.fit) {
     const layer = state.trailLayers.get(trailId);
-    if (layer) map.fitBounds(layer.getBounds(), { padding: [42, 42], maxZoom: 13 });
+    if (layer) map.fitBounds(layer.getBounds(), { ...mapFitOptions(42), maxZoom: 13 });
   }
 }
 
@@ -344,7 +359,7 @@ function metricRow(key, value) {
 
 function fitFilteredTrails() {
   if (routeGroup.getLayers().length) {
-    map.fitBounds(routeGroup.getBounds(), { padding: [28, 28] });
+    map.fitBounds(routeGroup.getBounds(), mapFitOptions(28));
   }
 }
 
@@ -358,8 +373,18 @@ function goToSelectedCity() {
   const cityTrails = TRAILS.filter((trail) => `${trail.city}, ${trail.state}` === selectedCity);
   const bounds = boundsForTrails(cityTrails);
   if (bounds?.isValid()) {
-    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 12 });
+    map.fitBounds(bounds, { ...mapFitOptions(44), maxZoom: 12 });
   }
+}
+
+function mapFitOptions(padding) {
+  if (!isArticleEmbed) return { padding: [padding, padding] };
+
+  const panelPadding = Math.min(370, Math.max(padding, Math.round(map.getSize().x * 0.52)));
+  return {
+    paddingTopLeft: [panelPadding, padding],
+    paddingBottomRight: [padding, padding]
+  };
 }
 
 function boundsForTrails(trails) {

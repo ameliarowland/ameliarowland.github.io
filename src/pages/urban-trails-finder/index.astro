@@ -27,7 +27,11 @@
         </div>
       </header>
 
-      <aside class="sidebar" aria-label="Urban trail controls">
+      <aside class="sidebar" id="trailSidebar" aria-label="Urban trail controls">
+        <button class="embed-panel-close" id="closeSidebarButton" type="button" aria-label="Close trail information" aria-controls="trailSidebar">
+          <i data-lucide="x"></i>
+        </button>
+
         <section class="filter-panel" aria-label="Trail filters">
           <label for="cityFilter">City</label>
           <select id="cityFilter">
@@ -119,6 +123,10 @@
       <section class="map-panel" aria-label="Interactive trail map">
         <div id="map"></div>
       </section>
+
+      <button class="embed-panel-open" id="openSidebarButton" type="button" aria-label="Open trail information" aria-controls="trailSidebar" aria-expanded="true">
+        Trail information
+      </button>
     </main>
 
     <script
