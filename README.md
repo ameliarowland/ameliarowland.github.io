@@ -29,6 +29,11 @@ Every published map article must meet these requirements:
   datasets, services, and source repositories.
 - Render article body copy with full justification while keeping headings
   left-aligned.
+- Never publish fabricated or placeholder factual data. Every map attribute
+  must be traceable to a cited authoritative source or a documented,
+  reproducible calculation from sourced data. If an attribute cannot be
+  verified, omit it; do not invent plausible scores, classifications,
+  amenities, accessibility claims, environmental qualities, or descriptions.
 
 1. Export a preview image as PNG/JPG/SVG and put it in `public/maps/`.
 2. Add a Markdown file in `src/content/maps/`, e.g. `my-map.md`:

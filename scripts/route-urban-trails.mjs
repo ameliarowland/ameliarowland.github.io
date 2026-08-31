@@ -13,7 +13,10 @@ for (const trail of context.TRAILS) {
   const controlPoints = trail.controlPoints || trail.coords;
   const routedCoords = await routePedestrianLoop(controlPoints, trail.id);
   routedTrails.push({
-    ...trail,
+    id: trail.id,
+    name: trail.name,
+    city: trail.city,
+    state: trail.state,
     geometrySource: "Valhalla pedestrian routing over OpenStreetMap control points",
     controlPoints,
     coords: routedCoords

@@ -18,35 +18,36 @@
   </head>
   <body>
     <main class="app-shell">
-      <aside class="sidebar" aria-label="Urban trail controls">
-        <header class="app-header">
-          <div>
-            <p class="eyebrow">Stadtwanderweg-inspired GIS</p>
-            <h1>Urban Trails Finder</h1>
-          </div>
-          <button class="icon-button" id="fitAllButton" type="button" title="Fit all trails" aria-label="Fit all trails">
-            <i data-lucide="scan"></i>
-          </button>
-        </header>
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">
+            <a href="https://www.wien.gv.at/en/leisure/hiking-paths" target="_blank" rel="noopener noreferrer">Stadtwanderweg</a>-inspired GIS
+          </p>
+          <h1>Urban Trails Finder</h1>
+        </div>
+      </header>
 
-        <section class="filter-panel" aria-label="Trail filters">
+      <aside class="sidebar" id="trailSidebar" aria-label="Urban trail controls">
+        <div class="embed-panel-heading">
+          <div>
+            <p class="panel-number">Trail information</p>
+            <h2>Explore urban trails</h2>
+          </div>
+          <button class="embed-panel-close" id="closeSidebarButton" type="button" aria-label="Close trail information" aria-controls="trailSidebar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="sidebar-content">
+
+          <section class="filter-panel" aria-label="Trail filters">
           <label for="cityFilter">City</label>
           <select id="cityFilter">
             <option value="all">All cities</option>
           </select>
+          </section>
 
-          <label for="scoreFilter">Minimum trail score</label>
-          <div class="range-row">
-            <input id="scoreFilter" type="range" min="60" max="95" value="60">
-            <output id="scoreValue" for="scoreFilter">60</output>
-          </div>
-          <button id="goCityButton" type="button" class="primary-action go-city-action">
-            <i data-lucide="map-pinned"></i>
-            Go
-          </button>
-        </section>
-
-        <section class="summary-grid" aria-label="Filtered trail summary">
+          <section class="summary-grid" aria-label="Filtered trail summary">
           <div>
             <span id="trailCount">0</span>
             <small>routes</small>
@@ -55,38 +56,21 @@
             <span id="cityCount">0</span>
             <small>cities</small>
           </div>
-          <div>
-            <span id="avgScore">0</span>
-            <small>avg score</small>
-          </div>
-        </section>
+          </section>
 
-        <section class="selected-panel" aria-live="polite">
+          <section class="selected-panel" aria-live="polite">
           <div class="selected-heading">
             <div>
               <p id="selectedCity" class="eyebrow">Select a route</p>
               <h2 id="selectedName">Route details</h2>
             </div>
-            <span id="selectedScore" class="score-pill">--</span>
           </div>
           <dl class="route-stats">
             <div>
               <dt>Distance</dt>
               <dd id="selectedDistance">--</dd>
             </div>
-            <div>
-              <dt>Transit</dt>
-              <dd id="selectedTransit">--</dd>
-            </div>
-            <div>
-              <dt>Comfort</dt>
-              <dd id="selectedComfort">--</dd>
-            </div>
           </dl>
-          <p id="selectedDescription" class="selected-copy">
-            Choose a trail from the list to inspect its path and export the geometry.
-          </p>
-          <div id="metricBars" class="metric-bars" aria-label="Route scoring metrics"></div>
           <div class="action-row">
             <button id="downloadGpx" type="button" class="primary-action" disabled>
               <i data-lucide="download"></i>
@@ -96,10 +80,14 @@
               <i data-lucide="file-down"></i>
               KML
             </button>
+            <button id="downloadGeoJson" type="button" class="secondary-action" disabled>
+              <i data-lucide="braces"></i>
+              GeoJSON
+            </button>
           </div>
-        </section>
+          </section>
 
-        <section class="trail-list-section" aria-label="Trail results">
+          <section class="trail-list-section" aria-label="Trail results">
           <div class="list-heading">
             <h2>City Wander Paths</h2>
             <div class="list-actions" aria-label="Export visible trails">
@@ -111,19 +99,42 @@
                 <i data-lucide="file-archive"></i>
                 KML
               </button>
+              <button id="downloadAllGeoJson" type="button" class="text-button">
+                <i data-lucide="braces"></i>
+                GeoJSON
+              </button>
             </div>
           </div>
           <div id="trailList" class="trail-list"></div>
-        </section>
+          </section>
 
-        <footer class="method-note">
-          <strong>Portfolio note:</strong> routes are generated from control points with Valhalla pedestrian routing over OpenStreetMap. A production version would add municipal sidewalk inventories, surface quality, slope, crossings, and transit stop joins.
-        </footer>
+          <footer class="method-note">
+            <strong>Data note:</strong> route geometry was generated from documented control points with Valhalla pedestrian routing over OpenStreetMap. Distances are calculated from that geometry. Routes are not field-verified or intended for turn-by-turn navigation.
+          </footer>
+        </div>
       </aside>
 
       <section class="map-panel" aria-label="Interactive trail map">
         <div id="map"></div>
+        <div class="basemap-switcher" aria-label="Basemap choices">
+          <button type="button" class="basemap-button is-active" data-basemap="Esri Topographic" aria-label="Esri Topographic basemap" aria-pressed="true" title="Esri Topographic">
+            <span class="basemap-thumbnail basemap-topographic" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="basemap-button" data-basemap="Esri Light Gray" aria-label="Esri Light Gray basemap" aria-pressed="false" title="Esri Light Gray">
+            <span class="basemap-thumbnail basemap-light-gray" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="basemap-button" data-basemap="Satellite" aria-label="Satellite basemap" aria-pressed="false" title="Satellite">
+            <span class="basemap-thumbnail basemap-satellite" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="basemap-button" data-basemap="OpenStreetMap" aria-label="OpenStreetMap basemap" aria-pressed="false" title="OpenStreetMap">
+            <span class="basemap-thumbnail basemap-openstreetmap" aria-hidden="true"></span>
+          </button>
+        </div>
       </section>
+
+      <button class="embed-panel-open" id="openSidebarButton" type="button" aria-label="Open trail information" aria-controls="trailSidebar" aria-expanded="true">
+        Trail information
+      </button>
     </main>
 
     <script
@@ -134,6 +145,6 @@
     ></script>
     <script is:inline src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script is:inline src="/urban-trails-finder/data.js"></script>
-    <script is:inline src="/urban-trails-finder/app.js"></script>
+    <script is:inline src="/urban-trails-finder/app.js?v=20260831-8"></script>
   </body>
 </html>

@@ -1,26 +1,64 @@
 const TRAILS = [
   {
     "id": "seattle-01-lake-union",
-    "name": "Seattle Wanderweg 1: Lake Union Circuit",
+    "name": "Seattle generated walking route 1",
     "city": "Seattle",
     "state": "WA",
-    "theme": "Waterfront walk",
-    "difficulty": "Moderate",
-    "transit": "Link + streetcar + bus",
-    "comfort": "Best in spring or early fall",
-    "description": "A city-wander loop following the Burke-Gilman Trail, Gas Works paths, Westlake sidewalks, and South Lake Union waterfront edges.",
-    "tags": [
-      "lakefront",
-      "multi-use path",
-      "parks"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        47.6463,
+        -122.3344
+      ],
+      [
+        47.6533,
+        -122.3338
+      ],
+      [
+        47.6572,
+        -122.3325
+      ],
+      [
+        47.6584,
+        -122.3279
+      ],
+      [
+        47.6565,
+        -122.3198
+      ],
+      [
+        47.6509,
+        -122.3154
+      ],
+      [
+        47.6427,
+        -122.3131
+      ],
+      [
+        47.6332,
+        -122.3135
+      ],
+      [
+        47.6263,
+        -122.3167
+      ],
+      [
+        47.6245,
+        -122.3299
+      ],
+      [
+        47.628,
+        -122.3383
+      ],
+      [
+        47.6368,
+        -122.3424
+      ],
+      [
+        47.6463,
+        -122.3344
+      ]
     ],
-    "scores": {
-      "greenery": 88,
-      "water": 94,
-      "transit": 86,
-      "calm": 76,
-      "culture": 78
-    },
     "coords": [
       [
         47.646415,
@@ -5142,85 +5180,72 @@ const TRAILS = [
         47.646415,
         -122.334508
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        47.6463,
-        -122.3344
-      ],
-      [
-        47.6533,
-        -122.3338
-      ],
-      [
-        47.6572,
-        -122.3325
-      ],
-      [
-        47.6584,
-        -122.3279
-      ],
-      [
-        47.6565,
-        -122.3198
-      ],
-      [
-        47.6509,
-        -122.3154
-      ],
-      [
-        47.6427,
-        -122.3131
-      ],
-      [
-        47.6332,
-        -122.3135
-      ],
-      [
-        47.6263,
-        -122.3167
-      ],
-      [
-        47.6245,
-        -122.3299
-      ],
-      [
-        47.628,
-        -122.3383
-      ],
-      [
-        47.6368,
-        -122.3424
-      ],
-      [
-        47.6463,
-        -122.3344
-      ]
     ]
   },
   {
     "id": "seattle-02-capitol-hill",
-    "name": "Seattle Wanderweg 2: Capitol Hill Parks",
+    "name": "Seattle generated walking route 2",
     "city": "Seattle",
     "state": "WA",
-    "theme": "Park loop",
-    "difficulty": "Hilly",
-    "transit": "Link + bus",
-    "comfort": "Good year-round outside icy weather",
-    "description": "A neighborhood walking loop using Volunteer Park paths, 15th Avenue sidewalks, Lake View Cemetery edges, and Cal Anderson Park connectors.",
-    "tags": [
-      "parks",
-      "stairs",
-      "viewpoints"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        47.6302,
+        -122.3151
+      ],
+      [
+        47.6328,
+        -122.3148
+      ],
+      [
+        47.634,
+        -122.3146
+      ],
+      [
+        47.6352,
+        -122.3134
+      ],
+      [
+        47.6365,
+        -122.3101
+      ],
+      [
+        47.6336,
+        -122.3083
+      ],
+      [
+        47.6294,
+        -122.3081
+      ],
+      [
+        47.6254,
+        -122.3124
+      ],
+      [
+        47.6217,
+        -122.3187
+      ],
+      [
+        47.6188,
+        -122.3194
+      ],
+      [
+        47.617,
+        -122.3214
+      ],
+      [
+        47.6228,
+        -122.3218
+      ],
+      [
+        47.6276,
+        -122.3189
+      ],
+      [
+        47.6302,
+        -122.3151
+      ]
     ],
-    "scores": {
-      "greenery": 90,
-      "water": 52,
-      "transit": 90,
-      "calm": 79,
-      "culture": 86
-    },
     "coords": [
       [
         47.630216,
@@ -8442,89 +8467,68 @@ const TRAILS = [
         47.630216,
         -122.315052
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        47.6302,
-        -122.3151
-      ],
-      [
-        47.6328,
-        -122.3148
-      ],
-      [
-        47.634,
-        -122.3146
-      ],
-      [
-        47.6352,
-        -122.3134
-      ],
-      [
-        47.6365,
-        -122.3101
-      ],
-      [
-        47.6336,
-        -122.3083
-      ],
-      [
-        47.6294,
-        -122.3081
-      ],
-      [
-        47.6254,
-        -122.3124
-      ],
-      [
-        47.6217,
-        -122.3187
-      ],
-      [
-        47.6188,
-        -122.3194
-      ],
-      [
-        47.617,
-        -122.3214
-      ],
-      [
-        47.6228,
-        -122.3218
-      ],
-      [
-        47.6276,
-        -122.3189
-      ],
-      [
-        47.6302,
-        -122.3151
-      ]
     ]
   },
   {
     "id": "seattle-03-waterfront-pioneer",
-    "name": "Seattle Wanderweg 3: Waterfront to Pioneer Square",
+    "name": "Seattle generated walking route 3",
     "city": "Seattle",
     "state": "WA",
-    "theme": "Civic loop",
-    "difficulty": "Easy",
-    "transit": "Link + ferry + bus",
-    "comfort": "Best outside heavy rain",
-    "description": "A civic route using Elliott Bay Trail, waterfront promenades, Pike Place sidewalks, and the Pioneer Square street grid.",
-    "tags": [
-      "waterfront",
-      "markets",
-      "historic core"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        47.6161,
+        -122.3551
+      ],
+      [
+        47.6124,
+        -122.3544
+      ],
+      [
+        47.6091,
+        -122.3429
+      ],
+      [
+        47.6072,
+        -122.3414
+      ],
+      [
+        47.6041,
+        -122.3396
+      ],
+      [
+        47.6001,
+        -122.3369
+      ],
+      [
+        47.5983,
+        -122.3331
+      ],
+      [
+        47.5996,
+        -122.3297
+      ],
+      [
+        47.6037,
+        -122.331
+      ],
+      [
+        47.6084,
+        -122.3354
+      ],
+      [
+        47.6113,
+        -122.3401
+      ],
+      [
+        47.6142,
+        -122.3472
+      ],
+      [
+        47.6161,
+        -122.3551
+      ]
     ],
-    "scores": {
-      "greenery": 62,
-      "water": 95,
-      "transit": 95,
-      "calm": 68,
-      "culture": 92
-    },
     "coords": [
       [
         47.616126,
@@ -10838,85 +10842,60 @@ const TRAILS = [
         47.616126,
         -122.35506
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        47.6161,
-        -122.3551
-      ],
-      [
-        47.6124,
-        -122.3544
-      ],
-      [
-        47.6091,
-        -122.3429
-      ],
-      [
-        47.6072,
-        -122.3414
-      ],
-      [
-        47.6041,
-        -122.3396
-      ],
-      [
-        47.6001,
-        -122.3369
-      ],
-      [
-        47.5983,
-        -122.3331
-      ],
-      [
-        47.5996,
-        -122.3297
-      ],
-      [
-        47.6037,
-        -122.331
-      ],
-      [
-        47.6084,
-        -122.3354
-      ],
-      [
-        47.6113,
-        -122.3401
-      ],
-      [
-        47.6142,
-        -122.3472
-      ],
-      [
-        47.6161,
-        -122.3551
-      ]
     ]
   },
   {
     "id": "seattle-04-ballard-locks",
-    "name": "Seattle Wanderweg 4: Ballard Locks and Canal",
+    "name": "Seattle generated walking route 4",
     "city": "Seattle",
     "state": "WA",
-    "theme": "Neighborhood loop",
-    "difficulty": "Easy",
-    "transit": "Bus + Burke-Gilman Trail",
-    "comfort": "Best in dry weather",
-    "description": "A Ballard loop following NW Market Street sidewalks, the Locks paths, Shilshole edges, and the canal-side Burke-Gilman corridor.",
-    "tags": [
-      "locks",
-      "canal",
-      "neighborhood main street"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        47.668,
+        -122.3867
+      ],
+      [
+        47.6681,
+        -122.3926
+      ],
+      [
+        47.6683,
+        -122.399
+      ],
+      [
+        47.6667,
+        -122.4049
+      ],
+      [
+        47.6641,
+        -122.4082
+      ],
+      [
+        47.6592,
+        -122.408
+      ],
+      [
+        47.6559,
+        -122.3988
+      ],
+      [
+        47.6565,
+        -122.3889
+      ],
+      [
+        47.66,
+        -122.3821
+      ],
+      [
+        47.6648,
+        -122.3814
+      ],
+      [
+        47.668,
+        -122.3867
+      ]
     ],
-    "scores": {
-      "greenery": 79,
-      "water": 88,
-      "transit": 76,
-      "calm": 82,
-      "culture": 74
-    },
     "coords": [
       [
         47.667985,
@@ -13634,77 +13613,56 @@ const TRAILS = [
         47.667985,
         -122.386722
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        47.668,
-        -122.3867
-      ],
-      [
-        47.6681,
-        -122.3926
-      ],
-      [
-        47.6683,
-        -122.399
-      ],
-      [
-        47.6667,
-        -122.4049
-      ],
-      [
-        47.6641,
-        -122.4082
-      ],
-      [
-        47.6592,
-        -122.408
-      ],
-      [
-        47.6559,
-        -122.3988
-      ],
-      [
-        47.6565,
-        -122.3889
-      ],
-      [
-        47.66,
-        -122.3821
-      ],
-      [
-        47.6648,
-        -122.3814
-      ],
-      [
-        47.668,
-        -122.3867
-      ]
     ]
   },
   {
     "id": "portland-01-washington-park",
-    "name": "Portland Wanderweg 1: Washington Park Ridge",
+    "name": "Portland generated walking route 1",
     "city": "Portland",
     "state": "OR",
-    "theme": "Park loop",
-    "difficulty": "Hilly",
-    "transit": "MAX + bus",
-    "comfort": "Good year-round with rain gear",
-    "description": "A westside walking loop using Washington Park paths, SW Kingston sidewalks, and the Hoyt Arboretum trail network.",
-    "tags": [
-      "urban forest",
-      "arboretum",
-      "hills"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        45.5107,
+        -122.7151
+      ],
+      [
+        45.5127,
+        -122.7194
+      ],
+      [
+        45.517,
+        -122.7169
+      ],
+      [
+        45.5209,
+        -122.7135
+      ],
+      [
+        45.5234,
+        -122.7076
+      ],
+      [
+        45.521,
+        -122.7015
+      ],
+      [
+        45.5169,
+        -122.7002
+      ],
+      [
+        45.5136,
+        -122.7049
+      ],
+      [
+        45.5101,
+        -122.7098
+      ],
+      [
+        45.5107,
+        -122.7151
+      ]
     ],
-    "scores": {
-      "greenery": 96,
-      "water": 42,
-      "transit": 84,
-      "calm": 88,
-      "culture": 80
-    },
     "coords": [
       [
         45.510734,
@@ -17286,73 +17244,56 @@ const TRAILS = [
         45.510734,
         -122.715123
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        45.5107,
-        -122.7151
-      ],
-      [
-        45.5127,
-        -122.7194
-      ],
-      [
-        45.517,
-        -122.7169
-      ],
-      [
-        45.5209,
-        -122.7135
-      ],
-      [
-        45.5234,
-        -122.7076
-      ],
-      [
-        45.521,
-        -122.7015
-      ],
-      [
-        45.5169,
-        -122.7002
-      ],
-      [
-        45.5136,
-        -122.7049
-      ],
-      [
-        45.5101,
-        -122.7098
-      ],
-      [
-        45.5107,
-        -122.7151
-      ]
     ]
   },
   {
     "id": "portland-02-eastbank-loop",
-    "name": "Portland Wanderweg 2: Eastbank and Waterfront",
+    "name": "Portland generated walking route 2",
     "city": "Portland",
     "state": "OR",
-    "theme": "Waterfront walk",
-    "difficulty": "Easy",
-    "transit": "MAX + streetcar",
-    "comfort": "Good year-round",
-    "description": "A central river loop using the Eastbank Esplanade, Steel Bridge path, Waterfront Park, and Hawthorne Bridge sidewalks.",
-    "tags": [
-      "riverwalk",
-      "bridges",
-      "downtown"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        45.5289,
+        -122.6675
+      ],
+      [
+        45.5272,
+        -122.6717
+      ],
+      [
+        45.5239,
+        -122.6734
+      ],
+      [
+        45.519,
+        -122.6751
+      ],
+      [
+        45.5138,
+        -122.6739
+      ],
+      [
+        45.5126,
+        -122.6673
+      ],
+      [
+        45.5154,
+        -122.6611
+      ],
+      [
+        45.5203,
+        -122.6623
+      ],
+      [
+        45.5249,
+        -122.664
+      ],
+      [
+        45.5289,
+        -122.6675
+      ]
     ],
-    "scores": {
-      "greenery": 73,
-      "water": 96,
-      "transit": 93,
-      "calm": 78,
-      "culture": 86
-    },
     "coords": [
       [
         45.528844,
@@ -19282,73 +19223,56 @@ const TRAILS = [
         45.528844,
         -122.667227
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        45.5289,
-        -122.6675
-      ],
-      [
-        45.5272,
-        -122.6717
-      ],
-      [
-        45.5239,
-        -122.6734
-      ],
-      [
-        45.519,
-        -122.6751
-      ],
-      [
-        45.5138,
-        -122.6739
-      ],
-      [
-        45.5126,
-        -122.6673
-      ],
-      [
-        45.5154,
-        -122.6611
-      ],
-      [
-        45.5203,
-        -122.6623
-      ],
-      [
-        45.5249,
-        -122.664
-      ],
-      [
-        45.5289,
-        -122.6675
-      ]
     ]
   },
   {
     "id": "portland-03-alberta-williams",
-    "name": "Portland Wanderweg 3: Alberta and Williams",
+    "name": "Portland generated walking route 3",
     "city": "Portland",
     "state": "OR",
-    "theme": "Neighborhood loop",
-    "difficulty": "Easy",
-    "transit": "Bus + bike share",
-    "comfort": "Good year-round",
-    "description": "A north Portland neighborhood loop using Alberta Street, Williams Avenue, local greenways, and park-side sidewalks.",
-    "tags": [
-      "main street",
-      "greenway",
-      "public art"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        45.5586,
+        -122.6757
+      ],
+      [
+        45.5587,
+        -122.6669
+      ],
+      [
+        45.5588,
+        -122.6576
+      ],
+      [
+        45.5591,
+        -122.6484
+      ],
+      [
+        45.5545,
+        -122.648
+      ],
+      [
+        45.5502,
+        -122.6519
+      ],
+      [
+        45.5489,
+        -122.662
+      ],
+      [
+        45.5518,
+        -122.6708
+      ],
+      [
+        45.5554,
+        -122.6756
+      ],
+      [
+        45.5586,
+        -122.6757
+      ]
     ],
-    "scores": {
-      "greenery": 76,
-      "water": 28,
-      "transit": 81,
-      "calm": 86,
-      "culture": 88
-    },
     "coords": [
       [
         45.558597,
@@ -20454,73 +20378,56 @@ const TRAILS = [
         45.558597,
         -122.67568
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        45.5586,
-        -122.6757
-      ],
-      [
-        45.5587,
-        -122.6669
-      ],
-      [
-        45.5588,
-        -122.6576
-      ],
-      [
-        45.5591,
-        -122.6484
-      ],
-      [
-        45.5545,
-        -122.648
-      ],
-      [
-        45.5502,
-        -122.6519
-      ],
-      [
-        45.5489,
-        -122.662
-      ],
-      [
-        45.5518,
-        -122.6708
-      ],
-      [
-        45.5554,
-        -122.6756
-      ],
-      [
-        45.5586,
-        -122.6757
-      ]
     ]
   },
   {
     "id": "portland-04-sellwood-oaks",
-    "name": "Portland Wanderweg 4: Sellwood and Oaks Bottom",
+    "name": "Portland generated walking route 4",
     "city": "Portland",
     "state": "OR",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Bus + MAX nearby",
-    "comfort": "Best outside muddy periods",
-    "description": "A southeast route using Sellwood sidewalks, Springwater Corridor, Oaks Bottom paths, and bluff-top neighborhood streets.",
-    "tags": [
-      "wetland",
-      "multi-use path",
-      "bluff"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        45.4685,
+        -122.6535
+      ],
+      [
+        45.4662,
+        -122.6662
+      ],
+      [
+        45.4701,
+        -122.6686
+      ],
+      [
+        45.477,
+        -122.6665
+      ],
+      [
+        45.4829,
+        -122.6598
+      ],
+      [
+        45.4873,
+        -122.6547
+      ],
+      [
+        45.4832,
+        -122.6499
+      ],
+      [
+        45.4759,
+        -122.6488
+      ],
+      [
+        45.4704,
+        -122.6507
+      ],
+      [
+        45.4685,
+        -122.6535
+      ]
     ],
-    "scores": {
-      "greenery": 91,
-      "water": 74,
-      "transit": 67,
-      "calm": 90,
-      "culture": 70
-    },
     "coords": [
       [
         45.4686,
@@ -24194,73 +24101,56 @@ const TRAILS = [
         45.4686,
         -122.653501
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        45.4685,
-        -122.6535
-      ],
-      [
-        45.4662,
-        -122.6662
-      ],
-      [
-        45.4701,
-        -122.6686
-      ],
-      [
-        45.477,
-        -122.6665
-      ],
-      [
-        45.4829,
-        -122.6598
-      ],
-      [
-        45.4873,
-        -122.6547
-      ],
-      [
-        45.4832,
-        -122.6499
-      ],
-      [
-        45.4759,
-        -122.6488
-      ],
-      [
-        45.4704,
-        -122.6507
-      ],
-      [
-        45.4685,
-        -122.6535
-      ]
     ]
   },
   {
     "id": "pittsburgh-01-three-rivers",
-    "name": "Pittsburgh Wanderweg 1: Three Rivers Heritage",
+    "name": "Pittsburgh generated walking route 1",
     "city": "Pittsburgh",
     "state": "PA",
-    "theme": "Waterfront walk",
-    "difficulty": "Easy",
-    "transit": "Light rail + bus",
-    "comfort": "Best outside icy conditions",
-    "description": "A riverfront loop using Point State Park paths, North Shore trails, the Allegheny riverwalk, and downtown bridge sidewalks.",
-    "tags": [
-      "riverfront",
-      "bridges",
-      "downtown"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        40.4416,
+        -80.007
+      ],
+      [
+        40.445,
+        -80.0091
+      ],
+      [
+        40.4475,
+        -80.009
+      ],
+      [
+        40.4493,
+        -80.0043
+      ],
+      [
+        40.4488,
+        -79.992
+      ],
+      [
+        40.4466,
+        -79.9865
+      ],
+      [
+        40.4424,
+        -79.9875
+      ],
+      [
+        40.4392,
+        -79.995
+      ],
+      [
+        40.4386,
+        -80.0024
+      ],
+      [
+        40.4416,
+        -80.007
+      ]
     ],
-    "scores": {
-      "greenery": 77,
-      "water": 97,
-      "transit": 85,
-      "calm": 76,
-      "culture": 91
-    },
     "coords": [
       [
         40.441583,
@@ -26762,73 +26652,52 @@ const TRAILS = [
         40.441583,
         -80.007009
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        40.4416,
-        -80.007
-      ],
-      [
-        40.445,
-        -80.0091
-      ],
-      [
-        40.4475,
-        -80.009
-      ],
-      [
-        40.4493,
-        -80.0043
-      ],
-      [
-        40.4488,
-        -79.992
-      ],
-      [
-        40.4466,
-        -79.9865
-      ],
-      [
-        40.4424,
-        -79.9875
-      ],
-      [
-        40.4392,
-        -79.995
-      ],
-      [
-        40.4386,
-        -80.0024
-      ],
-      [
-        40.4416,
-        -80.007
-      ]
     ]
   },
   {
     "id": "pittsburgh-02-south-side-steps",
-    "name": "Pittsburgh Wanderweg 2: South Side Steps",
+    "name": "Pittsburgh generated walking route 2",
     "city": "Pittsburgh",
     "state": "PA",
-    "theme": "Hillside walk",
-    "difficulty": "Hilly",
-    "transit": "Bus + incline nearby",
-    "comfort": "Best outside snow and ice",
-    "description": "A hillside wander using South Side sidewalks, public stair corridors, neighborhood overlooks, and river-adjacent connectors.",
-    "tags": [
-      "steps",
-      "views",
-      "slopes"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        40.428,
+        -79.9875
+      ],
+      [
+        40.4276,
+        -79.9824
+      ],
+      [
+        40.4262,
+        -79.9772
+      ],
+      [
+        40.4234,
+        -79.9738
+      ],
+      [
+        40.4212,
+        -79.9776
+      ],
+      [
+        40.4198,
+        -79.984
+      ],
+      [
+        40.4208,
+        -79.9912
+      ],
+      [
+        40.4247,
+        -79.9935
+      ],
+      [
+        40.428,
+        -79.9875
+      ]
     ],
-    "scores": {
-      "greenery": 73,
-      "water": 70,
-      "transit": 68,
-      "calm": 66,
-      "culture": 84
-    },
     "coords": [
       [
         40.428,
@@ -28102,69 +27971,52 @@ const TRAILS = [
         40.428,
         -79.987511
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        40.428,
-        -79.9875
-      ],
-      [
-        40.4276,
-        -79.9824
-      ],
-      [
-        40.4262,
-        -79.9772
-      ],
-      [
-        40.4234,
-        -79.9738
-      ],
-      [
-        40.4212,
-        -79.9776
-      ],
-      [
-        40.4198,
-        -79.984
-      ],
-      [
-        40.4208,
-        -79.9912
-      ],
-      [
-        40.4247,
-        -79.9935
-      ],
-      [
-        40.428,
-        -79.9875
-      ]
     ]
   },
   {
     "id": "pittsburgh-03-oakland-schenley",
-    "name": "Pittsburgh Wanderweg 3: Oakland and Schenley",
+    "name": "Pittsburgh generated walking route 3",
     "city": "Pittsburgh",
     "state": "PA",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Busway + frequent bus",
-    "comfort": "Good outside heavy snow",
-    "description": "A university district route using Schenley Plaza, park trails, Forbes Avenue sidewalks, and civic campus paths.",
-    "tags": [
-      "campus",
-      "park",
-      "museums"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        40.4427,
+        -79.9524
+      ],
+      [
+        40.4403,
+        -79.9477
+      ],
+      [
+        40.4372,
+        -79.947
+      ],
+      [
+        40.4336,
+        -79.9444
+      ],
+      [
+        40.4301,
+        -79.9497
+      ],
+      [
+        40.4324,
+        -79.9568
+      ],
+      [
+        40.4368,
+        -79.9594
+      ],
+      [
+        40.4407,
+        -79.9571
+      ],
+      [
+        40.4427,
+        -79.9524
+      ]
     ],
-    "scores": {
-      "greenery": 86,
-      "water": 35,
-      "transit": 91,
-      "calm": 74,
-      "culture": 94
-    },
     "coords": [
       [
         40.442607,
@@ -30194,69 +30046,52 @@ const TRAILS = [
         40.442607,
         -79.95246
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        40.4427,
-        -79.9524
-      ],
-      [
-        40.4403,
-        -79.9477
-      ],
-      [
-        40.4372,
-        -79.947
-      ],
-      [
-        40.4336,
-        -79.9444
-      ],
-      [
-        40.4301,
-        -79.9497
-      ],
-      [
-        40.4324,
-        -79.9568
-      ],
-      [
-        40.4368,
-        -79.9594
-      ],
-      [
-        40.4407,
-        -79.9571
-      ],
-      [
-        40.4427,
-        -79.9524
-      ]
     ]
   },
   {
     "id": "pittsburgh-04-highland-park",
-    "name": "Pittsburgh Wanderweg 4: Highland Park Reservoir",
+    "name": "Pittsburgh generated walking route 4",
     "city": "Pittsburgh",
     "state": "PA",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Bus",
-    "comfort": "Best in spring through fall",
-    "description": "A northeast park route following reservoir walks, park drives, neighborhood sidewalks, and Allegheny River overlook connectors.",
-    "tags": [
-      "reservoir",
-      "park",
-      "neighborhood"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        40.4792,
+        -79.9196
+      ],
+      [
+        40.4824,
+        -79.9194
+      ],
+      [
+        40.4852,
+        -79.9148
+      ],
+      [
+        40.4848,
+        -79.9069
+      ],
+      [
+        40.4803,
+        -79.9047
+      ],
+      [
+        40.4746,
+        -79.9101
+      ],
+      [
+        40.4727,
+        -79.9178
+      ],
+      [
+        40.4758,
+        -79.9223
+      ],
+      [
+        40.4792,
+        -79.9196
+      ]
     ],
-    "scores": {
-      "greenery": 93,
-      "water": 65,
-      "transit": 60,
-      "calm": 88,
-      "culture": 68
-    },
     "coords": [
       [
         40.479247,
@@ -32718,69 +32553,52 @@ const TRAILS = [
         40.479247,
         -79.91972
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        40.4792,
-        -79.9196
-      ],
-      [
-        40.4824,
-        -79.9194
-      ],
-      [
-        40.4852,
-        -79.9148
-      ],
-      [
-        40.4848,
-        -79.9069
-      ],
-      [
-        40.4803,
-        -79.9047
-      ],
-      [
-        40.4746,
-        -79.9101
-      ],
-      [
-        40.4727,
-        -79.9178
-      ],
-      [
-        40.4758,
-        -79.9223
-      ],
-      [
-        40.4792,
-        -79.9196
-      ]
     ]
   },
   {
     "id": "dc-01-rock-creek",
-    "name": "DC Wanderweg 1: Rock Creek and Dupont",
+    "name": "Washington generated walking route 1",
     "city": "Washington",
     "state": "DC",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Metro-rich",
-    "comfort": "Best outside peak summer heat",
-    "description": "A northwest route using Rock Creek paths, Dupont sidewalks, Embassy Row edges, and neighborhood connectors.",
-    "tags": [
-      "park trail",
-      "embassies",
-      "circles"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        38.9097,
+        -77.0434
+      ],
+      [
+        38.915,
+        -77.0473
+      ],
+      [
+        38.9212,
+        -77.052
+      ],
+      [
+        38.9253,
+        -77.0505
+      ],
+      [
+        38.927,
+        -77.0442
+      ],
+      [
+        38.9226,
+        -77.038
+      ],
+      [
+        38.9174,
+        -77.0367
+      ],
+      [
+        38.912,
+        -77.0398
+      ],
+      [
+        38.9097,
+        -77.0434
+      ]
     ],
-    "scores": {
-      "greenery": 88,
-      "water": 55,
-      "transit": 94,
-      "calm": 73,
-      "culture": 90
-    },
     "coords": [
       [
         38.909757,
@@ -34874,69 +34692,52 @@ const TRAILS = [
         38.909757,
         -77.043359
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        38.9097,
-        -77.0434
-      ],
-      [
-        38.915,
-        -77.0473
-      ],
-      [
-        38.9212,
-        -77.052
-      ],
-      [
-        38.9253,
-        -77.0505
-      ],
-      [
-        38.927,
-        -77.0442
-      ],
-      [
-        38.9226,
-        -77.038
-      ],
-      [
-        38.9174,
-        -77.0367
-      ],
-      [
-        38.912,
-        -77.0398
-      ],
-      [
-        38.9097,
-        -77.0434
-      ]
     ]
   },
   {
     "id": "dc-02-mall-tidal-basin",
-    "name": "DC Wanderweg 2: Mall and Tidal Basin",
+    "name": "Washington generated walking route 2",
     "city": "Washington",
     "state": "DC",
-    "theme": "Civic loop",
-    "difficulty": "Easy",
-    "transit": "Metro + bus",
-    "comfort": "Best outside peak summer heat",
-    "description": "A national civic loop using Mall paths, Tidal Basin walks, monument promenades, and downtown sidewalks.",
-    "tags": [
-      "monuments",
-      "basin",
-      "promenades"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        38.8895,
+        -77.0353
+      ],
+      [
+        38.8892,
+        -77.0451
+      ],
+      [
+        38.8853,
+        -77.0501
+      ],
+      [
+        38.8814,
+        -77.0412
+      ],
+      [
+        38.8807,
+        -77.0366
+      ],
+      [
+        38.8849,
+        -77.028
+      ],
+      [
+        38.8894,
+        -77.0229
+      ],
+      [
+        38.8923,
+        -77.0307
+      ],
+      [
+        38.8895,
+        -77.0353
+      ]
     ],
-    "scores": {
-      "greenery": 80,
-      "water": 82,
-      "transit": 92,
-      "calm": 77,
-      "culture": 98
-    },
     "coords": [
       [
         38.889626,
@@ -36762,69 +36563,52 @@ const TRAILS = [
         38.889626,
         -77.035546
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        38.8895,
-        -77.0353
-      ],
-      [
-        38.8892,
-        -77.0451
-      ],
-      [
-        38.8853,
-        -77.0501
-      ],
-      [
-        38.8814,
-        -77.0412
-      ],
-      [
-        38.8807,
-        -77.0366
-      ],
-      [
-        38.8849,
-        -77.028
-      ],
-      [
-        38.8894,
-        -77.0229
-      ],
-      [
-        38.8923,
-        -77.0307
-      ],
-      [
-        38.8895,
-        -77.0353
-      ]
     ]
   },
   {
     "id": "dc-03-capitol-riverwalk",
-    "name": "DC Wanderweg 3: Capitol to Riverwalk",
+    "name": "Washington generated walking route 3",
     "city": "Washington",
     "state": "DC",
-    "theme": "Waterfront walk",
-    "difficulty": "Easy",
-    "transit": "Metro + streetcar",
-    "comfort": "Best outside summer humidity",
-    "description": "An eastside civic route using Capitol grounds paths, Barracks Row sidewalks, Navy Yard streets, and Anacostia Riverwalk segments.",
-    "tags": [
-      "capitol",
-      "riverwalk",
-      "main street"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        38.8899,
+        -77.0091
+      ],
+      [
+        38.887,
+        -77.0059
+      ],
+      [
+        38.8843,
+        -76.9995
+      ],
+      [
+        38.8792,
+        -76.9941
+      ],
+      [
+        38.8733,
+        -77.0001
+      ],
+      [
+        38.8722,
+        -77.0067
+      ],
+      [
+        38.8788,
+        -77.0114
+      ],
+      [
+        38.8852,
+        -77.0141
+      ],
+      [
+        38.8899,
+        -77.0091
+      ]
     ],
-    "scores": {
-      "greenery": 72,
-      "water": 84,
-      "transit": 90,
-      "calm": 70,
-      "culture": 89
-    },
     "coords": [
       [
         38.889811,
@@ -38894,69 +38678,56 @@ const TRAILS = [
         38.889811,
         -77.008718
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        38.8899,
-        -77.0091
-      ],
-      [
-        38.887,
-        -77.0059
-      ],
-      [
-        38.8843,
-        -76.9995
-      ],
-      [
-        38.8792,
-        -76.9941
-      ],
-      [
-        38.8733,
-        -77.0001
-      ],
-      [
-        38.8722,
-        -77.0067
-      ],
-      [
-        38.8788,
-        -77.0114
-      ],
-      [
-        38.8852,
-        -77.0141
-      ],
-      [
-        38.8899,
-        -77.0091
-      ]
     ]
   },
   {
     "id": "dc-04-georgetown-glover",
-    "name": "DC Wanderweg 4: Georgetown and Glover",
+    "name": "Washington generated walking route 4",
     "city": "Washington",
     "state": "DC",
-    "theme": "Neighborhood loop",
-    "difficulty": "Hilly",
-    "transit": "Bus + Metro nearby",
-    "comfort": "Best in spring or fall",
-    "description": "A Georgetown route using canal towpath edges, Wisconsin Avenue sidewalks, Glover-Archbold paths, and residential stair streets.",
-    "tags": [
-      "canal",
-      "hills",
-      "historic streets"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        38.9058,
+        -77.062
+      ],
+      [
+        38.9095,
+        -77.0658
+      ],
+      [
+        38.9147,
+        -77.0705
+      ],
+      [
+        38.9212,
+        -77.073
+      ],
+      [
+        38.9258,
+        -77.0772
+      ],
+      [
+        38.9228,
+        -77.0837
+      ],
+      [
+        38.9161,
+        -77.0826
+      ],
+      [
+        38.9094,
+        -77.0763
+      ],
+      [
+        38.9049,
+        -77.0683
+      ],
+      [
+        38.9058,
+        -77.062
+      ]
     ],
-    "scores": {
-      "greenery": 83,
-      "water": 74,
-      "transit": 71,
-      "calm": 79,
-      "culture": 90
-    },
     "coords": [
       [
         38.905801,
@@ -40802,73 +40573,52 @@ const TRAILS = [
         38.905801,
         -77.061923
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        38.9058,
-        -77.062
-      ],
-      [
-        38.9095,
-        -77.0658
-      ],
-      [
-        38.9147,
-        -77.0705
-      ],
-      [
-        38.9212,
-        -77.073
-      ],
-      [
-        38.9258,
-        -77.0772
-      ],
-      [
-        38.9228,
-        -77.0837
-      ],
-      [
-        38.9161,
-        -77.0826
-      ],
-      [
-        38.9094,
-        -77.0763
-      ],
-      [
-        38.9049,
-        -77.0683
-      ],
-      [
-        38.9058,
-        -77.062
-      ]
     ]
   },
   {
     "id": "boston-01-emerald-necklace",
-    "name": "Boston Wanderweg 1: Emerald Necklace Fenway",
+    "name": "Boston generated walking route 1",
     "city": "Boston",
     "state": "MA",
-    "theme": "Park loop",
-    "difficulty": "Easy",
-    "transit": "Green Line + bus",
-    "comfort": "Best in shoulder seasons",
-    "description": "A park-forward route using Back Bay Fens paths, Fenway sidewalks, river crossings, and Museum district walkways.",
-    "tags": [
-      "emerald necklace",
-      "fens",
-      "museums"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        42.3429,
+        -71.0961
+      ],
+      [
+        42.3447,
+        -71.1
+      ],
+      [
+        42.3488,
+        -71.1023
+      ],
+      [
+        42.352,
+        -71.0962
+      ],
+      [
+        42.3513,
+        -71.0894
+      ],
+      [
+        42.3471,
+        -71.0866
+      ],
+      [
+        42.343,
+        -71.0898
+      ],
+      [
+        42.3404,
+        -71.0938
+      ],
+      [
+        42.3429,
+        -71.0961
+      ]
     ],
-    "scores": {
-      "greenery": 91,
-      "water": 68,
-      "transit": 90,
-      "calm": 82,
-      "culture": 91
-    },
     "coords": [
       [
         42.343029,
@@ -42550,69 +42300,52 @@ const TRAILS = [
         42.343029,
         -71.096164
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        42.3429,
-        -71.0961
-      ],
-      [
-        42.3447,
-        -71.1
-      ],
-      [
-        42.3488,
-        -71.1023
-      ],
-      [
-        42.352,
-        -71.0962
-      ],
-      [
-        42.3513,
-        -71.0894
-      ],
-      [
-        42.3471,
-        -71.0866
-      ],
-      [
-        42.343,
-        -71.0898
-      ],
-      [
-        42.3404,
-        -71.0938
-      ],
-      [
-        42.3429,
-        -71.0961
-      ]
     ]
   },
   {
     "id": "boston-02-harborwalk",
-    "name": "Boston Wanderweg 2: Harborwalk and Greenway",
+    "name": "Boston generated walking route 2",
     "city": "Boston",
     "state": "MA",
-    "theme": "Waterfront walk",
-    "difficulty": "Easy",
-    "transit": "Subway + ferry",
-    "comfort": "Best outside winter wind",
-    "description": "A harbor route using North End sidewalks, Harborwalk segments, Seaport streets, and Rose Kennedy Greenway paths.",
-    "tags": [
-      "harborwalk",
-      "greenway",
-      "history"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        42.3656,
+        -71.0524
+      ],
+      [
+        42.3618,
+        -71.0496
+      ],
+      [
+        42.3566,
+        -71.0492
+      ],
+      [
+        42.352,
+        -71.0465
+      ],
+      [
+        42.3474,
+        -71.0398
+      ],
+      [
+        42.349,
+        -71.0556
+      ],
+      [
+        42.3538,
+        -71.0594
+      ],
+      [
+        42.3605,
+        -71.0573
+      ],
+      [
+        42.3656,
+        -71.0524
+      ]
     ],
-    "scores": {
-      "greenery": 72,
-      "water": 96,
-      "transit": 94,
-      "calm": 72,
-      "culture": 92
-    },
     "coords": [
       [
         42.365614,
@@ -44910,69 +44643,48 @@ const TRAILS = [
         42.365614,
         -71.052444
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        42.3656,
-        -71.0524
-      ],
-      [
-        42.3618,
-        -71.0496
-      ],
-      [
-        42.3566,
-        -71.0492
-      ],
-      [
-        42.352,
-        -71.0465
-      ],
-      [
-        42.3474,
-        -71.0398
-      ],
-      [
-        42.349,
-        -71.0556
-      ],
-      [
-        42.3538,
-        -71.0594
-      ],
-      [
-        42.3605,
-        -71.0573
-      ],
-      [
-        42.3656,
-        -71.0524
-      ]
     ]
   },
   {
     "id": "boston-03-charles-back-bay",
-    "name": "Boston Wanderweg 3: Charles and Back Bay",
+    "name": "Boston generated walking route 3",
     "city": "Boston",
     "state": "MA",
-    "theme": "Civic loop",
-    "difficulty": "Easy",
-    "transit": "Green Line + Red Line",
-    "comfort": "Best in spring through fall",
-    "description": "A Back Bay route using Esplanade paths, Commonwealth Avenue Mall, Public Garden paths, and Charles River bridge sidewalks.",
-    "tags": [
-      "esplanade",
-      "mall",
-      "river"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        42.359,
+        -71.073
+      ],
+      [
+        42.3568,
+        -71.0815
+      ],
+      [
+        42.3534,
+        -71.0838
+      ],
+      [
+        42.3493,
+        -71.0822
+      ],
+      [
+        42.3487,
+        -71.0741
+      ],
+      [
+        42.3527,
+        -71.0708
+      ],
+      [
+        42.3562,
+        -71.0692
+      ],
+      [
+        42.359,
+        -71.073
+      ]
     ],
-    "scores": {
-      "greenery": 86,
-      "water": 88,
-      "transit": 95,
-      "calm": 78,
-      "culture": 89
-    },
     "coords": [
       [
         42.359029,
@@ -46822,65 +46534,52 @@ const TRAILS = [
         42.359029,
         -71.072996
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        42.359,
-        -71.073
-      ],
-      [
-        42.3568,
-        -71.0815
-      ],
-      [
-        42.3534,
-        -71.0838
-      ],
-      [
-        42.3493,
-        -71.0822
-      ],
-      [
-        42.3487,
-        -71.0741
-      ],
-      [
-        42.3527,
-        -71.0708
-      ],
-      [
-        42.3562,
-        -71.0692
-      ],
-      [
-        42.359,
-        -71.073
-      ]
     ]
   },
   {
     "id": "boston-04-jamaica-pond",
-    "name": "Boston Wanderweg 4: Jamaica Pond and Arboretum",
+    "name": "Boston generated walking route 4",
     "city": "Boston",
     "state": "MA",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Orange Line + bus",
-    "comfort": "Best in spring through fall",
-    "description": "A southwest route using Jamaica Pond paths, Arborway sidewalks, Arnold Arboretum paths, and neighborhood connectors.",
-    "tags": [
-      "pond",
-      "arboretum",
-      "shade"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        42.316,
+        -71.1188
+      ],
+      [
+        42.3131,
+        -71.1212
+      ],
+      [
+        42.3098,
+        -71.1227
+      ],
+      [
+        42.3058,
+        -71.1205
+      ],
+      [
+        42.3035,
+        -71.1155
+      ],
+      [
+        42.3063,
+        -71.1102
+      ],
+      [
+        42.3114,
+        -71.1081
+      ],
+      [
+        42.316,
+        -71.1119
+      ],
+      [
+        42.316,
+        -71.1188
+      ]
     ],
-    "scores": {
-      "greenery": 97,
-      "water": 83,
-      "transit": 72,
-      "calm": 91,
-      "culture": 70
-    },
     "coords": [
       [
         42.315842,
@@ -49738,69 +49437,48 @@ const TRAILS = [
         42.315842,
         -71.117757
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        42.316,
-        -71.1188
-      ],
-      [
-        42.3131,
-        -71.1212
-      ],
-      [
-        42.3098,
-        -71.1227
-      ],
-      [
-        42.3058,
-        -71.1205
-      ],
-      [
-        42.3035,
-        -71.1155
-      ],
-      [
-        42.3063,
-        -71.1102
-      ],
-      [
-        42.3114,
-        -71.1081
-      ],
-      [
-        42.316,
-        -71.1119
-      ],
-      [
-        42.316,
-        -71.1188
-      ]
     ]
   },
   {
     "id": "sf-01-embarcadero-telegraph",
-    "name": "San Francisco Wanderweg 1: Embarcadero and Telegraph Hill",
+    "name": "San Francisco generated walking route 1",
     "city": "San Francisco",
     "state": "CA",
-    "theme": "Waterfront walk",
-    "difficulty": "Hilly",
-    "transit": "Muni + ferry",
-    "comfort": "Good year-round",
-    "description": "A bayfront route using Embarcadero promenades, North Beach sidewalks, Telegraph Hill stairs, and Ferry Building paths.",
-    "tags": [
-      "bayfront",
-      "stairs",
-      "viewpoints"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        37.7955,
+        -122.3937
+      ],
+      [
+        37.8005,
+        -122.3985
+      ],
+      [
+        37.8061,
+        -122.4059
+      ],
+      [
+        37.8044,
+        -122.413
+      ],
+      [
+        37.8005,
+        -122.4146
+      ],
+      [
+        37.7981,
+        -122.4077
+      ],
+      [
+        37.797,
+        -122.4002
+      ],
+      [
+        37.7955,
+        -122.3937
+      ]
     ],
-    "scores": {
-      "greenery": 70,
-      "water": 97,
-      "transit": 91,
-      "calm": 68,
-      "culture": 94
-    },
     "coords": [
       [
         37.795422,
@@ -50994,65 +50672,56 @@ const TRAILS = [
         37.795422,
         -122.393613
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        37.7955,
-        -122.3937
-      ],
-      [
-        37.8005,
-        -122.3985
-      ],
-      [
-        37.8061,
-        -122.4059
-      ],
-      [
-        37.8044,
-        -122.413
-      ],
-      [
-        37.8005,
-        -122.4146
-      ],
-      [
-        37.7981,
-        -122.4077
-      ],
-      [
-        37.797,
-        -122.4002
-      ],
-      [
-        37.7955,
-        -122.3937
-      ]
     ]
   },
   {
     "id": "sf-02-golden-gate-park",
-    "name": "San Francisco Wanderweg 2: Panhandle to Ocean",
+    "name": "San Francisco generated walking route 2",
     "city": "San Francisco",
     "state": "CA",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Muni",
-    "comfort": "Good year-round",
-    "description": "A westside route using the Panhandle path, Golden Gate Park walks, JFK Promenade, and neighborhood sidewalk returns.",
-    "tags": [
-      "park promenade",
-      "museums",
-      "ocean air"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        37.772,
+        -122.445
+      ],
+      [
+        37.7713,
+        -122.4548
+      ],
+      [
+        37.7697,
+        -122.466
+      ],
+      [
+        37.7691,
+        -122.4776
+      ],
+      [
+        37.7688,
+        -122.4899
+      ],
+      [
+        37.7651,
+        -122.4925
+      ],
+      [
+        37.7626,
+        -122.4784
+      ],
+      [
+        37.7644,
+        -122.4622
+      ],
+      [
+        37.7681,
+        -122.4494
+      ],
+      [
+        37.772,
+        -122.445
+      ]
     ],
-    "scores": {
-      "greenery": 96,
-      "water": 58,
-      "transit": 80,
-      "calm": 90,
-      "culture": 84
-    },
     "coords": [
       [
         37.772097,
@@ -53742,73 +53411,52 @@ const TRAILS = [
         37.772097,
         -122.445021
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        37.772,
-        -122.445
-      ],
-      [
-        37.7713,
-        -122.4548
-      ],
-      [
-        37.7697,
-        -122.466
-      ],
-      [
-        37.7691,
-        -122.4776
-      ],
-      [
-        37.7688,
-        -122.4899
-      ],
-      [
-        37.7651,
-        -122.4925
-      ],
-      [
-        37.7626,
-        -122.4784
-      ],
-      [
-        37.7644,
-        -122.4622
-      ],
-      [
-        37.7681,
-        -122.4494
-      ],
-      [
-        37.772,
-        -122.445
-      ]
     ]
   },
   {
     "id": "sf-03-mission-noe-stairs",
-    "name": "San Francisco Wanderweg 3: Mission and Noe Stairs",
+    "name": "San Francisco generated walking route 3",
     "city": "San Francisco",
     "state": "CA",
-    "theme": "Hillside walk",
-    "difficulty": "Hilly",
-    "transit": "BART + Muni",
-    "comfort": "Good year-round",
-    "description": "A neighborhood stair walk using Valencia sidewalks, Liberty Hill edges, Dolores Park paths, and Noe Valley connectors.",
-    "tags": [
-      "stairs",
-      "murals",
-      "parks"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        37.7596,
+        -122.4269
+      ],
+      [
+        37.7613,
+        -122.4215
+      ],
+      [
+        37.7648,
+        -122.4219
+      ],
+      [
+        37.7692,
+        -122.4269
+      ],
+      [
+        37.7668,
+        -122.4334
+      ],
+      [
+        37.7618,
+        -122.436
+      ],
+      [
+        37.7567,
+        -122.4331
+      ],
+      [
+        37.7553,
+        -122.428
+      ],
+      [
+        37.7596,
+        -122.4269
+      ]
     ],
-    "scores": {
-      "greenery": 74,
-      "water": 20,
-      "transit": 92,
-      "calm": 67,
-      "culture": 96
-    },
     "coords": [
       [
         37.759597,
@@ -54874,69 +54522,52 @@ const TRAILS = [
         37.759597,
         -122.426779
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        37.7596,
-        -122.4269
-      ],
-      [
-        37.7613,
-        -122.4215
-      ],
-      [
-        37.7648,
-        -122.4219
-      ],
-      [
-        37.7692,
-        -122.4269
-      ],
-      [
-        37.7668,
-        -122.4334
-      ],
-      [
-        37.7618,
-        -122.436
-      ],
-      [
-        37.7567,
-        -122.4331
-      ],
-      [
-        37.7553,
-        -122.428
-      ],
-      [
-        37.7596,
-        -122.4269
-      ]
     ]
   },
   {
     "id": "sf-04-presidio-crissy",
-    "name": "San Francisco Wanderweg 4: Presidio and Crissy Field",
+    "name": "San Francisco generated walking route 4",
     "city": "San Francisco",
     "state": "CA",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Muni + Presidio Go",
-    "comfort": "Good year-round",
-    "description": "A northside route using Presidio trails, Crissy Field paths, bluff walks, and Marina sidewalks.",
-    "tags": [
-      "bay trail",
-      "presidio",
-      "bluffs"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        37.8034,
+        -122.4661
+      ],
+      [
+        37.8063,
+        -122.4557
+      ],
+      [
+        37.8068,
+        -122.4452
+      ],
+      [
+        37.8031,
+        -122.4364
+      ],
+      [
+        37.7985,
+        -122.4354
+      ],
+      [
+        37.7927,
+        -122.4488
+      ],
+      [
+        37.7917,
+        -122.4619
+      ],
+      [
+        37.7971,
+        -122.4708
+      ],
+      [
+        37.8034,
+        -122.4661
+      ]
     ],
-    "scores": {
-      "greenery": 94,
-      "water": 94,
-      "transit": 68,
-      "calm": 88,
-      "culture": 76
-    },
     "coords": [
       [
         37.803382,
@@ -57102,69 +56733,52 @@ const TRAILS = [
         37.803382,
         -122.466105
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        37.8034,
-        -122.4661
-      ],
-      [
-        37.8063,
-        -122.4557
-      ],
-      [
-        37.8068,
-        -122.4452
-      ],
-      [
-        37.8031,
-        -122.4364
-      ],
-      [
-        37.7985,
-        -122.4354
-      ],
-      [
-        37.7927,
-        -122.4488
-      ],
-      [
-        37.7917,
-        -122.4619
-      ],
-      [
-        37.7971,
-        -122.4708
-      ],
-      [
-        37.8034,
-        -122.4661
-      ]
     ]
   },
   {
     "id": "chicago-01-lincoln-lakefront",
-    "name": "Chicago Wanderweg 1: Lincoln Park Lakefront",
+    "name": "Chicago generated walking route 1",
     "city": "Chicago",
     "state": "IL",
-    "theme": "Waterfront walk",
-    "difficulty": "Easy",
-    "transit": "L + bus",
-    "comfort": "Best from late spring to fall",
-    "description": "A north lakefront route using Lincoln Park paths, Lakefront Trail, zoo edges, and neighborhood sidewalk returns.",
-    "tags": [
-      "lakefront",
-      "park paths",
-      "zoo"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        41.9214,
+        -87.6338
+      ],
+      [
+        41.9236,
+        -87.6268
+      ],
+      [
+        41.9179,
+        -87.6219
+      ],
+      [
+        41.9097,
+        -87.6222
+      ],
+      [
+        41.9022,
+        -87.6218
+      ],
+      [
+        41.8986,
+        -87.6304
+      ],
+      [
+        41.9067,
+        -87.6378
+      ],
+      [
+        41.9168,
+        -87.6385
+      ],
+      [
+        41.9214,
+        -87.6338
+      ]
     ],
-    "scores": {
-      "greenery": 89,
-      "water": 98,
-      "transit": 88,
-      "calm": 82,
-      "culture": 84
-    },
     "coords": [
       [
         41.921353,
@@ -59270,69 +58884,52 @@ const TRAILS = [
         41.921353,
         -87.633799
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        41.9214,
-        -87.6338
-      ],
-      [
-        41.9236,
-        -87.6268
-      ],
-      [
-        41.9179,
-        -87.6219
-      ],
-      [
-        41.9097,
-        -87.6222
-      ],
-      [
-        41.9022,
-        -87.6218
-      ],
-      [
-        41.8986,
-        -87.6304
-      ],
-      [
-        41.9067,
-        -87.6378
-      ],
-      [
-        41.9168,
-        -87.6385
-      ],
-      [
-        41.9214,
-        -87.6338
-      ]
     ]
   },
   {
     "id": "chicago-02-loop-riverwalk",
-    "name": "Chicago Wanderweg 2: Loop and Riverwalk",
+    "name": "Chicago generated walking route 2",
     "city": "Chicago",
     "state": "IL",
-    "theme": "Civic loop",
-    "difficulty": "Easy",
-    "transit": "L-rich",
-    "comfort": "Best outside winter wind",
-    "description": "A downtown route using the Chicago Riverwalk, Millennium Park paths, LaSalle Street sidewalks, and bridge crossings.",
-    "tags": [
-      "riverwalk",
-      "architecture",
-      "downtown"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        41.8873,
+        -87.625
+      ],
+      [
+        41.8895,
+        -87.6221
+      ],
+      [
+        41.887,
+        -87.6182
+      ],
+      [
+        41.8826,
+        -87.6233
+      ],
+      [
+        41.8795,
+        -87.6247
+      ],
+      [
+        41.8789,
+        -87.6328
+      ],
+      [
+        41.8827,
+        -87.6372
+      ],
+      [
+        41.8866,
+        -87.6332
+      ],
+      [
+        41.8873,
+        -87.625
+      ]
     ],
-    "scores": {
-      "greenery": 66,
-      "water": 91,
-      "transit": 98,
-      "calm": 64,
-      "culture": 97
-    },
     "coords": [
       [
         41.8873,
@@ -60914,69 +60511,52 @@ const TRAILS = [
         41.8873,
         -87.624741
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        41.8873,
-        -87.625
-      ],
-      [
-        41.8895,
-        -87.6221
-      ],
-      [
-        41.887,
-        -87.6182
-      ],
-      [
-        41.8826,
-        -87.6233
-      ],
-      [
-        41.8795,
-        -87.6247
-      ],
-      [
-        41.8789,
-        -87.6328
-      ],
-      [
-        41.8827,
-        -87.6372
-      ],
-      [
-        41.8866,
-        -87.6332
-      ],
-      [
-        41.8873,
-        -87.625
-      ]
     ]
   },
   {
     "id": "chicago-03-606-bucktown",
-    "name": "Chicago Wanderweg 3: The 606 and Bucktown",
+    "name": "Chicago generated walking route 3",
     "city": "Chicago",
     "state": "IL",
-    "theme": "Neighborhood loop",
-    "difficulty": "Easy",
-    "transit": "Blue Line + bus",
-    "comfort": "Best spring through fall",
-    "description": "A westside route using The 606 elevated trail, Damen and Milwaukee sidewalks, and neighborhood greenway connectors.",
-    "tags": [
-      "rail trail",
-      "main street",
-      "neighborhood"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        41.9137,
+        -87.6777
+      ],
+      [
+        41.9138,
+        -87.6854
+      ],
+      [
+        41.9139,
+        -87.6953
+      ],
+      [
+        41.914,
+        -87.7049
+      ],
+      [
+        41.9103,
+        -87.7061
+      ],
+      [
+        41.9058,
+        -87.7003
+      ],
+      [
+        41.908,
+        -87.6897
+      ],
+      [
+        41.9107,
+        -87.6819
+      ],
+      [
+        41.9137,
+        -87.6777
+      ]
     ],
-    "scores": {
-      "greenery": 78,
-      "water": 20,
-      "transit": 89,
-      "calm": 84,
-      "culture": 88
-    },
     "coords": [
       [
         41.913701,
@@ -62738,69 +62318,52 @@ const TRAILS = [
         41.913701,
         -87.677652
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        41.9137,
-        -87.6777
-      ],
-      [
-        41.9138,
-        -87.6854
-      ],
-      [
-        41.9139,
-        -87.6953
-      ],
-      [
-        41.914,
-        -87.7049
-      ],
-      [
-        41.9103,
-        -87.7061
-      ],
-      [
-        41.9058,
-        -87.7003
-      ],
-      [
-        41.908,
-        -87.6897
-      ],
-      [
-        41.9107,
-        -87.6819
-      ],
-      [
-        41.9137,
-        -87.6777
-      ]
     ]
   },
   {
     "id": "chicago-04-jackson-park",
-    "name": "Chicago Wanderweg 4: Jackson Park and South Shore",
+    "name": "Chicago generated walking route 4",
     "city": "Chicago",
     "state": "IL",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Metra + bus",
-    "comfort": "Best late spring to fall",
-    "description": "A South Side route using Jackson Park paths, lakefront edges, Museum campus sidewalks, and lagoon crossings.",
-    "tags": [
-      "lagoon",
-      "lakefront",
-      "park"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        41.7896,
+        -87.58
+      ],
+      [
+        41.789,
+        -87.5722
+      ],
+      [
+        41.7837,
+        -87.571
+      ],
+      [
+        41.7768,
+        -87.578
+      ],
+      [
+        41.7745,
+        -87.5865
+      ],
+      [
+        41.7807,
+        -87.5941
+      ],
+      [
+        41.7872,
+        -87.592
+      ],
+      [
+        41.7914,
+        -87.5862
+      ],
+      [
+        41.7896,
+        -87.58
+      ]
     ],
-    "scores": {
-      "greenery": 93,
-      "water": 94,
-      "transit": 69,
-      "calm": 88,
-      "culture": 79
-    },
     "coords": [
       [
         41.789596,
@@ -64586,69 +64149,48 @@ const TRAILS = [
         41.789596,
         -87.580054
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        41.7896,
-        -87.58
-      ],
-      [
-        41.789,
-        -87.5722
-      ],
-      [
-        41.7837,
-        -87.571
-      ],
-      [
-        41.7768,
-        -87.578
-      ],
-      [
-        41.7745,
-        -87.5865
-      ],
-      [
-        41.7807,
-        -87.5941
-      ],
-      [
-        41.7872,
-        -87.592
-      ],
-      [
-        41.7914,
-        -87.5862
-      ],
-      [
-        41.7896,
-        -87.58
-      ]
     ]
   },
   {
     "id": "minneapolis-01-chain-lakes",
-    "name": "Minneapolis Wanderweg 1: Chain of Lakes",
+    "name": "Minneapolis generated walking route 1",
     "city": "Minneapolis",
     "state": "MN",
-    "theme": "Waterfront walk",
-    "difficulty": "Easy",
-    "transit": "Bus + bike share",
-    "comfort": "Best from May to October",
-    "description": "A lake district route using Bde Maka Ska paths, Lake Harriet walks, parkway sidewalks, and shaded neighborhood connectors.",
-    "tags": [
-      "lakes",
-      "parkways",
-      "shade"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        44.9483,
+        -93.3119
+      ],
+      [
+        44.9447,
+        -93.3245
+      ],
+      [
+        44.9348,
+        -93.321
+      ],
+      [
+        44.9293,
+        -93.3085
+      ],
+      [
+        44.9346,
+        -93.3055
+      ],
+      [
+        44.9435,
+        -93.3029
+      ],
+      [
+        44.9509,
+        -93.3052
+      ],
+      [
+        44.9483,
+        -93.3119
+      ]
     ],
-    "scores": {
-      "greenery": 96,
-      "water": 97,
-      "transit": 70,
-      "calm": 90,
-      "culture": 72
-    },
     "coords": [
       [
         44.949482,
@@ -66970,65 +66512,52 @@ const TRAILS = [
         44.949482,
         -93.312895
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        44.9483,
-        -93.3119
-      ],
-      [
-        44.9447,
-        -93.3245
-      ],
-      [
-        44.9348,
-        -93.321
-      ],
-      [
-        44.9293,
-        -93.3085
-      ],
-      [
-        44.9346,
-        -93.3055
-      ],
-      [
-        44.9435,
-        -93.3029
-      ],
-      [
-        44.9509,
-        -93.3052
-      ],
-      [
-        44.9483,
-        -93.3119
-      ]
     ]
   },
   {
     "id": "minneapolis-02-mississippi-gorge",
-    "name": "Minneapolis Wanderweg 2: Mississippi Gorge",
+    "name": "Minneapolis generated walking route 2",
     "city": "Minneapolis",
     "state": "MN",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Light rail + bus",
-    "comfort": "Best spring through fall",
-    "description": "A river gorge route using West River Parkway paths, bridge sidewalks, east bank trails, and campus connectors.",
-    "tags": [
-      "river gorge",
-      "bridges",
-      "campus"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        44.9733,
+        -93.237
+      ],
+      [
+        44.969,
+        -93.2339
+      ],
+      [
+        44.964,
+        -93.2298
+      ],
+      [
+        44.9589,
+        -93.2229
+      ],
+      [
+        44.9527,
+        -93.2198
+      ],
+      [
+        44.9516,
+        -93.2273
+      ],
+      [
+        44.9583,
+        -93.2367
+      ],
+      [
+        44.9664,
+        -93.2424
+      ],
+      [
+        44.9733,
+        -93.237
+      ]
     ],
-    "scores": {
-      "greenery": 92,
-      "water": 88,
-      "transit": 82,
-      "calm": 87,
-      "culture": 76
-    },
     "coords": [
       [
         44.973351,
@@ -68794,69 +68323,48 @@ const TRAILS = [
         44.973351,
         -93.236994
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        44.9733,
-        -93.237
-      ],
-      [
-        44.969,
-        -93.2339
-      ],
-      [
-        44.964,
-        -93.2298
-      ],
-      [
-        44.9589,
-        -93.2229
-      ],
-      [
-        44.9527,
-        -93.2198
-      ],
-      [
-        44.9516,
-        -93.2273
-      ],
-      [
-        44.9583,
-        -93.2367
-      ],
-      [
-        44.9664,
-        -93.2424
-      ],
-      [
-        44.9733,
-        -93.237
-      ]
     ]
   },
   {
     "id": "minneapolis-03-downtown-riverfront",
-    "name": "Minneapolis Wanderweg 3: Downtown Riverfront",
+    "name": "Minneapolis generated walking route 3",
     "city": "Minneapolis",
     "state": "MN",
-    "theme": "Civic loop",
-    "difficulty": "Easy",
-    "transit": "Light rail + bus",
-    "comfort": "Best outside deep winter",
-    "description": "A central route using Stone Arch Bridge, Mill Ruins paths, Nicollet sidewalks, and Mississippi riverfront promenades.",
-    "tags": [
-      "riverfront",
-      "historic mills",
-      "downtown"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        44.9819,
+        -93.262
+      ],
+      [
+        44.9828,
+        -93.2553
+      ],
+      [
+        44.9792,
+        -93.2509
+      ],
+      [
+        44.9767,
+        -93.2555
+      ],
+      [
+        44.9735,
+        -93.2636
+      ],
+      [
+        44.9744,
+        -93.2708
+      ],
+      [
+        44.9783,
+        -93.2739
+      ],
+      [
+        44.9819,
+        -93.262
+      ]
     ],
-    "scores": {
-      "greenery": 76,
-      "water": 94,
-      "transit": 96,
-      "calm": 78,
-      "culture": 91
-    },
     "coords": [
       [
         44.981839,
@@ -70682,65 +70190,52 @@ const TRAILS = [
         44.981839,
         -93.262048
       ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        44.9819,
-        -93.262
-      ],
-      [
-        44.9828,
-        -93.2553
-      ],
-      [
-        44.9792,
-        -93.2509
-      ],
-      [
-        44.9767,
-        -93.2555
-      ],
-      [
-        44.9735,
-        -93.2636
-      ],
-      [
-        44.9744,
-        -93.2708
-      ],
-      [
-        44.9783,
-        -93.2739
-      ],
-      [
-        44.9819,
-        -93.262
-      ]
     ]
   },
   {
     "id": "minneapolis-04-minnehaha-creek",
-    "name": "Minneapolis Wanderweg 4: Minnehaha Creek and Falls",
+    "name": "Minneapolis generated walking route 4",
     "city": "Minneapolis",
     "state": "MN",
-    "theme": "Park loop",
-    "difficulty": "Moderate",
-    "transit": "Light rail + bus",
-    "comfort": "Best May to October",
-    "description": "A south Minneapolis route using Minnehaha Creek paths, parkway sidewalks, Minnehaha Falls paths, and river bluff connectors.",
-    "tags": [
-      "creek",
-      "falls",
-      "parkway"
+    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
+    "controlPoints": [
+      [
+        44.9162,
+        -93.2159
+      ],
+      [
+        44.915,
+        -93.2245
+      ],
+      [
+        44.914,
+        -93.2342
+      ],
+      [
+        44.9123,
+        -93.2455
+      ],
+      [
+        44.9075,
+        -93.2449
+      ],
+      [
+        44.9048,
+        -93.2347
+      ],
+      [
+        44.9057,
+        -93.2238
+      ],
+      [
+        44.9115,
+        -93.2157
+      ],
+      [
+        44.9162,
+        -93.2159
+      ]
     ],
-    "scores": {
-      "greenery": 95,
-      "water": 92,
-      "transit": 77,
-      "calm": 91,
-      "culture": 74
-    },
     "coords": [
       [
         44.916211,
@@ -72421,45 +71916,6 @@ const TRAILS = [
       [
         44.916211,
         -93.215901
-      ]
-    ],
-    "geometrySource": "Valhalla pedestrian routing over OpenStreetMap control points",
-    "controlPoints": [
-      [
-        44.9162,
-        -93.2159
-      ],
-      [
-        44.915,
-        -93.2245
-      ],
-      [
-        44.914,
-        -93.2342
-      ],
-      [
-        44.9123,
-        -93.2455
-      ],
-      [
-        44.9075,
-        -93.2449
-      ],
-      [
-        44.9048,
-        -93.2347
-      ],
-      [
-        44.9057,
-        -93.2238
-      ],
-      [
-        44.9115,
-        -93.2157
-      ],
-      [
-        44.9162,
-        -93.2159
       ]
     ]
   }

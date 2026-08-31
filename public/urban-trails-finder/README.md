@@ -5,11 +5,9 @@ A GitHub Pages-friendly web GIS prototype for Stadtwanderweg-inspired walking lo
 ## What it includes
 
 - Interactive Leaflet map with four city-wander paths per included city
-- Filters by city and minimum route score
-- City Go button that pans to the selected city
-- Route scoring for greenery, water access, transit, calm streets, and culture
-- Download selected or filtered routes as GeoJSON
-- Copy route coordinates in WGS84 latitude/longitude format
+- Filters by city
+- Automatic city zoom when the selected city changes
+- Download selected or filtered routes as GeoJSON, GPX, or KML
 
 ## How to run
 
@@ -17,7 +15,7 @@ Run the Astro site and open `/urban-trails-finder/`. The app uses CDN-hosted Lea
 
 ## Portfolio framing
 
-This prototype stores broad control points and generated pedestrian-routed geometries from Valhalla over OpenStreetMap. A production GIS workflow could add municipal sidewalk inventories and field-verified path quality, then add:
+This prototype stores broad control points and generated pedestrian-routed geometries from Valhalla over OpenStreetMap. It intentionally excludes unverified descriptive attributes. A production GIS workflow could add sourced municipal inventories and field-verified path quality, including:
 
 - sidewalk and crossing quality
 - slope and stair segments
@@ -29,4 +27,4 @@ This prototype stores broad control points and generated pedestrian-routed geome
 
 ## Data note
 
-The included routes are concept city-wander paths for demonstration, not turn-by-turn navigation products.
+The included geometries are generated city-wander paths for demonstration, not field-verified or turn-by-turn navigation products. Distances are calculated from the displayed geometry. Do not add scores, classifications, accessibility claims, environmental attributes, amenities, or qualitative descriptions without a cited authoritative source or a documented reproducible derivation.
