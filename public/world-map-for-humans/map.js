@@ -3,7 +3,6 @@
   const layerState = {
     coastlines: true,
     water: true,
-    urban: true,
     population: false,
     'land-cover': false,
     'false-colour': false,
@@ -12,7 +11,6 @@
   const layerIds = {
     coastlines: ['coastline-halo', 'coastline'],
     water: ['water-fill'],
-    urban: ['urban-fill', 'urban-outline'],
     population: ['population-density'],
     'land-cover': ['worldcover-land-cover'],
     'false-colour': ['worldcover-false-colour'],
@@ -40,11 +38,6 @@
           type: 'vector',
           url: 'https://tiles.openfreemap.org/planet',
           attribution: osmAttribution,
-        },
-        urban: {
-          type: 'geojson',
-          data: '/world-map-for-humans/urban-areas.geojson',
-          attribution: '<a href="https://www.naturalearthdata.com/" target="_blank">Made with Natural Earth</a>',
         },
         'worldcover-land-cover': {
           type: 'raster',
@@ -92,22 +85,6 @@
             'fill-color': '#8cb9bb',
             'fill-opacity': ['interpolate', ['linear'], ['zoom'], 0, 0.92, 8, 0.82],
           },
-        },
-        {
-          id: 'urban-fill',
-          type: 'fill',
-          source: 'urban',
-          paint: {
-            'fill-color': '#e25f3d',
-            'fill-opacity': ['interpolate', ['linear'], ['zoom'], 1, 0.42, 8, 0.62],
-          },
-        },
-        {
-          id: 'urban-outline',
-          type: 'line',
-          source: 'urban',
-          minzoom: 3,
-          paint: { 'line-color': '#7f2f22', 'line-width': 0.65, 'line-opacity': 0.6 },
         },
         {
           id: 'coastline-halo',
@@ -163,7 +140,7 @@
       type: 'raster',
       source: 'ghsl-population',
       layout: { visibility: 'none' },
-      paint: { 'raster-opacity': 0.9, 'raster-fade-duration': 140 },
+      paint: { 'raster-opacity': 0.6, 'raster-fade-duration': 140 },
     }, 'water-fill');
   }
 
@@ -225,10 +202,6 @@
     updatePosition();
   });
   map.on('error', (event) => {
-    if (event.error && /urban-areas\.geojson/.test(String(event.error.message))) {
-      status.textContent = 'The urban layer could not be loaded.';
-      status.classList.add('is-error');
-    }
     if (event.sourceId === 'ghsl-population') {
       status.textContent = 'The population layer could not be loaded.';
       status.classList.remove('is-hidden');

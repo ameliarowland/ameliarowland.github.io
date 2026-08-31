@@ -44,7 +44,6 @@ a { color: inherit; }
 .layer-swatch { width: 27px; height: 27px; border: 1px solid rgba(23,58,60,.35); }
 .swatch-coastline { background: linear-gradient(145deg, var(--paper) 45%, var(--ink) 46%, var(--ink) 52%, var(--water) 53%); }
 .swatch-water { background: var(--water); }
-.swatch-urban { background: repeating-linear-gradient(45deg, #e25f3d 0 3px, #f3b08d 3px 6px); }
 .swatch-population { background: linear-gradient(135deg, #0d0887, #9c179e 42%, #ed7953 72%, #f0f921); }
 .swatch-land-cover { background: conic-gradient(#006400 0 18%, #ffbb22 18% 29%, #ffff4c 29% 40%, #f096ff 40% 52%, #fa0000 52% 62%, #b4b4b4 62% 72%, #0064c8 72% 83%, #0096a0 83% 91%, #00cf75 91% 100%); }
 .swatch-false-colour { background: linear-gradient(135deg, #8d1630, #ec654d 52%, #2d7d73); }

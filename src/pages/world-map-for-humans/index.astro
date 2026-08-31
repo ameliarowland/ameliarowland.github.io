@@ -1,6 +1,6 @@
 ---
 const title = 'World Map for Humans';
-const description = 'An interactive, boundary-free world map built from coastlines, water, population, urban areas, and satellite imagery.';
+const description = 'An interactive, boundary-free world map built from coastlines, water, population, and satellite imagery.';
 ---
 
 <!doctype html>
@@ -60,15 +60,6 @@ const description = 'An interactive, boundary-free world map built from coastlin
               <span class="switch" aria-hidden="true"><span></span></span>
             </button>
             <a class="layer-source" href="https://osmdata.openstreetmap.de/data/water-polygons.html" target="_blank" rel="noreferrer">OSMData · ODbL ↗</a>
-          </div>
-
-          <div class="layer-item">
-            <button class="layer-toggle is-on" type="button" data-layer="urban" aria-pressed="true">
-              <span class="layer-swatch swatch-urban" aria-hidden="true"></span>
-              <span class="layer-copy"><strong>Urban areas</strong></span>
-              <span class="switch" aria-hidden="true"><span></span></span>
-            </button>
-            <a class="layer-source" href="https://naciscdn.org/naturalearth/10m/cultural/ne_10m_urban_areas.zip" target="_blank" rel="noreferrer">Natural Earth · public domain ↗</a>
           </div>
 
           <div class="layer-item">
@@ -138,6 +129,6 @@ const description = 'An interactive, boundary-free world map built from coastlin
     </main>
 
     <script is:inline defer src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
-    <script is:inline defer src="/world-map-for-humans/map.js?v=5"></script>
+    <script is:inline defer src="/world-map-for-humans/map.js?v=6"></script>
   </body>
 </html>
