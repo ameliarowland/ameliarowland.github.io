@@ -14,12 +14,14 @@ export async function getStaticPaths() {
 const { map } = Astro.props;
 const { Content } = await render(map);
 const { title, description, date, image, embedUrl, externalUrl, tallEmbed, tools, tags } = map.data;
-const embedSrc = (() => {
-  if (!embedUrl || !Astro.site) return embedUrl;
+const localizeSiteUrl = (value: string | undefined) => {
+  if (!value || !Astro.site) return value;
 
-  const url = new URL(embedUrl);
-  return url.origin === Astro.site.origin ? `${url.pathname}${url.search}${url.hash}` : embedUrl;
-})();
+  const url = new URL(value);
+  return url.origin === Astro.site.origin ? `${url.pathname}${url.search}${url.hash}` : value;
+};
+const embedSrc = localizeSiteUrl(embedUrl);
+const externalHref = localizeSiteUrl(externalUrl);
 const formattedDate = date.toLocaleDateString('en-US', {
   year: 'numeric',
   month: 'long',
@@ -83,7 +85,7 @@ const formattedDate = date.toLocaleDateString('en-US', {
     {externalUrl && (
       <p class="mt-4">
         <a
-          href={externalUrl}
+          href={externalHref}
           target="_blank"
           rel="noopener"
           class="inline-flex items-center rounded-lg border border-primary px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
