@@ -1,5 +1,6 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { getToolLink, toolNeedsLink } from './data/tool-links';
 
 const maps = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/maps' }),
@@ -38,6 +39,16 @@ const maps = defineCollection({
           path: ['externalUrl'],
         });
       }
+
+      map.tools.forEach((tool, index) => {
+        if (toolNeedsLink(tool) && !getToolLink(tool)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Non-language tool "${tool}" must have an official link in src/data/tool-links.ts.`,
+            path: ['tools', index],
+          });
+        }
+      });
     }),
 });
 

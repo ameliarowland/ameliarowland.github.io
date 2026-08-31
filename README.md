@@ -22,6 +22,13 @@ Every published map article must meet these requirements:
   panels must use no more than 40% of the map width at article-sized desktop
   breakpoints and scroll internally instead of covering most of the map.
 - Preserve a roomier control layout for the full-screen map where appropriate.
+- Link every non-language tool keyword shown at the top of an article to its
+  official website or specification. Scripting languages remain plain text;
+  the content schema enforces the configured tool links.
+- Include contextual inline links in the article prose for named libraries,
+  datasets, services, and source repositories.
+- Render article body copy with full justification while keeping headings
+  left-aligned.
 
 1. Export a preview image as PNG/JPG/SVG and put it in `public/maps/`.
 2. Add a Markdown file in `src/content/maps/`, e.g. `my-map.md`:
