@@ -4,6 +4,7 @@
     coastlines: true,
     water: true,
     urban: true,
+    population: false,
     'land-cover': false,
     'false-colour': false,
   };
@@ -12,13 +13,17 @@
     coastlines: ['coastline-halo', 'coastline'],
     water: ['water-fill'],
     urban: ['urban-fill', 'urban-outline'],
+    population: ['population-density'],
     'land-cover': ['worldcover-land-cover'],
     'false-colour': ['worldcover-false-colour'],
   };
 
   const worldCoverBase = 'https://mapproxy.terrascope.be/mapproxy/wmts';
+  const ghslPopulationCog = 'https://human-settlement.emergency.copernicus.eu/data/tiles/tilesets1/NEW2/COG/POP/WUP_POP_2020.tif';
+  const ghslPopulationTiles = `https://titiler.terrascope.be/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(ghslPopulationCog)}&expression=b1%2A%28b1%3C255%29&colormap_name=plasma&rescale=1%2C18&nodata=0`;
   const osmAttribution = '<a href="https://openfreemap.org/" target="_blank">OpenFreeMap</a> · <a href="https://www.openmaptiles.org/" target="_blank">© OpenMapTiles</a> · data <a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap contributors, ODbL</a>';
   const worldCoverAttribution = '<a href="https://esa-worldcover.org/en/data-access" target="_blank">© ESA WorldCover</a> · service <a href="https://terrascope.be/" target="_blank">Terrascope</a>';
+  const ghslAttribution = '<a href="https://human-settlement.emergency.copernicus.eu/ghs_wup_pop_r2025a.php" target="_blank">© EU · GHS-WUP-POP</a> · <a href="https://terrascope.be/" target="_blank">Terrascope tiles</a>';
 
   const map = new maplibregl.Map({
     container: 'map',
@@ -140,8 +145,30 @@
   const coordinateReadout = document.querySelector('#coordinate-readout');
   const zoomReadout = document.querySelector('#zoom-readout');
   const landCoverLegend = document.querySelector('#land-cover-legend');
+  const populationLegend = document.querySelector('#population-legend');
+
+  function ensurePopulationLayer() {
+    if (map.getLayer('population-density')) return;
+
+    map.addSource('ghsl-population', {
+      type: 'raster',
+      tiles: [ghslPopulationTiles],
+      tileSize: 256,
+      minzoom: 0,
+      maxzoom: 10,
+      attribution: ghslAttribution,
+    });
+    map.addLayer({
+      id: 'population-density',
+      type: 'raster',
+      source: 'ghsl-population',
+      layout: { visibility: 'none' },
+      paint: { 'raster-opacity': 0.9, 'raster-fade-duration': 140 },
+    }, 'water-fill');
+  }
 
   function setLayerVisibility(layerName, isVisible) {
+    if (layerName === 'population' && isVisible) ensurePopulationLayer();
     layerState[layerName] = isVisible;
     layerIds[layerName].forEach((id) => {
       if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', isVisible ? 'visible' : 'none');
@@ -152,6 +179,7 @@
       button.setAttribute('aria-pressed', String(isVisible));
     }
     if (layerName === 'land-cover') landCoverLegend.hidden = !isVisible;
+    if (layerName === 'population') populationLegend.hidden = !isVisible;
   }
 
   function toggleLayer(layerName) {
@@ -159,6 +187,13 @@
     if (next && layerName === 'land-cover') setLayerVisibility('false-colour', false);
     if (next && layerName === 'false-colour') setLayerVisibility('land-cover', false);
     setLayerVisibility(layerName, next);
+    if (next && layerName === 'population') {
+      status.textContent = 'Loading population tiles…';
+      status.classList.remove('is-hidden', 'is-error');
+      map.once('idle', () => {
+        if (!status.classList.contains('is-error')) status.classList.add('is-hidden');
+      });
+    }
   }
 
   function updatePosition() {
@@ -192,6 +227,11 @@
   map.on('error', (event) => {
     if (event.error && /urban-areas\.geojson/.test(String(event.error.message))) {
       status.textContent = 'The urban layer could not be loaded.';
+      status.classList.add('is-error');
+    }
+    if (event.sourceId === 'ghsl-population') {
+      status.textContent = 'The population layer could not be loaded.';
+      status.classList.remove('is-hidden');
       status.classList.add('is-error');
     }
   });

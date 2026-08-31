@@ -45,6 +45,7 @@ a { color: inherit; }
 .swatch-coastline { background: linear-gradient(145deg, var(--paper) 45%, var(--ink) 46%, var(--ink) 52%, var(--water) 53%); }
 .swatch-water { background: var(--water); }
 .swatch-urban { background: repeating-linear-gradient(45deg, #e25f3d 0 3px, #f3b08d 3px 6px); }
+.swatch-population { background: linear-gradient(135deg, #0d0887, #9c179e 42%, #ed7953 72%, #f0f921); }
 .swatch-land-cover { background: conic-gradient(#006400 0 18%, #ffbb22 18% 29%, #ffff4c 29% 40%, #f096ff 40% 52%, #fa0000 52% 62%, #b4b4b4 62% 72%, #0064c8 72% 83%, #0096a0 83% 91%, #00cf75 91% 100%); }
 .swatch-false-colour { background: linear-gradient(135deg, #8d1630, #ec654d 52%, #2d7d73); }
 .layer-copy { min-width: 0; }
@@ -59,6 +60,10 @@ a { color: inherit; }
 .land-cover-legend[hidden] { display: none; }
 .land-cover-legend li { display: flex; align-items: center; gap: 6px; }
 .land-cover-legend li span { flex: none; width: 9px; height: 9px; border: 1px solid rgba(23,58,60,.18); background: var(--legend-color); }
+.population-legend { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; align-items: center; gap: 7px; margin: 1px 9px 12px 51px; color: var(--muted); font: 400 8px/1.25 var(--mono); }
+.population-legend[hidden] { display: none; }
+.population-scale { height: 8px; border: 1px solid rgba(23,58,60,.18); background: linear-gradient(90deg, #0d0887, #7e03a8 30%, #cc4778 55%, #f89441 78%, #f0f921); }
+.population-legend small { grid-column: 1 / -1; font: inherit; }
 .imagery-note { margin: 7px 9px 2px; color: var(--muted); font: 400 8px/1.45 var(--mono); }
 
 .panel-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 21px; border-top: 1px solid var(--ink); background: var(--paper-deep); }

@@ -1,6 +1,6 @@
 ---
 const title = 'World Map for Humans';
-const description = 'An interactive, boundary-free world map built from coastlines, water, urban areas, and satellite imagery.';
+const description = 'An interactive, boundary-free world map built from coastlines, water, population, urban areas, and satellite imagery.';
 ---
 
 <!doctype html>
@@ -13,7 +13,7 @@ const description = 'An interactive, boundary-free world map built from coastlin
     <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
     <link rel="preconnect" href="https://titiler.terrascope.be" crossorigin />
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css" />
-    <link rel="stylesheet" href="/world-map-for-humans/map.css?v=3" />
+    <link rel="stylesheet" href="/world-map-for-humans/map.css?v=4" />
   </head>
   <body>
     <main class="map-shell">
@@ -70,6 +70,21 @@ const description = 'An interactive, boundary-free world map built from coastlin
             </button>
             <a class="layer-source" href="https://naciscdn.org/naturalearth/10m/cultural/ne_10m_urban_areas.zip" target="_blank" rel="noreferrer">Natural Earth · public domain ↗</a>
           </div>
+
+          <div class="layer-item">
+            <button class="layer-toggle" type="button" data-layer="population" aria-pressed="false">
+              <span class="layer-swatch swatch-population" aria-hidden="true"></span>
+              <span class="layer-copy"><strong>Population · 2020</strong></span>
+              <span class="switch" aria-hidden="true"><span></span></span>
+            </button>
+            <a class="layer-source" href="https://human-settlement.emergency.copernicus.eu/ghs_wup_pop_r2025a.php" target="_blank" rel="noreferrer">Copernicus GHSL · CC BY 4.0 ↗</a>
+          </div>
+          <div id="population-legend" class="population-legend" aria-label="Estimated residents per one kilometre grid cell" hidden>
+            <span>Few</span>
+            <span class="population-scale" aria-hidden="true"></span>
+            <span>100k+</span>
+            <small>Estimated residents per ~1 km² cell</small>
+          </div>
         </div>
 
         <div class="layer-section imagery-section" aria-labelledby="imagery-heading">
@@ -123,6 +138,6 @@ const description = 'An interactive, boundary-free world map built from coastlin
     </main>
 
     <script is:inline defer src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
-    <script is:inline defer src="/world-map-for-humans/map.js?v=4"></script>
+    <script is:inline defer src="/world-map-for-humans/map.js?v=5"></script>
   </body>
 </html>
