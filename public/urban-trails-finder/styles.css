@@ -83,10 +83,6 @@
   z-index: 650;
 }
 
-.leaflet-popup-pane {
-  z-index: 700;
-}
-
 .leaflet-control {
   position: relative;
   z-index: 800;
@@ -174,8 +170,13 @@ button {
 }
 
 .embed-panel-close,
-.embed-panel-open {
+.embed-panel-open,
+.embed-panel-heading {
   display: none;
+}
+
+.sidebar-content {
+  display: contents;
 }
 
 .app-shell {
@@ -357,7 +358,7 @@ output {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -381,19 +382,9 @@ output {
   text-transform: uppercase;
 }
 
-.score-pill {
-  min-width: 52px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  color: #fff;
-  background: var(--teal);
-  text-align: center;
-  font-weight: 850;
-}
-
 .route-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 8px;
   margin: 14px 0;
 }
@@ -424,42 +415,22 @@ dd {
   line-height: 1.45;
 }
 
-.metric-bars {
-  display: grid;
-  gap: 9px;
-  margin-bottom: 14px;
-}
-
-.metric-row {
-  display: grid;
-  grid-template-columns: 86px 1fr 34px;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-}
-
-.metric-track {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e8e2d8;
-}
-
-.metric-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--green);
-}
-
 .action-row {
-  gap: 8px;
+  gap: 5px;
 }
 
 .primary-action,
 .secondary-action {
   flex: 1;
-  padding: 0 12px;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 0.75rem;
   font-weight: 800;
+}
+
+.list-actions {
+  display: flex;
+  gap: 4px;
 }
 
 .primary-action {
@@ -480,10 +451,16 @@ button:disabled {
 
 .text-button {
   min-height: 36px;
-  padding: 0 10px;
+  padding: 0 7px;
   color: var(--green);
   background: #edf6f1;
+  font-size: 0.72rem;
   font-weight: 800;
+}
+
+.text-button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .trail-list {
@@ -516,8 +493,7 @@ button:disabled {
 }
 
 .card-top,
-.card-meta,
-.tag-row {
+.card-meta {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -527,14 +503,7 @@ button:disabled {
   justify-content: space-between;
 }
 
-.card-score {
-  flex: 0 0 auto;
-  color: var(--teal);
-  font-weight: 850;
-}
-
-.card-meta,
-.tag-row {
+.card-meta {
   flex-wrap: wrap;
 }
 
@@ -542,15 +511,6 @@ button:disabled {
   margin-bottom: 10px;
   color: var(--muted);
   font-size: 0.82rem;
-}
-
-.tag-row span {
-  padding: 5px 8px;
-  border-radius: 999px;
-  color: #263531;
-  background: #eee8dd;
-  font-size: 0.72rem;
-  font-weight: 750;
 }
 
 .method-note {
@@ -565,6 +525,67 @@ button:disabled {
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
+}
+
+.basemap-switcher {
+  position: absolute;
+  z-index: 1001;
+  right: 10px;
+  bottom: 112px;
+  display: grid;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0 rgba(23, 58, 60, 0.16);
+}
+
+.route-hit-area {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.basemap-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 1px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+}
+
+.basemap-button:hover,
+.basemap-button:focus-visible,
+.basemap-button.is-active {
+  border-color: var(--amber);
+  outline: 0;
+}
+
+.basemap-thumbnail {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-position: center;
+  background-size: cover;
+}
+
+.basemap-topographic {
+  background-image: url("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/4/5/2");
+}
+
+.basemap-light-gray {
+  background-image: url("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/4/5/2");
+}
+
+.basemap-satellite {
+  background-image: url("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/4/5/2");
+}
+
+.basemap-openstreetmap {
+  background-image: url("https://tile.openstreetmap.org/4/2/5.png");
 }
 
 body.article-embed {
@@ -594,11 +615,13 @@ body.article-embed .sidebar {
   left: 16px;
   width: min(350px, calc(100vw - 32px));
   height: auto;
-  padding-top: 12px;
+  padding: 0;
   border: 1px solid var(--ink);
   background: rgba(247, 243, 232, 0.96);
   box-shadow: 7px 7px 0 rgba(23, 58, 60, 0.16);
   backdrop-filter: blur(14px);
+  overflow: hidden;
+  gap: 0;
   transition: transform 0.28s ease, opacity 0.2s ease;
 }
 
@@ -608,19 +631,68 @@ body.article-embed .sidebar.is-closed {
   pointer-events: none;
 }
 
+body.article-embed .embed-panel-heading {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+body.article-embed .panel-number {
+  margin: 0 0 7px;
+  color: var(--amber);
+  font: 700 0.58rem/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+body.article-embed .embed-panel-heading h2 {
+  margin: 0;
+  font: 400 1.65rem/0.98 var(--display);
+  letter-spacing: -0.035em;
+}
+
+body.article-embed .sidebar-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: var(--ink) var(--paper);
+  scrollbar-width: thin;
+}
+
+body.article-embed .sidebar-content::-webkit-scrollbar {
+  width: 9px;
+}
+
+body.article-embed .sidebar-content::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+
+body.article-embed .sidebar-content::-webkit-scrollbar-thumb {
+  border: 2px solid var(--paper);
+  background: var(--ink);
+}
+
 body.article-embed .embed-panel-close {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   display: grid;
   width: 34px;
   height: 34px;
-  margin: 0 0 0 auto;
+  flex: none;
+  margin: -5px -5px 0 0;
   padding: 0;
   place-items: center;
-  border: 1px solid var(--ink);
-  color: var(--paper);
-  background: var(--ink);
+  border: 0;
+  color: var(--ink);
+  background: transparent;
 }
 
 body.article-embed .embed-panel-close svg {
@@ -649,22 +721,59 @@ body.article-embed .embed-panel-open.is-visible {
   display: block;
 }
 
+/* Match the panel proportions used by the other article-sized map embeds. */
+@media (min-width: 641px) and (max-width: 800px) {
+  body.article-embed .sidebar {
+    bottom: 64px;
+    width: min(280px, calc(100vw - 32px));
+  }
+
+  body.article-embed .embed-panel-heading {
+    padding: 16px 16px 10px;
+  }
+
+  body.article-embed .embed-panel-heading h2 {
+    font-size: 1.45rem;
+  }
+
+  body.article-embed .embed-panel-close {
+    width: 28px;
+    height: 28px;
+  }
+
+  body.article-embed .sidebar-content {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  body.article-embed .list-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  body.article-embed .list-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  body.article-embed .text-button {
+    min-width: 0;
+    padding: 0 4px;
+    gap: 3px;
+    font-size: 0.64rem;
+  }
+}
+
 #map {
   width: 100%;
   height: 100%;
   background: #e7e0d2;
 }
 
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  border-radius: 0;
-  color: var(--ink);
-  background: var(--paper);
-  box-shadow: 5px 5px 0 rgba(23, 58, 60, 0.2);
-}
-
 .leaflet-control-layers {
-  border: 1px solid var(--line) !important;
+  border: 1px solid var(--ink) !important;
   border-radius: 0;
   box-shadow: 4px 4px 0 rgba(23, 58, 60, 0.16);
   color: var(--ink);
@@ -681,12 +790,17 @@ body.article-embed .embed-panel-open.is-visible {
   accent-color: var(--green);
 }
 
-.map-popup h3 {
-  margin: 0 0 6px;
+.leaflet-control-layers-toggle {
+  display: block;
+  width: 30px !important;
+  height: 30px !important;
+  background-size: 18px 18px !important;
 }
 
-.map-popup p {
-  margin: 0;
+.leaflet-control-zoom {
+  border: 1px solid var(--ink) !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 rgba(23, 58, 60, 0.16) !important;
 }
 
 .trail-number-marker {

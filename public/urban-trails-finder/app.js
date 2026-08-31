@@ -7,6 +7,7 @@ const state = {
 
 const TRAIL_COLOR = "#e25f3d";
 const DEFAULT_CITY = "Seattle, WA";
+const ROUTE_NUMBER_MIN_ZOOM = 10;
 const isArticleEmbed = new URLSearchParams(window.location.search).get("embed") === "article";
 document.body.classList.toggle("article-embed", isArticleEmbed);
 
@@ -49,38 +50,30 @@ const basemaps = {
   })
 };
 
-basemaps["Esri Topographic"].addTo(map);
-L.control.layers(basemaps, null, {
-  collapsed: false,
-  position: "topright"
-}).addTo(map);
+let activeBasemap = basemaps["Esri Topographic"];
+activeBasemap.addTo(map);
 
 const routeGroup = L.featureGroup().addTo(map);
 const markerGroup = L.featureGroup().addTo(map);
 
 const elements = {
   cityFilter: document.getElementById("cityFilter"),
-  scoreFilter: document.getElementById("scoreFilter"),
-  scoreValue: document.getElementById("scoreValue"),
   trailCount: document.getElementById("trailCount"),
   cityCount: document.getElementById("cityCount"),
-  avgScore: document.getElementById("avgScore"),
   selectedCity: document.getElementById("selectedCity"),
   selectedName: document.getElementById("selectedName"),
-  selectedScore: document.getElementById("selectedScore"),
   selectedDistance: document.getElementById("selectedDistance"),
-  selectedTransit: document.getElementById("selectedTransit"),
-  selectedComfort: document.getElementById("selectedComfort"),
-  selectedDescription: document.getElementById("selectedDescription"),
-  metricBars: document.getElementById("metricBars"),
   downloadGpx: document.getElementById("downloadGpx"),
   downloadKml: document.getElementById("downloadKml"),
+  downloadGeoJson: document.getElementById("downloadGeoJson"),
   downloadAllGpx: document.getElementById("downloadAllGpx"),
   downloadAllKml: document.getElementById("downloadAllKml"),
+  downloadAllGeoJson: document.getElementById("downloadAllGeoJson"),
   trailList: document.getElementById("trailList"),
   sidebar: document.querySelector(".sidebar"),
   closeSidebarButton: document.getElementById("closeSidebarButton"),
-  openSidebarButton: document.getElementById("openSidebarButton")
+  openSidebarButton: document.getElementById("openSidebarButton"),
+  basemapButtons: document.querySelectorAll(".basemap-button")
 };
 
 function init() {
@@ -111,13 +104,13 @@ function bindEvents() {
     elements.openSidebarButton.addEventListener("click", () => setSidebarOpen(true));
   }
 
+  elements.basemapButtons.forEach((button) => {
+    button.addEventListener("click", () => setBasemap(button.dataset.basemap));
+  });
+
   elements.cityFilter.addEventListener("change", () => {
     applyFilters();
     goToSelectedCity();
-  });
-  elements.scoreFilter.addEventListener("input", () => {
-    elements.scoreValue.textContent = elements.scoreFilter.value;
-    applyFilters();
   });
   elements.downloadGpx.addEventListener("click", () => {
     const trail = getActiveTrail();
@@ -127,13 +120,35 @@ function bindEvents() {
     const trail = getActiveTrail();
     if (trail) downloadKml([trail], `${trail.id}.kml`);
   });
+  elements.downloadGeoJson.addEventListener("click", () => {
+    const trail = getActiveTrail();
+    if (trail) downloadGeoJson([trail], `${trail.id}.geojson`);
+  });
   elements.downloadAllGpx.addEventListener("click", () => {
     downloadGpx(state.filteredTrails, "urban-trails-visible.gpx");
   });
   elements.downloadAllKml.addEventListener("click", () => {
     downloadKml(state.filteredTrails, "urban-trails-visible.kml");
   });
+  elements.downloadAllGeoJson.addEventListener("click", () => {
+    downloadGeoJson(state.filteredTrails, "urban-trails-visible.geojson");
+  });
   window.addEventListener("resize", () => map.invalidateSize());
+  map.on("zoomend", updateRouteNumberVisibility);
+}
+
+function setBasemap(name) {
+  const nextBasemap = basemaps[name];
+  if (!nextBasemap || nextBasemap === activeBasemap) return;
+
+  map.removeLayer(activeBasemap);
+  activeBasemap = nextBasemap;
+  activeBasemap.addTo(map);
+  elements.basemapButtons.forEach((button) => {
+    const isActive = button.dataset.basemap === name;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 function setSidebarOpen(isOpen) {
@@ -159,13 +174,9 @@ function setInitialMapExtent() {
 
 function applyFilters() {
   const city = elements.cityFilter.value;
-  const minScore = Number(elements.scoreFilter.value);
-
-  state.filteredTrails = TRAILS.filter((trail) => {
-    const cityMatch = city === "all" || `${trail.city}, ${trail.state}` === city;
-    const scoreMatch = trailScore(trail) >= minScore;
-    return cityMatch && scoreMatch;
-  });
+  state.filteredTrails = TRAILS.filter((trail) => (
+    city === "all" || `${trail.city}, ${trail.state}` === city
+  ));
 
   if (!state.filteredTrails.some((trail) => trail.id === state.activeTrailId)) {
     state.activeTrailId = state.filteredTrails[0]?.id ?? null;
@@ -189,6 +200,14 @@ function renderMap() {
   state.markerLayers = [];
 
   state.filteredTrails.forEach((trail) => {
+    const hitLayer = L.polyline(trail.coords, {
+      color: "#000",
+      weight: 18,
+      opacity: 0,
+      interactive: true,
+      className: "route-hit-area",
+      lineJoin: "round"
+    });
     const layer = L.polyline(trail.coords, {
       color: TRAIL_COLOR,
       weight: trail.id === state.activeTrailId ? 7 : 5,
@@ -196,13 +215,16 @@ function renderMap() {
       lineJoin: "round"
     });
 
-    layer.bindPopup(popupTemplate(trail));
     layer.on("click", () => selectTrail(trail.id, { fit: false }));
     layer.addTo(routeGroup);
     state.trailLayers.set(trail.id, layer);
+    hitLayer.on("click", () => selectTrail(trail.id, { fit: false }));
+    hitLayer.addTo(routeGroup);
+    hitLayer.bringToFront();
   });
 
   renderTrailMarkers(state.filteredTrails);
+  updateRouteNumberVisibility();
 }
 
 function renderTrailMarkers(trails) {
@@ -263,15 +285,10 @@ function renderList() {
     button.innerHTML = `
       <div class="card-top">
         <h3>${trail.name}</h3>
-        <span class="card-score">${trailScore(trail)}</span>
       </div>
       <div class="card-meta">
         <span>${trail.city}, ${trail.state}</span>
         <span>${formatDistance(routeDistanceMiles(trail))}</span>
-        <span>${trail.difficulty}</span>
-      </div>
-      <div class="tag-row">
-        ${trail.tags.map((tag) => `<span>${tag}</span>`).join("")}
       </div>
     `;
 
@@ -282,13 +299,9 @@ function renderList() {
 function renderSummary() {
   const trails = state.filteredTrails;
   const cities = new Set(trails.map((trail) => `${trail.city}, ${trail.state}`));
-  const average = trails.length
-    ? Math.round(trails.reduce((sum, trail) => sum + trailScore(trail), 0) / trails.length)
-    : 0;
 
   elements.trailCount.textContent = trails.length;
   elements.cityCount.textContent = cities.size;
-  elements.avgScore.textContent = average;
 }
 
 function selectTrail(trailId, options = { fit: false }) {
@@ -318,43 +331,20 @@ function selectTrail(trailId, options = { fit: false }) {
 function renderSelection(trail) {
   elements.selectedCity.textContent = `${trail.city}, ${trail.state}`;
   elements.selectedName.textContent = trail.name;
-  elements.selectedScore.textContent = trailScore(trail);
   elements.selectedDistance.textContent = formatDistance(routeDistanceMiles(trail));
-  elements.selectedTransit.textContent = trail.transit;
-  elements.selectedComfort.textContent = trail.comfort;
-  elements.selectedDescription.textContent = trail.description;
   elements.downloadGpx.disabled = false;
   elements.downloadKml.disabled = false;
-
-  elements.metricBars.innerHTML = Object.entries(trail.scores)
-    .map(([key, value]) => metricRow(key, value))
-    .join("");
+  elements.downloadGeoJson.disabled = false;
 }
 
 function renderEmptySelection() {
   elements.selectedCity.textContent = "No route selected";
   elements.selectedName.textContent = "Route details";
-  elements.selectedScore.textContent = "--";
   elements.selectedDistance.textContent = "--";
-  elements.selectedTransit.textContent = "--";
-  elements.selectedComfort.textContent = "--";
-  elements.selectedDescription.textContent = "No routes match the current filters.";
-  elements.metricBars.innerHTML = "";
   markerGroup.clearLayers();
   elements.downloadGpx.disabled = true;
   elements.downloadKml.disabled = true;
-}
-
-function metricRow(key, value) {
-  const label = key.charAt(0).toUpperCase() + key.slice(1);
-  const color = key === "water" ? "#8cb9bb" : key === "culture" ? "#e25f3d" : key === "calm" ? "#173a3c" : "#6f836b";
-  return `
-    <div class="metric-row">
-      <span>${label}</span>
-      <span class="metric-track"><span class="metric-fill" style="width: ${value}%; background: ${color};"></span></span>
-      <strong>${value}</strong>
-    </div>
-  `;
+  elements.downloadGeoJson.disabled = true;
 }
 
 function fitFilteredTrails() {
@@ -377,10 +367,22 @@ function goToSelectedCity() {
   }
 }
 
+function updateRouteNumberVisibility() {
+  const shouldShow = map.getZoom() >= ROUTE_NUMBER_MIN_ZOOM;
+  if (shouldShow && !map.hasLayer(markerGroup)) {
+    markerGroup.addTo(map);
+  } else if (!shouldShow && map.hasLayer(markerGroup)) {
+    map.removeLayer(markerGroup);
+  }
+}
+
 function mapFitOptions(padding) {
   if (!isArticleEmbed) return { padding: [padding, padding] };
 
-  const panelPadding = Math.min(370, Math.max(padding, Math.round(map.getSize().x * 0.52)));
+  const mapWidth = map.getSize().x;
+  const panelPadding = mapWidth >= 641 && mapWidth <= 800
+    ? 312
+    : Math.min(370, Math.max(padding, Math.round(mapWidth * 0.52)));
   return {
     paddingTopLeft: [panelPadding, padding],
     paddingBottomRight: [padding, padding]
@@ -395,22 +397,8 @@ function boundsForTrails(trails) {
   return bounds;
 }
 
-function popupTemplate(trail) {
-  return `
-    <div class="map-popup">
-      <h3>${trail.name}</h3>
-      <p>${trail.city}, ${trail.state} - ${formatDistance(routeDistanceMiles(trail))} - score ${trailScore(trail)}</p>
-    </div>
-  `;
-}
-
 function getActiveTrail() {
   return TRAILS.find((trail) => trail.id === state.activeTrailId);
-}
-
-function trailScore(trail) {
-  const values = Object.values(trail.scores);
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
 function routeDistanceMiles(trail) {
@@ -438,6 +426,29 @@ function toRadians(value) {
 
 function formatDistance(distance) {
   return `${distance.toFixed(1)} mi`;
+}
+
+function downloadGeoJson(trails, filename) {
+  const featureCollection = {
+    type: "FeatureCollection",
+    features: trails.map((trail) => ({
+      type: "Feature",
+      properties: {
+        id: trail.id,
+        name: trail.name,
+        city: trail.city,
+        state: trail.state,
+        distance_miles: Number(routeDistanceMiles(trail).toFixed(2)),
+        geometry_source: trail.geometrySource
+      },
+      geometry: {
+        type: "LineString",
+        coordinates: trail.coords.map(([lat, lng]) => [lng, lat])
+      }
+    }))
+  };
+
+  downloadText(JSON.stringify(featureCollection, null, 2), filename, "application/geo+json");
 }
 
 function downloadGpx(trails, filename) {
@@ -500,7 +511,7 @@ ${placemarks}
 }
 
 function routeExportDescription(trail) {
-  return `${trail.city}, ${trail.state} | ${formatDistance(routeDistanceMiles(trail))} | score ${trailScore(trail)}. ${trail.description}`;
+  return `${trail.city}, ${trail.state} | ${formatDistance(routeDistanceMiles(trail))} | ${trail.geometrySource}`;
 }
 
 function downloadText(content, filename, mimeType) {
