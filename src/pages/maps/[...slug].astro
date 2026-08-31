@@ -13,6 +13,12 @@ export async function getStaticPaths() {
 const { map } = Astro.props;
 const { Content } = await render(map);
 const { title, description, date, image, embedUrl, externalUrl, tallEmbed, tools, tags } = map.data;
+const embedSrc = (() => {
+  if (!embedUrl || !Astro.site) return embedUrl;
+
+  const url = new URL(embedUrl);
+  return url.origin === Astro.site.origin ? `${url.pathname}${url.search}${url.hash}` : embedUrl;
+})();
 const formattedDate = date.toLocaleDateString('en-US', {
   year: 'numeric',
   month: 'long',
@@ -33,7 +39,7 @@ const formattedDate = date.toLocaleDateString('en-US', {
     <div class="mt-8">
       {embedUrl ? (
         <iframe
-          src={embedUrl}
+          src={embedSrc}
           title={title}
           class:list={[
             'w-full rounded-xl border border-border',
