@@ -80,6 +80,17 @@ a { color: inherit; }
 .maplibregl-ctrl-attrib { max-width: min(72vw, 720px); border-radius: 0 !important; background: rgba(243,239,228,.9) !important; font-family: var(--mono); font-size: 8px !important; }
 .maplibregl-ctrl-attrib a { color: var(--ink) !important; }
 
+/* Keep the layer panel proportional inside article-sized embeds. */
+@media (min-width: 681px) and (max-width: 800px) {
+  .layer-panel { bottom: 64px; width: min(280px, calc(100vw - 32px)); }
+  .panel-heading { gap: 12px; padding: 16px 16px 10px; }
+  .panel-heading h2 { max-width: 210px; font-size: 25px; }
+  .panel-close { width: 28px; height: 28px; font-size: 24px; }
+  .panel-intro { padding: 0 16px 14px; font-size: 11px; }
+  .layer-section { padding: 12px 9px 8px; }
+  .panel-actions { padding: 11px 16px; }
+}
+
 @media (max-width: 680px) {
   .map-header { min-height: 68px; padding: 11px 13px; }
   .map-header h1 { font-size: 24px; }

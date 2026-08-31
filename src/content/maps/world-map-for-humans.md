@@ -4,21 +4,21 @@ description: "An exploratory interactive map that gives geographic context throu
 date: 2026-08-29
 image: /maps/world_map_for_humans.png
 embedUrl: https://ameliarowland.github.io/world-map-for-humans/
-tallEmbed: true
+externalUrl: https://ameliarowland.github.io/world-map-for-humans/
 tools: [MapLibre GL JS, OpenStreetMap, Natural Earth, ESA WorldCover]
 tags: [web-gis, experimental-cartography, open-data, remote-sensing]
 ---
 
 Putting the Slingshot Radical Contact List into an interactive map got me thinking about basemaps: how could a map give location data enough geographic context to feel grounded without quietly centering countries and political borders?
 
-This map is an exploratory answer. It reduces the world to a small vocabulary of coast, water, settlement, and satellite observation. Each layer can be switched on or off, making it possible to notice how much of our mental map depends on boundaries and labels—and what other patterns appear when they are absent.
+Built with [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/), this map is an exploratory answer. It reduces the world to a small vocabulary of coast, water, settlement, and satellite observation. Each layer can be switched on or off, making it possible to notice how much of our mental map depends on boundaries and labels—and what other patterns appear when they are absent.
 
 > Can you navigate in the map to your hometown? Does it feel different?
 
 ## The Layers
 
 - **Coastlines.** The downloadable reference is the [OSMData coastline dataset](https://osmdata.openstreetmap.de/data/coastlines.html), derived from OpenStreetMap ways tagged `natural=coastline` and licensed under the ODbL.
-- **Water polygons.** Oceans and seas are referenced from [OSMData's water polygons](https://osmdata.openstreetmap.de/data/water-polygons.html). For responsive web display, the live map renders OSM-derived water geometry through OpenMapTiles-compatible tiles served by OpenFreeMap.
+- **Water polygons.** Oceans and seas are referenced from [OSMData's water polygons](https://osmdata.openstreetmap.de/data/water-polygons.html). For responsive web display, the live map renders OSM-derived water geometry through OpenMapTiles-compatible tiles served by [OpenFreeMap](https://openfreemap.org/).
 - **Urban areas.** Built-up areas come from [Natural Earth's 1:10 million urban areas dataset](https://naciscdn.org/naturalearth/10m/cultural/ne_10m_urban_areas.zip), simplified for browser performance. Natural Earth data is in the public domain.
 - **WorldCover.** The optional V2 2021 land-cover classification and false-colour infrared composite are ESA WorldCover layers served through the public [Terrascope WMTS/WMS service](https://wmts.terrascope.be/?service=WMTS&request=GetCapabilities). [ESA's data-access page](https://esa-worldcover.org/en/data-access) documents the products and access options.
 

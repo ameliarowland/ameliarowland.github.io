@@ -8,11 +8,13 @@ tags: [sample, vienna, sustainability]
 draft: true
 ---
 
-This is a **sample map entry**. To publish a real one:
+This is a **draft sample map entry**. Before publishing a real one:
 
 1. Drop your exported map image (PNG/JPG/SVG) into `public/maps/`.
 2. Copy this file in `src/content/maps/`, rename it, and update the frontmatter.
-3. Write the story behind the map right here in Markdown — the data you used,
+3. Add `embedUrl` for the interactive map shown in the article and `externalUrl`
+   for its full-screen version. Published map posts require both fields.
+4. Write the story behind the map right here in Markdown — the data you used,
    the question you asked, what surprised you.
 
 The text supports headings, lists, links, images, and blockquotes.

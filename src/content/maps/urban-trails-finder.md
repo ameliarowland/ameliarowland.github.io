@@ -3,16 +3,18 @@ title: "Urban Trails Finder"
 description: "A Stadtwanderweg-inspired interactive map prototype for curated walking loops in US cities."
 date: 2026-07-10
 image: /maps/city_wander_paths.png
+embedUrl: https://ameliarowland.github.io/urban-trails-finder/
 externalUrl: https://ameliarowland.github.io/urban-trails-finder/
+tallEmbed: true
 tools: [Leaflet, OpenStreetMap, GeoJSON, JavaScript]
 tags: [urbanism, walkability, web-gis, sustainability]
 ---
 
-Urban Trails Finder explores how US cities could present longer recreational walking loops in the spirit of Vienna's Stadtwanderwege. The prototype includes four city-wander paths for each included city, combining parks, waterfronts, transit access, quieter streets, cultural stops, and memorable urban terrain. The prototype includes city browsing, scorecards, OSM-routed starter geometries, city zoom controls, basemap switching, and route export to GPX and KML. 
+Urban Trails Finder explores how US cities could present longer recreational walking loops in the spirit of Vienna's Stadtwanderwege. Built with [Leaflet](https://leafletjs.com/) and [OpenStreetMap](https://www.openstreetmap.org/), the prototype includes four city-wander paths for each included city, combining parks, waterfronts, transit access, quieter streets, cultural stops, and memorable urban terrain. It includes city browsing, scorecards, OSM-routed starter geometries, city zoom controls, basemap switching, and route export to [GeoJSON](https://www.rfc-editor.org/info/rfc7946/), GPX, and KML.
 
 ## GIS Method
 
-The current routes are generated from route control points using Valhalla pedestrian routing over OpenStreetMap. A fuller version could add municipal sidewalk inventories and allow for route editing/development in the app.
+The current routes are generated from route control points using the [Valhalla open-source routing engine](https://github.com/valhalla/valhalla) over [OpenStreetMap](https://www.openstreetmap.org/) data. A fuller version could add municipal sidewalk inventories and allow for route editing and development in the app.
 
 ## Why It Matters
 
