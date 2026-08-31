@@ -586,6 +586,9 @@ body.article-embed .map-panel {
 
 body.article-embed .sidebar {
   position: absolute;
+  z-index: 1100;
+  grid-column: auto;
+  grid-row: auto;
   top: 92px;
   bottom: 16px;
   left: 16px;
@@ -627,7 +630,7 @@ body.article-embed .embed-panel-close svg {
 
 body.article-embed .embed-panel-open {
   position: absolute;
-  z-index: 750;
+  z-index: 1100;
   top: 92px;
   left: 16px;
   display: none;
