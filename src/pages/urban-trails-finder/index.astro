@@ -21,12 +21,11 @@
       <aside class="sidebar" aria-label="Urban trail controls">
         <header class="app-header">
           <div>
-            <p class="eyebrow">Stadtwanderweg-inspired GIS</p>
+            <p class="eyebrow">
+              <a href="https://www.wien.gv.at/en/leisure/hiking-paths" target="_blank" rel="noopener noreferrer">Stadtwanderweg</a>-inspired GIS
+            </p>
             <h1>Urban Trails Finder</h1>
           </div>
-          <button class="icon-button" id="fitAllButton" type="button" title="Fit all trails" aria-label="Fit all trails">
-            <i data-lucide="scan"></i>
-          </button>
         </header>
 
         <section class="filter-panel" aria-label="Trail filters">
@@ -40,10 +39,6 @@
             <input id="scoreFilter" type="range" min="60" max="95" value="60">
             <output id="scoreValue" for="scoreFilter">60</output>
           </div>
-          <button id="goCityButton" type="button" class="primary-action go-city-action">
-            <i data-lucide="map-pinned"></i>
-            Go
-          </button>
         </section>
 
         <section class="summary-grid" aria-label="Filtered trail summary">

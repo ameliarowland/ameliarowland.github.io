@@ -1,15 +1,19 @@
 :root {
-  --ink: #17201f;
-  --muted: #66736f;
-  --paper: #f7f4ed;
-  --panel: #fffdfa;
-  --line: #ded8ce;
-  --green: #31785f;
-  --teal: #087f8c;
-  --amber: #b86b23;
-  --blue: #2d6cdf;
-  --rose: #b64a5b;
-  --shadow: 0 14px 35px rgba(25, 29, 31, 0.16);
+  --ink: #173a3c;
+  --muted: #6e7069;
+  --paper: #f3efe4;
+  --panel: #f7f3e8;
+  --line: rgba(23, 58, 60, 0.25);
+  --green: #173a3c;
+  --teal: #2d7277;
+  --amber: #e25f3d;
+  --blue: #547f82;
+  --rose: #a84231;
+  --water: #8cb9bb;
+  --shadow: 7px 7px 0 rgba(23, 58, 60, 0.16);
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --display: Georgia, "Times New Roman", serif;
+  --sans: "Avenir Next", "Segoe UI", Arial, sans-serif;
 }
 
 /* Leaflet structural styles are kept local so tile positioning does not depend on CDN CSS. */
@@ -156,7 +160,7 @@ body {
 body {
   color: var(--ink);
   background: var(--paper);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--sans);
 }
 
 button,
@@ -207,9 +211,15 @@ button {
 .eyebrow {
   margin: 0 0 5px;
   color: var(--amber);
-  font-size: 0.73rem;
-  font-weight: 800;
+  font: 700 0.68rem/1 var(--mono);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.eyebrow a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 h1,
@@ -221,7 +231,9 @@ p {
 
 h1 {
   margin-bottom: 0;
-  font-size: 1.75rem;
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 400;
   line-height: 1.05;
 }
 
@@ -247,7 +259,7 @@ h3 {
   gap: 8px;
   min-height: 40px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .icon-button {
@@ -270,7 +282,7 @@ h3 {
 .trail-list-section,
 .method-note {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   background: #fffdfa;
 }
 
@@ -303,7 +315,7 @@ select {
   padding: 0 12px;
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   background: #fff;
 }
 
@@ -318,7 +330,7 @@ input[type="range"] {
 output {
   min-width: 42px;
   padding: 7px 9px;
-  border-radius: 8px;
+  border-radius: 0;
   color: var(--panel);
   background: var(--green);
   text-align: center;
@@ -334,7 +346,7 @@ output {
 .summary-grid div {
   min-width: 0;
   padding: 12px 10px;
-  border-radius: 8px;
+  border-radius: 0;
   color: var(--panel);
   background: var(--ink);
 }
@@ -372,7 +384,7 @@ output {
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   background: #faf7f1;
 }
 
@@ -437,11 +449,6 @@ dd {
   background: var(--green);
 }
 
-.go-city-action {
-  width: 100%;
-  margin-top: 4px;
-}
-
 .secondary-action {
   color: var(--ink);
   border-color: var(--line);
@@ -471,7 +478,7 @@ button:disabled {
   padding: 12px;
   border: 1px solid var(--line);
   border-left: 6px solid var(--green);
-  border-radius: 8px;
+  border-radius: 0;
   background: #fff;
   text-align: left;
   transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
@@ -543,17 +550,21 @@ button:disabled {
 #map {
   width: 100%;
   height: 100%;
-  background: #d8dfdc;
+  background: #e7e0d2;
 }
 
-.leaflet-popup-content-wrapper {
-  border-radius: 8px;
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 5px 5px 0 rgba(23, 58, 60, 0.2);
 }
 
 .leaflet-control-layers {
   border: 1px solid var(--line) !important;
-  border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(23, 32, 31, 0.16);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 rgba(23, 58, 60, 0.16);
   color: var(--ink);
   font-size: 0.82rem;
   font-weight: 700;
@@ -574,6 +585,24 @@ button:disabled {
 
 .map-popup p {
   margin: 0;
+}
+
+.trail-number-marker {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 3px 3px 0 rgba(226, 95, 61, 0.8);
+  font: 700 1rem/1 var(--mono);
+}
+
+.trail-number-marker.active {
+  color: var(--ink);
+  background: var(--amber);
 }
 
 .trail-start-marker,

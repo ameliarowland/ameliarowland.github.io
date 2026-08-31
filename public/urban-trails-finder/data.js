@@ -1,7 +1,7 @@
 const TRAILS = [
   {
     "id": "seattle-01-lake-union",
-    "name": "Seattle Wanderweg 1: Lake Union Circuit",
+    "name": "Seattle Wanderway 1: Lake Union Circuit",
     "city": "Seattle",
     "state": "WA",
     "theme": "Waterfront walk",
@@ -5201,7 +5201,7 @@ const TRAILS = [
   },
   {
     "id": "seattle-02-capitol-hill",
-    "name": "Seattle Wanderweg 2: Capitol Hill Parks",
+    "name": "Seattle Wanderway 2: Capitol Hill Parks",
     "city": "Seattle",
     "state": "WA",
     "theme": "Park loop",
@@ -8505,7 +8505,7 @@ const TRAILS = [
   },
   {
     "id": "seattle-03-waterfront-pioneer",
-    "name": "Seattle Wanderweg 3: Waterfront to Pioneer Square",
+    "name": "Seattle Wanderway 3: Waterfront to Pioneer Square",
     "city": "Seattle",
     "state": "WA",
     "theme": "Civic loop",
@@ -10897,7 +10897,7 @@ const TRAILS = [
   },
   {
     "id": "seattle-04-ballard-locks",
-    "name": "Seattle Wanderweg 4: Ballard Locks and Canal",
+    "name": "Seattle Wanderway 4: Ballard Locks and Canal",
     "city": "Seattle",
     "state": "WA",
     "theme": "Neighborhood loop",
@@ -13685,7 +13685,7 @@ const TRAILS = [
   },
   {
     "id": "portland-01-washington-park",
-    "name": "Portland Wanderweg 1: Washington Park Ridge",
+    "name": "Portland Wanderway 1: Washington Park Ridge",
     "city": "Portland",
     "state": "OR",
     "theme": "Park loop",
@@ -17333,7 +17333,7 @@ const TRAILS = [
   },
   {
     "id": "portland-02-eastbank-loop",
-    "name": "Portland Wanderweg 2: Eastbank and Waterfront",
+    "name": "Portland Wanderway 2: Eastbank and Waterfront",
     "city": "Portland",
     "state": "OR",
     "theme": "Waterfront walk",
@@ -19329,7 +19329,7 @@ const TRAILS = [
   },
   {
     "id": "portland-03-alberta-williams",
-    "name": "Portland Wanderweg 3: Alberta and Williams",
+    "name": "Portland Wanderway 3: Alberta and Williams",
     "city": "Portland",
     "state": "OR",
     "theme": "Neighborhood loop",
@@ -20501,7 +20501,7 @@ const TRAILS = [
   },
   {
     "id": "portland-04-sellwood-oaks",
-    "name": "Portland Wanderweg 4: Sellwood and Oaks Bottom",
+    "name": "Portland Wanderway 4: Sellwood and Oaks Bottom",
     "city": "Portland",
     "state": "OR",
     "theme": "Park loop",
@@ -24241,7 +24241,7 @@ const TRAILS = [
   },
   {
     "id": "pittsburgh-01-three-rivers",
-    "name": "Pittsburgh Wanderweg 1: Three Rivers Heritage",
+    "name": "Pittsburgh Wanderway 1: Three Rivers Heritage",
     "city": "Pittsburgh",
     "state": "PA",
     "theme": "Waterfront walk",
@@ -26809,7 +26809,7 @@ const TRAILS = [
   },
   {
     "id": "pittsburgh-02-south-side-steps",
-    "name": "Pittsburgh Wanderweg 2: South Side Steps",
+    "name": "Pittsburgh Wanderway 2: South Side Steps",
     "city": "Pittsburgh",
     "state": "PA",
     "theme": "Hillside walk",
@@ -28145,7 +28145,7 @@ const TRAILS = [
   },
   {
     "id": "pittsburgh-03-oakland-schenley",
-    "name": "Pittsburgh Wanderweg 3: Oakland and Schenley",
+    "name": "Pittsburgh Wanderway 3: Oakland and Schenley",
     "city": "Pittsburgh",
     "state": "PA",
     "theme": "Park loop",
@@ -30237,7 +30237,7 @@ const TRAILS = [
   },
   {
     "id": "pittsburgh-04-highland-park",
-    "name": "Pittsburgh Wanderweg 4: Highland Park Reservoir",
+    "name": "Pittsburgh Wanderway 4: Highland Park Reservoir",
     "city": "Pittsburgh",
     "state": "PA",
     "theme": "Park loop",
@@ -32761,7 +32761,7 @@ const TRAILS = [
   },
   {
     "id": "dc-01-rock-creek",
-    "name": "DC Wanderweg 1: Rock Creek and Dupont",
+    "name": "DC Wanderway 1: Rock Creek and Dupont",
     "city": "Washington",
     "state": "DC",
     "theme": "Park loop",
@@ -34917,7 +34917,7 @@ const TRAILS = [
   },
   {
     "id": "dc-02-mall-tidal-basin",
-    "name": "DC Wanderweg 2: Mall and Tidal Basin",
+    "name": "DC Wanderway 2: Mall and Tidal Basin",
     "city": "Washington",
     "state": "DC",
     "theme": "Civic loop",
@@ -36805,7 +36805,7 @@ const TRAILS = [
   },
   {
     "id": "dc-03-capitol-riverwalk",
-    "name": "DC Wanderweg 3: Capitol to Riverwalk",
+    "name": "DC Wanderway 3: Capitol to Riverwalk",
     "city": "Washington",
     "state": "DC",
     "theme": "Waterfront walk",
@@ -38937,7 +38937,7 @@ const TRAILS = [
   },
   {
     "id": "dc-04-georgetown-glover",
-    "name": "DC Wanderweg 4: Georgetown and Glover",
+    "name": "DC Wanderway 4: Georgetown and Glover",
     "city": "Washington",
     "state": "DC",
     "theme": "Neighborhood loop",
@@ -40849,7 +40849,7 @@ const TRAILS = [
   },
   {
     "id": "boston-01-emerald-necklace",
-    "name": "Boston Wanderweg 1: Emerald Necklace Fenway",
+    "name": "Boston Wanderway 1: Emerald Necklace Fenway",
     "city": "Boston",
     "state": "MA",
     "theme": "Park loop",
@@ -42593,7 +42593,7 @@ const TRAILS = [
   },
   {
     "id": "boston-02-harborwalk",
-    "name": "Boston Wanderweg 2: Harborwalk and Greenway",
+    "name": "Boston Wanderway 2: Harborwalk and Greenway",
     "city": "Boston",
     "state": "MA",
     "theme": "Waterfront walk",
@@ -44953,7 +44953,7 @@ const TRAILS = [
   },
   {
     "id": "boston-03-charles-back-bay",
-    "name": "Boston Wanderweg 3: Charles and Back Bay",
+    "name": "Boston Wanderway 3: Charles and Back Bay",
     "city": "Boston",
     "state": "MA",
     "theme": "Civic loop",
@@ -46861,7 +46861,7 @@ const TRAILS = [
   },
   {
     "id": "boston-04-jamaica-pond",
-    "name": "Boston Wanderweg 4: Jamaica Pond and Arboretum",
+    "name": "Boston Wanderway 4: Jamaica Pond and Arboretum",
     "city": "Boston",
     "state": "MA",
     "theme": "Park loop",
@@ -49781,7 +49781,7 @@ const TRAILS = [
   },
   {
     "id": "sf-01-embarcadero-telegraph",
-    "name": "San Francisco Wanderweg 1: Embarcadero and Telegraph Hill",
+    "name": "San Francisco Wanderway 1: Embarcadero and Telegraph Hill",
     "city": "San Francisco",
     "state": "CA",
     "theme": "Waterfront walk",
@@ -51033,7 +51033,7 @@ const TRAILS = [
   },
   {
     "id": "sf-02-golden-gate-park",
-    "name": "San Francisco Wanderweg 2: Panhandle to Ocean",
+    "name": "San Francisco Wanderway 2: Panhandle to Ocean",
     "city": "San Francisco",
     "state": "CA",
     "theme": "Park loop",
@@ -53789,7 +53789,7 @@ const TRAILS = [
   },
   {
     "id": "sf-03-mission-noe-stairs",
-    "name": "San Francisco Wanderweg 3: Mission and Noe Stairs",
+    "name": "San Francisco Wanderway 3: Mission and Noe Stairs",
     "city": "San Francisco",
     "state": "CA",
     "theme": "Hillside walk",
@@ -54917,7 +54917,7 @@ const TRAILS = [
   },
   {
     "id": "sf-04-presidio-crissy",
-    "name": "San Francisco Wanderweg 4: Presidio and Crissy Field",
+    "name": "San Francisco Wanderway 4: Presidio and Crissy Field",
     "city": "San Francisco",
     "state": "CA",
     "theme": "Park loop",
@@ -57145,7 +57145,7 @@ const TRAILS = [
   },
   {
     "id": "chicago-01-lincoln-lakefront",
-    "name": "Chicago Wanderweg 1: Lincoln Park Lakefront",
+    "name": "Chicago Wanderway 1: Lincoln Park Lakefront",
     "city": "Chicago",
     "state": "IL",
     "theme": "Waterfront walk",
@@ -59313,7 +59313,7 @@ const TRAILS = [
   },
   {
     "id": "chicago-02-loop-riverwalk",
-    "name": "Chicago Wanderweg 2: Loop and Riverwalk",
+    "name": "Chicago Wanderway 2: Loop and Riverwalk",
     "city": "Chicago",
     "state": "IL",
     "theme": "Civic loop",
@@ -60957,7 +60957,7 @@ const TRAILS = [
   },
   {
     "id": "chicago-03-606-bucktown",
-    "name": "Chicago Wanderweg 3: The 606 and Bucktown",
+    "name": "Chicago Wanderway 3: The 606 and Bucktown",
     "city": "Chicago",
     "state": "IL",
     "theme": "Neighborhood loop",
@@ -62781,7 +62781,7 @@ const TRAILS = [
   },
   {
     "id": "chicago-04-jackson-park",
-    "name": "Chicago Wanderweg 4: Jackson Park and South Shore",
+    "name": "Chicago Wanderway 4: Jackson Park and South Shore",
     "city": "Chicago",
     "state": "IL",
     "theme": "Park loop",
@@ -64629,7 +64629,7 @@ const TRAILS = [
   },
   {
     "id": "minneapolis-01-chain-lakes",
-    "name": "Minneapolis Wanderweg 1: Chain of Lakes",
+    "name": "Minneapolis Wanderway 1: Chain of Lakes",
     "city": "Minneapolis",
     "state": "MN",
     "theme": "Waterfront walk",
@@ -67009,7 +67009,7 @@ const TRAILS = [
   },
   {
     "id": "minneapolis-02-mississippi-gorge",
-    "name": "Minneapolis Wanderweg 2: Mississippi Gorge",
+    "name": "Minneapolis Wanderway 2: Mississippi Gorge",
     "city": "Minneapolis",
     "state": "MN",
     "theme": "Park loop",
@@ -68837,7 +68837,7 @@ const TRAILS = [
   },
   {
     "id": "minneapolis-03-downtown-riverfront",
-    "name": "Minneapolis Wanderweg 3: Downtown Riverfront",
+    "name": "Minneapolis Wanderway 3: Downtown Riverfront",
     "city": "Minneapolis",
     "state": "MN",
     "theme": "Civic loop",
@@ -70721,7 +70721,7 @@ const TRAILS = [
   },
   {
     "id": "minneapolis-04-minnehaha-creek",
-    "name": "Minneapolis Wanderweg 4: Minnehaha Creek and Falls",
+    "name": "Minneapolis Wanderway 4: Minnehaha Creek and Falls",
     "city": "Minneapolis",
     "state": "MN",
     "theme": "Park loop",

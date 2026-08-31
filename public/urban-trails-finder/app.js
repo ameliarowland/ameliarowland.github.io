@@ -5,7 +5,9 @@ const state = {
   filteredTrails: []
 };
 
-const TRAIL_COLOR = "#0c7c59";
+const TRAIL_COLOR = "#e25f3d";
+const DEFAULT_CITY = "Seattle, WA";
+const isArticleEmbed = new URLSearchParams(window.location.search).get("embed") === "article";
 
 const map = L.map("map", {
   zoomControl: false,
@@ -59,7 +61,6 @@ const elements = {
   cityFilter: document.getElementById("cityFilter"),
   scoreFilter: document.getElementById("scoreFilter"),
   scoreValue: document.getElementById("scoreValue"),
-  goCityButton: document.getElementById("goCityButton"),
   trailCount: document.getElementById("trailCount"),
   cityCount: document.getElementById("cityCount"),
   avgScore: document.getElementById("avgScore"),
@@ -75,16 +76,14 @@ const elements = {
   downloadKml: document.getElementById("downloadKml"),
   downloadAllGpx: document.getElementById("downloadAllGpx"),
   downloadAllKml: document.getElementById("downloadAllKml"),
-  trailList: document.getElementById("trailList"),
-  fitAllButton: document.getElementById("fitAllButton")
+  trailList: document.getElementById("trailList")
 };
 
 function init() {
   hydrateFilters();
   bindEvents();
   applyFilters();
-  selectTrail(state.activeTrailId, { fit: true });
-  stabilizeMapLayout();
+  setInitialMapExtent();
 
   if (window.lucide) {
     window.lucide.createIcons();
@@ -99,16 +98,18 @@ function hydrateFilters() {
     option.textContent = city;
     elements.cityFilter.appendChild(option);
   });
-
+  elements.cityFilter.value = DEFAULT_CITY;
 }
 
 function bindEvents() {
-  elements.cityFilter.addEventListener("change", applyFilters);
+  elements.cityFilter.addEventListener("change", () => {
+    applyFilters();
+    goToSelectedCity();
+  });
   elements.scoreFilter.addEventListener("input", () => {
     elements.scoreValue.textContent = elements.scoreFilter.value;
     applyFilters();
   });
-  elements.goCityButton.addEventListener("click", goToSelectedCity);
   elements.downloadGpx.addEventListener("click", () => {
     const trail = getActiveTrail();
     if (trail) downloadGpx([trail], `${trail.id}.gpx`);
@@ -123,13 +124,17 @@ function bindEvents() {
   elements.downloadAllKml.addEventListener("click", () => {
     downloadKml(state.filteredTrails, "urban-trails-visible.kml");
   });
-  elements.fitAllButton.addEventListener("click", fitFilteredTrails);
-  window.addEventListener("resize", stabilizeMapLayout);
+  window.addEventListener("resize", () => map.invalidateSize());
 }
 
-function stabilizeMapLayout() {
+function setInitialMapExtent() {
   window.requestAnimationFrame(() => {
     map.invalidateSize();
+    if (isArticleEmbed) {
+      fitFilteredTrails();
+      return;
+    }
+
     const activeLayer = state.activeTrailId ? state.trailLayers.get(state.activeTrailId) : null;
     if (activeLayer) {
       map.fitBounds(activeLayer.getBounds(), { padding: [42, 42], maxZoom: 13 });
@@ -202,8 +207,8 @@ function addTrailNumberMarker(trail) {
     icon: L.divIcon({
       className: "",
       html: `<span class="trail-number-marker${activeClass}">${number}</span>`,
-      iconSize: [34, 34],
-      iconAnchor: [17, 17]
+      iconSize: [38, 38],
+      iconAnchor: [19, 19]
     }),
     title: `Start/end: ${trail.name}`
   });
@@ -214,7 +219,7 @@ function addTrailNumberMarker(trail) {
 }
 
 function trailNumber(trail) {
-  const match = trail.name.match(/Wanderweg\s+(\d+)/);
+  const match = trail.name.match(/Wanderway\s+(\d+)/);
   if (match) return match[1];
 
   const cityTrails = TRAILS.filter((item) => item.city === trail.city && item.state === trail.state);
@@ -327,7 +332,7 @@ function renderEmptySelection() {
 
 function metricRow(key, value) {
   const label = key.charAt(0).toUpperCase() + key.slice(1);
-  const color = key === "water" ? "#087f8c" : key === "culture" ? "#b86b23" : key === "calm" ? "#2d6cdf" : "#31785f";
+  const color = key === "water" ? "#8cb9bb" : key === "culture" ? "#e25f3d" : key === "calm" ? "#173a3c" : "#6f836b";
   return `
     <div class="metric-row">
       <span>${label}</span>

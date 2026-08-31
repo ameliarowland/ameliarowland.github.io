@@ -6,7 +6,7 @@ A GitHub Pages-friendly web GIS prototype for Stadtwanderweg-inspired walking lo
 
 - Interactive Leaflet map with four city-wander paths per included city
 - Filters by city and minimum route score
-- City Go button that pans to the selected city
+- Automatic city zoom when the selected city changes
 - Route scoring for greenery, water access, transit, calm streets, and culture
 - Download selected or filtered routes as GeoJSON
 - Copy route coordinates in WGS84 latitude/longitude format
