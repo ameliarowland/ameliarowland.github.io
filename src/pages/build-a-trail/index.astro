@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Build a Trail</title>
+    <meta
+      name="description"
+      content="Generate, edit, save, and export your own urban walking trails with OpenStreetMap and Valhalla."
+    >
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQmMdI0Z4h12p8mX0hgGcR31xQp8ROA="
+      crossorigin=""
+    >
+    <link rel="stylesheet" href="/build-a-trail/styles.css?v=20260903-47">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Make the route your own</p>
+          <h1>Build a Trail</h1>
+        </div>
+        <p class="header-note">Generate · revise · export</p>
+      </header>
+
+      <aside class="sidebar" id="trailSidebar" aria-label="Trail builder controls">
+        <div class="embed-panel-heading">
+          <div>
+            <p class="panel-number">Trail workshop</p>
+            <h2>Let's Build</h2>
+          </div>
+          <button class="embed-panel-close" id="closeSidebarButton" type="button" aria-label="Close trail workshop" aria-controls="trailSidebar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="sidebar-content">
+          <section class="builder-panel" aria-labelledby="city-heading">
+            <div class="section-kicker"><span>01</span> Choose a city</div>
+            <h2 id="city-heading">Where do you want to walk?</h2>
+            <form id="citySearchForm" class="city-search" role="search">
+              <label class="sr-only" for="citySearch">City name</label>
+              <input id="citySearch" name="city" type="search" placeholder="Try Tbilisi, Vienna, or Seattle" autocomplete="off" required>
+              <button class="icon-button" type="submit" aria-label="Find city">
+                <i data-lucide="search"></i>
+              </button>
+            </form>
+            <div id="cityResults" class="city-results" role="listbox" aria-label="City search results" hidden></div>
+            <p id="cityStatus" class="status-line" aria-live="polite">Search for a city, or pan and zoom the map yourself.</p>
+          </section>
+
+          <section class="builder-panel" aria-labelledby="generate-heading">
+            <div class="section-kicker"><span>02</span> Generate</div>
+            <h2 id="generate-heading">Set the trail length</h2>
+            <div class="route-length-controls">
+              <div class="unit-picker">
+                <span>Distance unit</span>
+                <div class="unit-options" role="radiogroup" aria-label="Distance unit">
+                  <label><input type="radio" name="distanceUnit" value="kilometers" checked><span>Kilometers</span></label>
+                  <label><input type="radio" name="distanceUnit" value="miles"><span>Miles</span></label>
+                </div>
+              </div>
+              <div class="length-options" role="radiogroup" aria-label="Approximate trail length">
+                <label><input type="radio" name="trailLength" value="2" checked><span>2</span></label>
+                <label><input type="radio" name="trailLength" value="4"><span>4</span></label>
+                <label><input type="radio" name="trailLength" value="6"><span>6</span></label>
+              </div>
+              <label class="custom-length" for="customTrailLength">
+                <input type="radio" name="trailLength" value="custom" aria-label="Use custom trail length">
+                <span>Custom distance</span>
+                <input id="customTrailLength" type="number" inputmode="decimal" min="0.5" max="25" step="0.5" placeholder="3.5" aria-label="Custom trail length; minimum 0.5 in the selected unit">
+              </label>
+            </div>
+            <button id="buildTrailButton" class="primary-action build-action" type="button">
+              <i data-lucide="wand-sparkles"></i>
+              Build a Trail
+            </button>
+            <p id="routeStatus" class="status-line" aria-live="polite">Generate a walkable loop around the map center.</p>
+            <div id="routeServiceLog" class="route-service-log" aria-label="Routing service progress" aria-live="polite" hidden></div>
+          </section>
+
+          <section id="editPanel" class="builder-panel edit-panel" aria-labelledby="edit-heading">
+            <div class="section-kicker"><span>03</span> Edit</div>
+            <h2 id="edit-heading">Edit the trail</h2>
+            <div id="editStatus" class="edit-status" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              <strong id="editModeStatus">Editing off</strong>
+              <span id="vertexCount">0 anchor points</span>
+            </div>
+            <p class="instruction-copy">Turn editing on to drag an anchor point or select it for a minus-sign removal popup. The routed line can have many bends, but only the visible anchor points shape it. Undo or redo any anchor change.</p>
+            <div class="edit-control-group">
+              <div class="edit-actions">
+                <button id="editingToggleButton" class="secondary-action" type="button" aria-pressed="false">
+                  <i data-lucide="mouse-pointer-2"></i>
+                  <span>Editing off</span>
+                </button>
+                <button id="snappingToggleButton" class="secondary-action is-active" type="button" aria-pressed="true">
+                  <i data-lucide="magnet"></i>
+                  <span>Snapping on</span>
+                </button>
+              </div>
+            </div>
+            <div class="edit-control-group">
+              <div class="edit-actions">
+                <button id="undoEditButton" class="secondary-action history-action" type="button" disabled>
+                  <i data-lucide="undo-2"></i>
+                  Undo edit
+                </button>
+                <button id="redoEditButton" class="secondary-action history-action" type="button" disabled>
+                  <i data-lucide="redo-2"></i>
+                  Redo edit
+                </button>
+              </div>
+            </div>
+            <button id="segmentDistancesButton" class="secondary-action segment-distance-action" type="button" aria-pressed="false">
+              <i data-lucide="ruler"></i>
+              <span>Show segment distances</span>
+            </button>
+            <div class="edit-actions edit-route-actions">
+              <button id="discardDraftButton" class="text-button danger-text" type="button">
+                <i data-lucide="trash-2"></i>
+                Discard route
+              </button>
+            </div>
+            <label for="trailName">Trail name</label>
+            <input id="trailName" type="text" maxlength="64" placeholder="Name this trail">
+            <button id="keepTrailButton" class="primary-action keep-action" type="button">
+              <i data-lucide="bookmark-check"></i>
+              Save Trail
+            </button>
+          </section>
+
+          <section class="trail-list-section" aria-labelledby="saved-heading">
+            <div class="list-heading">
+              <div>
+                <div class="section-kicker"><span>04</span> Your trails</div>
+                <h2 id="saved-heading">Kept trails <span id="trailCount" class="count-badge">0</span></h2>
+              </div>
+              <div class="export-all-group">
+                <span>Export all visible trails</span>
+                <div class="list-actions" aria-label="Export all visible trails">
+                <button id="downloadAllGpx" type="button" class="text-button" disabled>GPX</button>
+                <button id="downloadAllKml" type="button" class="text-button" disabled>KML</button>
+                <button id="downloadAllGeoJson" type="button" class="text-button" disabled>GeoJSON</button>
+                </div>
+              </div>
+            </div>
+            <div id="trailList" class="trail-list">
+              <div class="empty-state">
+                <i data-lucide="route"></i>
+                <p>Your kept trails will appear here.</p>
+              </div>
+            </div>
+          </section>
+
+          <footer class="method-note">
+            <strong>Data note:</strong> candidate geometry is generated with
+            <a href="https://valhalla.github.io/valhalla/" target="_blank" rel="noopener noreferrer">Valhalla</a>
+            or the <a href="https://routing.openstreetmap.de/" target="_blank" rel="noopener noreferrer">OpenStreetMap pedestrian router</a> as an availability fallback, using
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>.
+            City search uses <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener noreferrer">Nominatim</a> only when you submit a search. Routes are not field-verified or turn-by-turn navigation products.
+          </footer>
+        </div>
+      </aside>
+
+      <section class="map-panel" aria-label="Interactive trail builder map">
+        <div id="map"></div>
+        <div class="map-tip" id="mapTip" aria-live="polite">
+          <i data-lucide="move"></i>
+          Pan the map or search for a city
+        </div>
+        <button id="vertexRemovePopup" class="vertex-remove-popup" type="button" aria-label="Remove selected point" title="Remove point" hidden>−</button>
+        <div id="mapEditControls" class="map-edit-controls" aria-label="Map editing tools" hidden>
+          <button id="mapSnappingToggleButton" class="history-action snapping-action" type="button" aria-label="Snapping on" title="Snapping on" aria-pressed="true"><i data-lucide="magnet"></i></button>
+          <button id="mapAddAnchorButton" class="history-action add-anchor-action" type="button" aria-label="Add anchor point" title="Add anchor point" aria-pressed="false">+</button>
+          <button id="mapUndoEditButton" class="history-action" type="button" aria-label="Undo edit" title="Undo edit" disabled>↶</button>
+          <button id="mapRedoEditButton" class="history-action" type="button" aria-label="Redo edit" title="Redo edit" disabled>↷</button>
+        </div>
+        <div class="basemap-switcher" aria-label="Basemap choices">
+          <button type="button" class="basemap-button is-active" data-basemap="Esri Topographic" aria-label="Esri Topographic basemap" aria-pressed="true" title="Esri Topographic"><span class="basemap-thumbnail basemap-topographic" aria-hidden="true"></span></button>
+          <button type="button" class="basemap-button" data-basemap="Esri Light Gray" aria-label="Esri Light Gray basemap" aria-pressed="false" title="Esri Light Gray"><span class="basemap-thumbnail basemap-light-gray" aria-hidden="true"></span></button>
+          <button type="button" class="basemap-button" data-basemap="Satellite" aria-label="Satellite basemap" aria-pressed="false" title="Satellite"><span class="basemap-thumbnail basemap-satellite" aria-hidden="true"></span></button>
+          <button type="button" class="basemap-button" data-basemap="OpenStreetMap" aria-label="OpenStreetMap basemap" aria-pressed="false" title="OpenStreetMap"><span class="basemap-thumbnail basemap-openstreetmap" aria-hidden="true"></span></button>
+        </div>
+      </section>
+
+      <button class="embed-panel-open" id="openSidebarButton" type="button" aria-label="Open trail workshop" aria-controls="trailSidebar" aria-expanded="true">Trail workshop</button>
+    </main>
+
+    <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script is:inline src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script is:inline src="/build-a-trail/app.js?v=20260903-47"></script>
+  </body>
+</html>
