@@ -114,6 +114,11 @@ const basemaps = {
       attribution: "Tiles &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
       pmIgnore: true
     }),
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19,
+      attribution: "Roads &copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+      pmIgnore: true
+    }),
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 19,
       attribution: "Labels &copy; Esri",
@@ -127,7 +132,7 @@ const basemaps = {
   })
 };
 
-let activeBasemap = basemaps["Esri Topographic"];
+let activeBasemap = basemaps.OpenStreetMap;
 activeBasemap.addTo(map);
 
 const savedRouteGroup = L.featureGroup().addTo(map);
@@ -240,6 +245,10 @@ function bindEvents() {
 async function handleCitySearch(event) {
   event.preventDefault();
   const query = elements.citySearch.value.trim();
+  await searchAndShowCity(query);
+}
+
+async function searchAndShowCity(query, selectFirst = false) {
   if (!query || state.busy) return;
 
   setBusy(true);
@@ -248,6 +257,10 @@ async function handleCitySearch(event) {
   try {
     const places = await searchCities(query);
     if (!places.length) throw new Error("No city matched that search. Try including a state or country.");
+    if (selectFirst) {
+      selectCity(places[0]);
+      return;
+    }
     renderCityResults(places);
     setStatus(elements.cityStatus, `Choose one of ${places.length} matching ${places.length === 1 ? "place" : "places"}.`);
   } catch (error) {
@@ -283,7 +296,7 @@ function showCitySuggestions() {
     button.innerHTML = `<strong>${escapeHtml(city)}</strong><small>Search this city</small>`;
     button.addEventListener("click", () => {
       elements.citySearch.value = city;
-      elements.citySearchForm.requestSubmit();
+      searchAndShowCity(city, true);
     });
     elements.cityResults.appendChild(button);
   });

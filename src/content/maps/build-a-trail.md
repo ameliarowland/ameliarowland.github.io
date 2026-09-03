@@ -1,25 +1,25 @@
 ---
 title: "Build a Trail"
-description: "Generate, reshape, save, and export your own urban walking trails."
+description: "Generate, revise, save, and export your own urban walking trails."
 date: 2026-09-01
-image: /maps/build-a-trail.svg
+image: /maps/build-a-trail.png
 embedUrl: https://ameliarowland.github.io/build-a-trail/?embed=article
 externalUrl: https://ameliarowland.github.io/build-a-trail/
 tallEmbed: true
-tools: [Leaflet, Leaflet-Geoman, Valhalla, OpenStreetMap, GeoJSON, JavaScript]
+tools: [Leaflet, Valhalla, OpenStreetMap, GeoJSON, JavaScript]
 tags: [urbanism, walkability, web-gis, routing]
 ---
 
-Build a Trail turns route generation into a hands-on map workshop. Search for a city anywhere in the world, choose kilometers or miles, pan to the part of town you want to explore, and ask the app to create a candidate walking loop. The route is generated with the [Valhalla routing engine](https://valhalla.github.io/valhalla/) over [OpenStreetMap](https://www.openstreetmap.org/) data, with OpenStreetMap's public pedestrian router as an availability fallback, and drawn with [Leaflet](https://leafletjs.com/).
+Build a Trail turns route generation into a hands-on map workshop. Search for a city from the suggestion list or pan and zoom directly to the area you want to explore. Choose kilometers or miles, select a preset or enter a custom distance, and ask the app to build a walking loop around the center of the map. The app tries the [Valhalla routing engine](https://valhalla.github.io/valhalla/) first and uses OpenStreetMap's public pedestrian router as an availability fallback, with progress messages showing which service is being tried. The default basemap is [OpenStreetMap](https://www.openstreetmap.org/), with topographic, light-gray, and satellite-with-roads alternatives.
 
-## Shape Your Route
+## Edit the Trail
 
-[Leaflet-Geoman](https://geoman.io/docs/leaflet/) makes each candidate route editable while leaving new routes locked by default. Turn editing on to drag a vertex or select it for removal. With snapping enabled, the released point and its two adjacent line sections are automatically refitted to walkable streets; removing a point similarly reroutes the gap between its neighbors. **Snap to streets** remains available for refitting the full route. Once a trail feels right, name it and keep it in the trail list. Each kept trail can be renamed, hidden, shown, or removed while you continue building more.
+New routes are locked by default. Turn editing on to reveal a small set of round anchor points rather than every bend in the routed line. An anchor can be dragged, selected for removal with a minus button, or added from the map controls. With snapping enabled, changed sections are rerouted along the walkable network. With snapping off, a moved or added anchor may leave the mapped network while the rest of the routed line stays in place. Undo and redo are available beside the editing controls and on the map, and segment-distance labels can be switched on while revising the trail. The current total length stays visible on the map as the route changes.
 
-## Take It With You
+## Save, Continue, and Export
 
-Created trails stay on the current device using browser storage and can be exported individually or together as [GeoJSON](https://www.rfc-editor.org/info/rfc7946/), [GPX](https://www.topografix.com/gpx.asp), or [KML](https://www.ogc.org/standard/kml/). Exported geometry reflects the user's edits rather than a pre-generated trail catalog.
+Name the result and choose **Save Trail** to add it to the trail list, then pan elsewhere and build another. Saved routes use different colors so they remain distinguishable on the map. Each one can be renamed, shown or hidden, removed, reopened with **Edit trail**, and updated with **Save edits**. Routes stay on the current device using browser storage and can be exported individually—or together when visible—as [GeoJSON](https://www.rfc-editor.org/info/rfc7946/), [GPX](https://www.topografix.com/gpx.asp), or [KML](https://www.ogc.org/standard/kml/).
 
 ## Data and Use
 
-City searches are sent only when the search form is submitted and follow the public [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/). Generated routes are derived from documented routing services, but they are not field-verified and should not be treated as turn-by-turn navigation or accessibility guidance. The implementation is available in the [portfolio source repository](https://github.com/ameliarowland/ameliarowland.github.io).
+City lookups are sent only when a search is submitted or a suggestion is selected, are cached on the device, and follow the public [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/). Generated routes are derived from mapped routing data, but they are not field-verified and should not be treated as turn-by-turn navigation or accessibility guidance. The implementation is available in the [portfolio source repository](https://github.com/ameliarowland/ameliarowland.github.io).
