@@ -5,10 +5,12 @@ export const TOOL_LINKS: Record<string, string> = {
   GeoJSON: 'https://www.rfc-editor.org/info/rfc7946/',
   HOT: 'https://www.hotosm.org/',
   Leaflet: 'https://leafletjs.com/',
+  'Leaflet-Geoman': 'https://geoman.io/docs/leaflet/',
   'MapLibre GL JS': 'https://maplibre.org/maplibre-gl-js/docs/',
   'Natural Earth': 'https://www.naturalearthdata.com/',
   OpenStreetMap: 'https://www.openstreetmap.org/',
   QGIS: 'https://qgis.org/',
+  Valhalla: 'https://valhalla.github.io/valhalla/',
 };
 
 export const SCRIPTING_LANGUAGES = new Set(['JavaScript', 'Python', 'R', 'TypeScript']);
