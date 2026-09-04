@@ -6,7 +6,7 @@ image: /maps/city_wander_paths.png
 embedUrl: https://ameliarowland.github.io/urban-trails-finder/?embed=article
 externalUrl: https://ameliarowland.github.io/urban-trails-finder/
 tallEmbed: true
-tools: [Leaflet, OpenStreetMap, GeoJSON, JavaScript]
+tools: [Leaflet, OpenStreetMap, GeoJSON, Valhalla, Product Development, Auto-Generated Routes]
 tags: [urbanism, walkability, web-gis, sustainability]
 ---
 

@@ -6,7 +6,7 @@ image: /maps/build-a-trail.png
 embedUrl: https://ameliarowland.github.io/build-a-trail/?embed=article
 externalUrl: https://ameliarowland.github.io/build-a-trail/
 tallEmbed: true
-tools: [Leaflet, Valhalla, OpenStreetMap, GeoJSON, JavaScript]
+tools: [Feature Editing, Valhalla, Auto-Generated Routes, Leaflet, OpenStreetMap, Product Development]
 tags: [urbanism, walkability, web-gis, routing]
 ---
 

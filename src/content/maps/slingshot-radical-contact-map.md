@@ -6,7 +6,7 @@ image: /maps/slingshot.png
 embedUrl: https://ameliarowland.github.io/slingshot-radical-contact-map/
 externalUrl: https://ameliarowland.github.io/slingshot-radical-contact-map/
 tallEmbed: true
-tools: [Leaflet, OpenStreetMap, HOT, JavaScript]
+tools: [Leaflet, OpenStreetMap, HOT, Web scraping, Geocoding]
 tags: [web-gis, mutual-aid, radical-geography, open-data]
 ---
 

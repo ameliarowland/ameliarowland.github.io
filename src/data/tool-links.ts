@@ -15,10 +15,18 @@ export const TOOL_LINKS: Record<string, string> = {
 
 export const SCRIPTING_LANGUAGES = new Set(['JavaScript', 'Python', 'R', 'TypeScript']);
 
+export const UNLINKED_TOOL_LABELS = new Set([
+  'Auto-Generated Routes',
+  'Feature Editing',
+  'Geocoding',
+  'Product Development',
+  'Web scraping',
+]);
+
 export function getToolLink(tool: string) {
   return TOOL_LINKS[tool];
 }
 
 export function toolNeedsLink(tool: string) {
-  return !SCRIPTING_LANGUAGES.has(tool);
+  return !SCRIPTING_LANGUAGES.has(tool) && !UNLINKED_TOOL_LABELS.has(tool);
 }
