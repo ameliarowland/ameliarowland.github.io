@@ -18,16 +18,15 @@ const latest = maps.slice(0, 3);
       Telling stories with <span class="text-primary">maps</span> and data
     </h1>
     <p class="mt-6 text-lg text-text-muted max-w-2xl leading-relaxed">
-      I'm Amelia — a GIS specialist and cartographer inspired by sustainability,
-      systems thinking, and the places where data meets people. Here I publish my
-      maps, visualizations, and the stories behind them.
+      I'm Amelia — a consultant, GIS specialist, and software product engineer inspired
+      by sustainability, systems thinking, and telling stories with data.
     </p>
-    <div class="mt-8 flex gap-4">
+    <div class="mt-8 flex flex-wrap gap-4">
       <a
         href="/maps"
         class="bg-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
       >
-        Browse the maps
+        Browse maps and more
       </a>
       <a
         href="/about"
@@ -35,13 +34,27 @@ const latest = maps.slice(0, 3);
       >
         About me
       </a>
+      <a
+        href="mailto:amelia.rowland09@gmail.com"
+        class="px-5 py-2.5 rounded-lg text-sm font-medium border border-border text-text hover:border-primary hover:text-primary transition-colors"
+      >
+        Contact me
+      </a>
+      <a
+        href="https://www.linkedin.com/in/ameliarowland09/"
+        target="_blank"
+        rel="noreferrer"
+        class="px-5 py-2.5 rounded-lg text-sm font-medium border border-border text-text hover:border-primary hover:text-primary transition-colors"
+      >
+        LinkedIn
+      </a>
     </div>
   </section>
 
   {latest.length > 0 && (
     <section class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
       <div class="flex items-baseline justify-between mb-6">
-        <h2 class="font-display text-2xl font-semibold">Latest maps</h2>
+        <h2 class="font-display text-2xl font-semibold">Latest content</h2>
         <a href="/maps" class="text-sm text-primary hover:text-primary-dark font-medium">View all →</a>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
