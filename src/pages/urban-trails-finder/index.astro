@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Urban Trails Finder</title>
+    <title>Urban Trails Development Plan</title>
     <meta
       name="description"
-      content="A Stadtwanderweg-inspired interactive web map prototype for curated urban walking loops in US cities."
+      content="Search any city, generate 1–10 urban trail concepts, edit the routes, and export spatial files or a community-ready map."
     >
     <link
       rel="stylesheet"
@@ -14,137 +14,239 @@
       integrity="sha256-p4NxAoJBhIINfQmMdI0Z4h12p8mX0hgGcR31xQp8ROA="
       crossorigin=""
     >
-    <link rel="stylesheet" href="/urban-trails-finder/styles.css">
+    <link rel="stylesheet" href="/urban-trails-finder/styles.css?v=20260904-3">
   </head>
   <body>
     <main class="app-shell">
       <header class="app-header">
         <div>
-          <p class="eyebrow">
-            <a href="https://www.wien.gv.at/en/leisure/hiking-paths" target="_blank" rel="noopener noreferrer">Stadtwanderweg</a>-inspired GIS
-          </p>
-          <h1>Urban Trails Finder</h1>
+          <p class="eyebrow">Plan together · walk better</p>
+          <h1><span>Urban Trails</span> <span>Development Plan</span></h1>
         </div>
+        <p class="header-note">Search · generate · edit · share</p>
       </header>
 
-      <aside class="sidebar" id="trailSidebar" aria-label="Urban trail controls">
+      <aside class="sidebar" id="trailSidebar" aria-label="Urban trails planning controls">
         <div class="embed-panel-heading">
           <div>
-            <p class="panel-number">Trail information</p>
-            <h2>Explore urban trails</h2>
+            <p class="panel-number">Planning workshop</p>
+            <h2>Develop a trail plan</h2>
           </div>
-          <button class="embed-panel-close" id="closeSidebarButton" type="button" aria-label="Close trail information" aria-controls="trailSidebar">
+          <button class="embed-panel-close" id="closeSidebarButton" type="button" aria-label="Close trail workshop" aria-controls="trailSidebar">
             <i data-lucide="x"></i>
           </button>
         </div>
 
         <div class="sidebar-content">
-
-          <section class="filter-panel" aria-label="Trail filters">
-          <label for="cityFilter">City</label>
-          <select id="cityFilter">
-            <option value="all">All cities</option>
-          </select>
+          <section class="builder-panel" aria-labelledby="city-heading">
+            <div class="section-kicker"><span>01</span> Locate your city</div>
+            <h2 id="city-heading">Search for a city, or pan and zoom in the map</h2>
+            <form id="citySearchForm" class="city-search" role="search">
+              <label class="sr-only" for="citySearch">City name</label>
+              <input id="citySearch" name="city" type="search" placeholder="Type city name here" autocomplete="off" required>
+              <button class="icon-button" type="submit" aria-label="Find city">
+                <i data-lucide="search"></i>
+              </button>
+            </form>
+            <div id="cityResults" class="city-results" role="listbox" aria-label="City search results" hidden></div>
+            <p id="cityStatus" class="status-line" aria-live="polite"></p>
           </section>
 
-          <section class="summary-grid" aria-label="Filtered trail summary">
-          <div>
-            <span id="trailCount">0</span>
-            <small>routes</small>
-          </div>
-          <div>
-            <span id="cityCount">0</span>
-            <small>cities</small>
-          </div>
+          <section class="builder-panel" aria-labelledby="generate-heading">
+            <div class="section-kicker"><span>02</span> Generate</div>
+            <h2 id="generate-heading">Shape the route set</h2>
+            <div class="route-length-controls">
+              <div class="unit-picker">
+                <span>Distance unit</span>
+                <div class="unit-options" role="radiogroup" aria-label="Distance unit">
+                  <label><input type="radio" name="distanceUnit" value="kilometers" checked><span>Kilometers</span></label>
+                  <label><input type="radio" name="distanceUnit" value="miles"><span>Miles</span></label>
+                </div>
+              </div>
+              <div class="distance-range" aria-labelledby="distanceRangeLabel">
+                <span id="distanceRangeLabel" class="field-label">Route distance range</span>
+                <div class="distance-value-row">
+                  <label for="minDistance">Minimum
+                    <span><input id="minDistance" type="number" inputmode="decimal" min="0.5" max="25" step="0.5" value="5"><b class="distance-unit-label">km</b></span>
+                  </label>
+                  <span class="range-separator" aria-hidden="true">to</span>
+                  <label for="maxDistance">Maximum
+                    <span><input id="maxDistance" type="number" inputmode="decimal" min="0.5" max="25" step="0.5" value="10"><b class="distance-unit-label">km</b></span>
+                  </label>
+                </div>
+                <div class="dual-range" aria-hidden="false">
+                  <div class="range-track"><span id="rangeFill"></span></div>
+                  <input id="minDistanceSlider" type="range" min="0.5" max="25" step="0.5" value="5" aria-label="Minimum route distance">
+                  <input id="maxDistanceSlider" type="range" min="0.5" max="25" step="0.5" value="10" aria-label="Maximum route distance">
+                </div>
+                <p class="range-summary">Routes will vary from <output id="minDistanceOutput">5 km</output> to <output id="maxDistanceOutput">10 km</output>.</p>
+              </div>
+              <label class="route-count" for="routeCount">
+                <span>Number of routes</span>
+                <select id="routeCount" aria-describedby="routeCountHelp">
+                  <option value="1">1 route</option>
+                  <option value="2">2 routes</option>
+                  <option value="3">3 routes</option>
+                  <option value="4">4 routes</option>
+                  <option value="5">5 routes</option>
+                  <option value="6">6 routes</option>
+                  <option value="7">7 routes</option>
+                  <option value="8">8 routes</option>
+                  <option value="9">9 routes</option>
+                  <option value="10" selected>10 routes</option>
+                </select>
+              </label>
+              <small id="routeCountHelp" class="field-help">Generate 1–10 alternatives for comparison and community review.</small>
+            </div>
+            <button id="buildTrailButton" class="primary-action build-action" type="button">
+              <i data-lucide="wand-sparkles"></i>
+              Generate routes
+            </button>
+            <p id="routeStatus" class="status-line" aria-live="polite">Generate 10 walkable concepts around the map center.</p>
+            <div id="routeServiceLog" class="route-service-log" aria-label="Routing service progress" aria-live="polite" hidden></div>
           </section>
 
-          <section class="selected-panel" aria-live="polite">
-          <div class="selected-heading">
-            <div>
-              <p id="selectedCity" class="eyebrow">Select a route</p>
-              <h2 id="selectedName">Route details</h2>
+          <section id="editPanel" class="builder-panel edit-panel" aria-labelledby="edit-heading">
+            <div class="section-kicker"><span>03</span> Edit</div>
+            <h2 id="edit-heading">Edit a route</h2>
+            <div id="editStatus" class="edit-status" aria-live="polite">
+              <span class="status-dot" aria-hidden="true"></span>
+              <strong id="editModeStatus">Select a route</strong>
+              <span id="vertexCount">0 anchor points</span>
             </div>
-          </div>
-          <dl class="route-stats">
-            <div>
-              <dt>Distance</dt>
-              <dd id="selectedDistance">--</dd>
+            <p class="instruction-copy">Select a route on the map or in the list, then turn editing on. Drag an anchor point, add one, or select one for removal. Undo or redo any anchor change.</p>
+            <div class="edit-control-group">
+              <div class="edit-actions">
+                <button id="editingToggleButton" class="secondary-action" type="button" aria-pressed="false">
+                  <i data-lucide="mouse-pointer-2"></i>
+                  <span>Edit selected route</span>
+                </button>
+                <button id="snappingToggleButton" class="secondary-action is-active" type="button" aria-pressed="true">
+                  <i data-lucide="magnet"></i>
+                  <span>Snapping on</span>
+                </button>
+              </div>
             </div>
-          </dl>
-          <div class="action-row">
-            <button id="downloadGpx" type="button" class="primary-action" disabled>
-              <i data-lucide="download"></i>
-              GPX
+            <div class="edit-control-group">
+              <div class="edit-actions">
+                <button id="undoEditButton" class="secondary-action history-action" type="button" disabled>
+                  <i data-lucide="undo-2"></i>
+                  Undo edit
+                </button>
+                <button id="redoEditButton" class="secondary-action history-action" type="button" disabled>
+                  <i data-lucide="redo-2"></i>
+                  Redo edit
+                </button>
+              </div>
+            </div>
+            <button id="segmentDistancesButton" class="secondary-action segment-distance-action" type="button" aria-pressed="false">
+              <i data-lucide="ruler"></i>
+              <span>Show segment distances</span>
             </button>
-            <button id="downloadKml" type="button" class="secondary-action" disabled>
-              <i data-lucide="file-down"></i>
-              KML
+            <div class="edit-actions edit-route-actions">
+              <button id="discardDraftButton" class="text-button danger-text" type="button">
+                <i data-lucide="trash-2"></i>
+                Cancel edits
+              </button>
+            </div>
+            <button id="keepTrailButton" class="primary-action keep-action" type="button">
+              <i data-lucide="save"></i>
+              Save edits
             </button>
-            <button id="downloadGeoJson" type="button" class="secondary-action" disabled>
-              <i data-lucide="braces"></i>
-              GeoJSON
-            </button>
-          </div>
           </section>
 
-          <section class="trail-list-section" aria-label="Trail results">
-          <div class="list-heading">
-            <h2>City Wander Paths</h2>
-            <div class="list-actions" aria-label="Export visible trails">
-              <button id="downloadAllGpx" type="button" class="text-button">
-                <i data-lucide="archive"></i>
-                GPX
-              </button>
-              <button id="downloadAllKml" type="button" class="text-button">
-                <i data-lucide="file-archive"></i>
-                KML
-              </button>
-              <button id="downloadAllGeoJson" type="button" class="text-button">
-                <i data-lucide="braces"></i>
-                GeoJSON
-              </button>
+          <section class="trail-list-section" aria-labelledby="saved-heading">
+            <div class="list-heading">
+              <div>
+                <div class="section-kicker"><span>04</span> Development plan</div>
+                <h2 id="saved-heading">Plan routes <span id="trailCount" class="count-badge">0</span></h2>
+              </div>
+              <div class="export-all-group">
+                <span>Export routes in map extent to</span>
+                <div class="list-actions" aria-label="Export all visible trails">
+                <button id="downloadAllGpx" type="button" class="text-button" disabled>GPX</button>
+                <button id="downloadAllKml" type="button" class="text-button" disabled>KML</button>
+                <button id="downloadAllGeoJson" type="button" class="text-button" disabled>GeoJSON</button>
+                <button id="downloadMap" type="button" class="text-button" disabled>HTML</button>
+                <button id="downloadPdf" type="button" class="text-button" disabled>PDF</button>
+                <button id="downloadImage" type="button" class="text-button" disabled>Image</button>
+                </div>
+              </div>
             </div>
-          </div>
-          <div id="trailList" class="trail-list"></div>
+            <p class="export-data-note"><strong>Keep your route data:</strong> HTML, PDF, and image exports are presentation-only. Export GPX, KML, or GeoJSON to save your routes.</p>
+            <div class="route-color-picker" aria-label="Route color picker">
+              <div class="route-color-modes" role="group" aria-label="Route color mode">
+                <button id="monoColorMode" class="color-mode-button is-active" type="button" aria-pressed="true">
+                  <span class="single-color-mark" aria-hidden="true"></span> Monocolor
+                </button>
+                <button id="multiColorMode" class="color-mode-button" type="button" aria-pressed="false">
+                  <span class="multi-color-mark" aria-hidden="true"><i></i><i></i><i></i></span> Multicolor
+                </button>
+              </div>
+              <div id="monoColorChoices" class="route-color-choices">
+                <label class="custom-color-choice" title="Custom route color">
+                  <span class="sr-only">Custom route color</span>
+                  <input id="customRouteColor" type="color" value="#173a3c">
+                </label>
+                <button type="button" class="color-swatch" data-route-color="#173a3c" style="--swatch:#173a3c" aria-label="Deep teal"></button>
+                <button type="button" class="color-swatch" data-route-color="#e25f3d" style="--swatch:#e25f3d" aria-label="Coral"></button>
+                <button type="button" class="color-swatch" data-route-color="#3566a8" style="--swatch:#3566a8" aria-label="Blue"></button>
+                <button type="button" class="color-swatch" data-route-color="#3f6f3a" style="--swatch:#3f6f3a" aria-label="Forest green"></button>
+                <button type="button" class="color-swatch highlighter" data-route-color="#dfff00" style="--swatch:#dfff00" aria-label="Highlighter yellow"></button>
+                <button type="button" class="color-swatch highlighter" data-route-color="#ff35c8" style="--swatch:#ff35c8" aria-label="Highlighter pink"></button>
+                <button type="button" class="color-swatch highlighter" data-route-color="#00e5ff" style="--swatch:#00e5ff" aria-label="Highlighter cyan"></button>
+                <button type="button" class="color-swatch highlighter" data-route-color="#72ff37" style="--swatch:#72ff37" aria-label="Highlighter green"></button>
+              </div>
+              <div id="multiColorChoices" class="route-palette-choices" aria-label="Multicolor palettes" hidden>
+                <button type="button" class="palette-swatch is-active" data-route-palette="classic" aria-label="Classic multicolor palette" aria-pressed="true"><i style="--swatch:#2d7277"></i><i style="--swatch:#7b4f91"></i><i style="--swatch:#b34f2c"></i><i style="--swatch:#3566a8"></i></button>
+                <button type="button" class="palette-swatch" data-route-palette="bright" aria-label="Bright multicolor palette" aria-pressed="false"><i style="--swatch:#ff4d00"></i><i style="--swatch:#7c3cff"></i><i style="--swatch:#00a8ff"></i><i style="--swatch:#00c853"></i></button>
+                <button type="button" class="palette-swatch highlighter" data-route-palette="highlighter" aria-label="Highlighter multicolor palette" aria-pressed="false"><i style="--swatch:#ffea00"></i><i style="--swatch:#ff3df2"></i><i style="--swatch:#00efff"></i><i style="--swatch:#7dff00"></i></button>
+              </div>
+            </div>
+            <div id="trailList" class="trail-list">
+              <div class="empty-state">
+                <i data-lucide="route"></i>
+                <p>Your generated route concepts will appear here.</p>
+              </div>
+            </div>
           </section>
 
           <footer class="method-note">
-            <strong>Data note:</strong> route geometry was generated from documented control points with Valhalla pedestrian routing over OpenStreetMap. Distances are calculated from that geometry. Routes are not field-verified or intended for turn-by-turn navigation.
+            <strong>Data note:</strong> candidate geometry is generated with
+            <a href="https://valhalla.github.io/valhalla/" target="_blank" rel="noopener noreferrer">Valhalla</a>
+            or the <a href="https://routing.openstreetmap.de/" target="_blank" rel="noopener noreferrer">OpenStreetMap pedestrian router</a> as an availability fallback, using
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>.
+            City search uses <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener noreferrer">Nominatim</a> only when you submit a search. Routes are not field-verified or turn-by-turn navigation products.
           </footer>
         </div>
       </aside>
 
-      <section class="map-panel" aria-label="Interactive trail map">
+      <section class="map-panel" aria-label="Interactive urban trails development map">
         <div id="map"></div>
+        <div class="map-tip" id="mapTip" aria-live="polite">
+          <i data-lucide="move"></i>
+          Pan the map or search for a city
+        </div>
+        <button id="vertexRemovePopup" class="vertex-remove-popup" type="button" aria-label="Remove selected point" title="Remove point" hidden>−</button>
+        <div id="mapEditControls" class="map-edit-controls" aria-label="Map editing tools" hidden>
+          <button id="mapSnappingToggleButton" class="history-action snapping-action" type="button" aria-label="Snapping on" title="Snapping on" aria-pressed="true"><i data-lucide="magnet"></i></button>
+          <button id="mapAddAnchorButton" class="history-action add-anchor-action" type="button" aria-label="Add anchor point" title="Add anchor point" aria-pressed="false">+</button>
+          <button id="mapUndoEditButton" class="history-action" type="button" aria-label="Undo edit" title="Undo edit" disabled>↶</button>
+          <button id="mapRedoEditButton" class="history-action" type="button" aria-label="Redo edit" title="Redo edit" disabled>↷</button>
+        </div>
         <div class="basemap-switcher" aria-label="Basemap choices">
-          <button type="button" class="basemap-button is-active" data-basemap="Esri Topographic" aria-label="Esri Topographic basemap" aria-pressed="true" title="Esri Topographic">
-            <span class="basemap-thumbnail basemap-topographic" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="basemap-button" data-basemap="Esri Light Gray" aria-label="Esri Light Gray basemap" aria-pressed="false" title="Esri Light Gray">
-            <span class="basemap-thumbnail basemap-light-gray" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="basemap-button" data-basemap="Satellite" aria-label="Satellite basemap" aria-pressed="false" title="Satellite">
-            <span class="basemap-thumbnail basemap-satellite" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="basemap-button" data-basemap="OpenStreetMap" aria-label="OpenStreetMap basemap" aria-pressed="false" title="OpenStreetMap">
-            <span class="basemap-thumbnail basemap-openstreetmap" aria-hidden="true"></span>
-          </button>
+          <button type="button" class="basemap-button" data-basemap="Esri Topographic" aria-label="Esri Topographic basemap" aria-pressed="false" title="Esri Topographic"><span class="basemap-thumbnail basemap-topographic" aria-hidden="true"></span></button>
+          <button type="button" class="basemap-button" data-basemap="Esri Light Gray" aria-label="Esri Light Gray basemap" aria-pressed="false" title="Esri Light Gray"><span class="basemap-thumbnail basemap-light-gray" aria-hidden="true"></span></button>
+          <button type="button" class="basemap-button" data-basemap="Satellite" aria-label="Satellite basemap" aria-pressed="false" title="Satellite"><span class="basemap-thumbnail basemap-satellite" aria-hidden="true"></span></button>
+          <button type="button" class="basemap-button is-active" data-basemap="OpenStreetMap" aria-label="OpenStreetMap basemap" aria-pressed="true" title="OpenStreetMap"><span class="basemap-thumbnail basemap-openstreetmap" aria-hidden="true"></span></button>
         </div>
       </section>
 
-      <button class="embed-panel-open" id="openSidebarButton" type="button" aria-label="Open trail information" aria-controls="trailSidebar" aria-expanded="true">
-        Trail information
-      </button>
+      <button class="embed-panel-open" id="openSidebarButton" type="button" aria-label="Open planning workshop" aria-controls="trailSidebar" aria-expanded="true">Planning workshop</button>
     </main>
 
-    <script
-      is:inline
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script is:inline src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script is:inline src="/urban-trails-finder/data.js"></script>
-    <script is:inline src="/urban-trails-finder/app.js?v=20260831-8"></script>
+    <script is:inline src="/urban-trails-finder/app.js?v=20260904-2"></script>
   </body>
 </html>
