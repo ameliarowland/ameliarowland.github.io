@@ -1,30 +1,27 @@
-# Urban Trails Finder
+# Urban Trails Development Plan
 
-A GitHub Pages-friendly web GIS prototype for Stadtwanderweg-inspired walking loops in US cities.
+A GitHub Pages-friendly urban trail planning workspace that replaces the original fixed route catalog.
 
 ## What it includes
 
-- Interactive Leaflet map with four city-wander paths per included city
-- Filters by city
-- Automatic city zoom when the selected city changes
-- Download selected or filtered routes as GeoJSON, GPX, or KML
+- Search for any city with [OpenStreetMap Nominatim](https://nominatim.org/)
+- Generate 1–10 route alternatives, with 10 selected by default
+- Set a customizable minimum and maximum distance; routes are distributed across that range
+- Reject generated or edited routes when measured shared geometry exceeds 10%
+- Global starting view with a kilometers/miles distance selector
+- Map-centered walking-loop generation with Valhalla pedestrian routing over OpenStreetMap
+- Editable Leaflet geometry using Leaflet-Geoman
+- Draggable vertices, right-click vertex removal, midpoint handles, and snapping to the generated route
+- A **Snap to streets** action that re-routes the edited control shape through Valhalla
+- Device-local saved trails with rename, show/hide, and remove controls
+- Individual and combined spatial exports as GeoJSON, GPX, or KML
+- Labeled community map exports as interactive HTML, linked PDF, or PNG image
+- Article-embed and full-screen layouts
 
 ## How to run
 
-Run the Astro site and open `/urban-trails-finder/`. The app uses CDN-hosted Leaflet and remote basemap tiles, so it needs an internet connection for the map library and basemaps.
+Run the Astro site and open `/urban-trails-finder/`. The app uses CDN-hosted Leaflet, remote basemap tiles, the public Valhalla demo server, and user-initiated [Nominatim](https://nominatim.org/) city searches, so it needs an internet connection.
 
-## Portfolio framing
+## Service and data notes
 
-This prototype stores broad control points and generated pedestrian-routed geometries from Valhalla over OpenStreetMap. It intentionally excludes unverified descriptive attributes. A production GIS workflow could add sourced municipal inventories and field-verified path quality, including:
-
-- sidewalk and crossing quality
-- slope and stair segments
-- tree canopy or heat exposure
-- traffic stress and speed limits
-- transit stop accessibility
-- park, waterfront, viewpoint, and public restroom proximity
-- route export as GeoJSON, GPX, and static PDF maps
-
-## Data note
-
-The included geometries are generated city-wander paths for demonstration, not field-verified or turn-by-turn navigation products. Distances are calculated from the displayed geometry. Do not add scores, classifications, accessibility claims, environmental attributes, amenities, or qualitative descriptions without a cited authoritative source or a documented reproducible derivation.
+[Nominatim](https://nominatim.org/) requests occur only after the user submits the city-search form, are cached on the device, and must remain within the [public usage policy](https://operations.osmfoundation.org/policies/nominatim/). Valhalla and public tile services may be unavailable or rate-limited; the interface reports those failures without inventing a route. Generated routes are not field-verified and are not intended for turn-by-turn navigation or accessibility guidance.
