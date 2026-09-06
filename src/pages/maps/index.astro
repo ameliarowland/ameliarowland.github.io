@@ -9,13 +9,13 @@ const maps = (await getCollection('maps', ({ data }) => !data.draft)).sort(
 ---
 
 <BaseLayout
-  title="Maps — Amelia Rowland"
-  description="A gallery of maps and data visualizations by Amelia Rowland: sustainability, urban development, environment, and global change."
+  title="Maps and Data Stories — Amelia Rowland"
+  description="A gallery of maps, notebooks, and data visualizations by Amelia Rowland: sustainability, urban development, environment, and global change."
 >
   <section class="max-w-5xl mx-auto px-4 sm:px-6 pt-16 pb-12">
-    <h1 class="font-display text-3xl sm:text-4xl font-bold">Maps</h1>
+    <h1 class="font-display text-3xl sm:text-4xl font-bold">Maps and data stories</h1>
     <p class="mt-4 text-text-muted max-w-2xl">
-      Each with a short story about the data, tools, and workflow.
+      Projects with the data, tools, process, and decisions made visible.
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
       {maps.map((map) => <MapCard map={map} />)}

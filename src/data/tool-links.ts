@@ -4,12 +4,18 @@ export const TOOL_LINKS: Record<string, string> = {
   'ESA WorldCover': 'https://esa-worldcover.org/',
   GeoJSON: 'https://www.rfc-editor.org/info/rfc7946/',
   HOT: 'https://www.hotosm.org/',
+  HDBSCAN: 'https://scikit-learn.org/stable/modules/clustering.html#hdbscan',
+  Jupyter: 'https://jupyter.org/',
   Leaflet: 'https://leafletjs.com/',
   'Leaflet-Geoman': 'https://geoman.io/docs/leaflet/',
   'MapLibre GL JS': 'https://maplibre.org/maplibre-gl-js/docs/',
+  Matplotlib: 'https://matplotlib.org/stable/',
   'Natural Earth': 'https://www.naturalearthdata.com/',
   OpenStreetMap: 'https://www.openstreetmap.org/',
+  pandas: 'https://pandas.pydata.org/',
   QGIS: 'https://qgis.org/',
+  'scikit-learn': 'https://scikit-learn.org/',
+  seaborn: 'https://seaborn.pydata.org/',
   Valhalla: 'https://valhalla.github.io/valhalla/',
 };
 

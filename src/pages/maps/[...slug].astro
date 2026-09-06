@@ -13,7 +13,8 @@ export async function getStaticPaths() {
 
 const { map } = Astro.props;
 const { Content } = await render(map);
-const { title, description, date, image, embedUrl, externalUrl, tallEmbed, tools, tags } = map.data;
+const { title, description, date, image, embedUrl, externalUrl, sourceUrl, tallEmbed, contentType, tools, tags } = map.data;
+const isNotebook = contentType === 'notebook';
 const localizeSiteUrl = (value: string | undefined) => {
   if (!value || !Astro.site) return value;
 
@@ -30,8 +31,8 @@ const formattedDate = date.toLocaleDateString('en-US', {
 ---
 
 <BaseLayout title={`${title} — Amelia Rowland`} description={description} image={image}>
-  <article class="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-12">
-    <a href="/maps" class="text-sm text-primary hover:text-primary-dark font-medium">← All maps</a>
+  <article class:list={['mx-auto px-4 sm:px-6 pt-16 pb-12', isNotebook ? 'max-w-5xl' : 'max-w-3xl']}>
+    <a href="/maps" class="text-sm text-primary hover:text-primary-dark font-medium">← Maps and data stories</a>
     <h1 class="font-display text-3xl sm:text-4xl font-bold mt-4">{title}</h1>
     <p class="mt-3 text-text-muted">{description}</p>
     <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-text-muted">
@@ -65,39 +66,66 @@ const formattedDate = date.toLocaleDateString('en-US', {
       )}
     </div>
 
-    <div class="mt-8">
-      {embedUrl ? (
-        <iframe
-          src={embedSrc}
-          title={title}
-          class:list={[
-            'w-full rounded-xl border border-border',
-            tallEmbed ? 'h-[78vh] min-h-[620px]' : 'aspect-[4/3]',
-          ]}
-          loading="lazy"
-          allowfullscreen
-        />
-      ) : (
-        <img src={image} alt={title} class="w-full rounded-xl border border-border" />
-      )}
-    </div>
-
-    {externalUrl && (
-      <p class="mt-4">
-        <a
-          href={externalHref}
-          target="_blank"
-          rel="noopener"
-          class="inline-flex items-center rounded-lg border border-primary px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          View map full screen ↗
-        </a>
-      </p>
+    {isNotebook && (
+      <div class="prose-map notebook-prose mt-8 max-w-3xl">
+        <Content />
+      </div>
     )}
 
-    <div class="prose-map mt-8">
-      <Content />
-    </div>
+    {!isNotebook && (
+      <div class="mt-8">
+        {embedUrl ? (
+          <iframe
+            src={embedSrc}
+            title={title}
+            class:list={[
+              'w-full rounded-xl border border-border',
+              tallEmbed ? 'h-[82vh] min-h-[640px]' : 'aspect-[4/3]',
+            ]}
+            loading="lazy"
+            allowfullscreen
+          />
+        ) : (
+          <img src={image} alt={title} class="w-full rounded-xl border border-border" />
+        )}
+      </div>
+    )}
+
+    {(externalUrl || sourceUrl) && (
+      <div class:list={['flex flex-wrap gap-3', isNotebook ? 'mt-8' : 'mt-4']}>
+        {externalUrl && (
+          <a
+            href={externalHref}
+            target="_blank"
+            rel="noopener"
+            class:list={[
+              'inline-flex items-center rounded-lg border border-primary px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+              isNotebook
+                ? 'bg-primary text-white hover:bg-primary-dark'
+                : 'text-primary hover:bg-primary hover:text-white',
+            ]}
+          >
+            {isNotebook ? 'Open in Colab ↗' : 'View map full screen ↗'}
+          </a>
+        )}
+        {sourceUrl && (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center rounded-lg border border-primary px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            Download notebook and project data on GitHub ↗
+          </a>
+        )}
+      </div>
+    )}
+
+    {!isNotebook && (
+      <div class="prose-map mt-8">
+        <Content />
+      </div>
+    )}
 
     {tags.length > 0 && (
       <ul class="flex flex-wrap gap-2 mt-10 pt-6 border-t border-border">
