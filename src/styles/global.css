@@ -65,4 +65,48 @@
   .prose-map img {
     @apply rounded-lg my-6;
   }
+
+  /* Light Jupyter-style cells in notebook project articles */
+  .notebook-prose {
+    counter-reset: notebook-input;
+  }
+  .notebook-prose pre.astro-code {
+    counter-increment: notebook-input;
+    position: relative;
+    margin: 1.25rem 0 2rem;
+    padding: 1.5rem 1.5rem 1.5rem 7.4rem !important;
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 0.9rem;
+    background: #fbfaf7 !important;
+    box-shadow: 0 8px 24px rgb(35 48 40 / 5%);
+  }
+  .notebook-prose pre.astro-code::before {
+    content: "In [" counter(notebook-input) "]";
+    position: absolute;
+    top: 1.5rem;
+    left: 1.9rem;
+    color: #175f53;
+    font: 600 0.82rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+    white-space: nowrap;
+  }
+  .notebook-prose pre.astro-code code {
+    display: block;
+    min-width: max-content;
+    font: 0.84rem/1.72 ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  .notebook-prose pre.astro-code span {
+    color: #17211d !important;
+    font-style: normal !important;
+  }
+
+  @media (max-width: 640px) {
+    .notebook-prose pre.astro-code {
+      padding: 3.15rem 1rem 1.2rem !important;
+    }
+    .notebook-prose pre.astro-code::before {
+      top: 0.8rem;
+      left: 1rem;
+    }
+  }
 }

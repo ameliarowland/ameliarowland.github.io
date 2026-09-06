@@ -15,8 +15,11 @@ const maps = defineCollection({
       embedUrl: z.string().url().optional(),
       // Full-screen version linked next to the embedded map.
       externalUrl: z.string().url().optional(),
+      // Public source repository for notebooks and project files.
+      sourceUrl: z.string().url().optional(),
       // Use a taller frame for full interactive applications.
       tallEmbed: z.boolean().default(false),
+      contentType: z.enum(['map', 'notebook']).default('map'),
       tools: z.array(z.string()).default([]),
       tags: z.array(z.string()).default([]),
       draft: z.boolean().default(false),
@@ -24,7 +27,7 @@ const maps = defineCollection({
     .superRefine((map, context) => {
       if (map.draft) return;
 
-      if (!map.embedUrl) {
+      if (map.contentType === 'map' && !map.embedUrl) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'Published map articles must embed an interactive map.',
@@ -35,7 +38,7 @@ const maps = defineCollection({
       if (!map.externalUrl) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Published map articles must link to a full-screen map.',
+          message: 'Published articles must include an external project link.',
           path: ['externalUrl'],
         });
       }
