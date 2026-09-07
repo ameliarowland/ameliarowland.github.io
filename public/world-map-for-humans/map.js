@@ -1,7 +1,6 @@
 (() => {
-  const initialView = { center: [7, 16], zoom: 1.35 };
+  const initialView = { center: [7, 16], zoom: 3 };
   const layerState = {
-    coastlines: true,
     water: true,
     population: false,
     'land-cover': false,
@@ -9,8 +8,7 @@
   };
 
   const layerIds = {
-    coastlines: ['coastline-halo', 'coastline'],
-    water: ['water-fill'],
+    water: ['water-fill', 'waterways'],
     population: ['population-density'],
     'land-cover': ['worldcover-land-cover'],
     'false-colour': ['worldcover-false-colour'],
@@ -87,25 +85,14 @@
           },
         },
         {
-          id: 'coastline-halo',
+          id: 'waterways',
           type: 'line',
           source: 'openmaptiles',
-          'source-layer': 'water',
+          'source-layer': 'waterway',
           paint: {
-            'line-color': '#f7f1e3',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 0, 1.7, 8, 3.2],
-            'line-opacity': 0.8,
-          },
-        },
-        {
-          id: 'coastline',
-          type: 'line',
-          source: 'openmaptiles',
-          'source-layer': 'water',
-          paint: {
-            'line-color': '#173a3c',
-            'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.7, 8, 1.25],
-            'line-opacity': 0.94,
+            'line-color': '#8cb9bb',
+            'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.3, 8, 0.8, 14, 2],
+            'line-opacity': ['interpolate', ['linear'], ['zoom'], 0, 0.92, 8, 0.82],
           },
         },
       ],
