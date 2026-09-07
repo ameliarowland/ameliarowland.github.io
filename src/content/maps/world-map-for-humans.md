@@ -5,6 +5,7 @@ date: 2026-08-29
 image: /maps/world_map_for_humans.png
 embedUrl: https://ameliarowland.github.io/world-map-for-humans/
 externalUrl: https://ameliarowland.github.io/world-map-for-humans/
+mobileTallEmbed: true
 tools: [MapLibre GL JS, OpenStreetMap, Copernicus GHSL, ESA WorldCover]
 tags: [web-gis, experimental-cartography, open-data, remote-sensing]
 ---

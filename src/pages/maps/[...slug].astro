@@ -13,7 +13,7 @@ export async function getStaticPaths() {
 
 const { map } = Astro.props;
 const { Content } = await render(map);
-const { title, description, date, image, embedUrl, externalUrl, sourceUrl, tallEmbed, contentType, tools, tags } = map.data;
+const { title, description, date, image, embedUrl, externalUrl, sourceUrl, tallEmbed, mobileTallEmbed, contentType, tools, tags } = map.data;
 const isNotebook = contentType === 'notebook';
 const localizeSiteUrl = (value: string | undefined) => {
   if (!value || !Astro.site) return value;
@@ -81,6 +81,7 @@ const formattedDate = date.toLocaleDateString('en-US', {
             class:list={[
               'w-full rounded-xl border border-border',
               tallEmbed ? 'h-[82vh] min-h-[640px]' : 'aspect-[4/3]',
+              mobileTallEmbed && 'mobile-tall-map-embed',
             ]}
             loading="lazy"
             allowfullscreen
@@ -138,3 +139,21 @@ const formattedDate = date.toLocaleDateString('en-US', {
     )}
   </article>
 </BaseLayout>
+
+<style>
+  @media (max-width: 640px) and (orientation: portrait) {
+    .mobile-tall-map-embed {
+      aspect-ratio: auto;
+      height: min(70dvh, 640px);
+      min-height: 520px;
+    }
+  }
+
+  @media (max-height: 500px) and (orientation: landscape) {
+    .mobile-tall-map-embed {
+      aspect-ratio: auto;
+      height: 82dvh;
+      min-height: 320px;
+    }
+  }
+</style>
