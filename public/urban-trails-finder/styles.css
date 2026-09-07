@@ -1358,9 +1358,22 @@ body.article-embed .embed-panel-open.is-visible { display: block; }
   .header-note { display: none; }
   .sidebar { padding: 14px; }
   .list-heading { align-items: stretch; flex-direction: column; }
-  .export-all-group { width: 100%; max-width: none; }
+  .list-heading > :first-child { flex: none; }
+  .export-all-group { width: 100%; max-width: none; flex: none; }
   .list-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .map-tip { top: 10px; max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }
+  .map-tip {
+    top: 10px;
+    max-width: calc(100vw - 110px);
+    min-height: 40px;
+    padding: 7px 10px;
+    justify-content: center;
+    font-size: clamp(0.72rem, 3.2vw, 0.88rem);
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .map-tip svg { flex: 0 0 auto; }
 
   body.article-embed .sidebar {
     top: auto;

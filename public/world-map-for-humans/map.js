@@ -112,8 +112,8 @@
     },
   });
 
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), 'bottom-right');
   map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), 'bottom-right');
 
   const status = document.querySelector('#map-status');
   const layerPanel = document.querySelector('#layer-panel');

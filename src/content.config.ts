@@ -19,6 +19,7 @@ const maps = defineCollection({
       sourceUrl: z.string().url().optional(),
       // Use a taller frame for full interactive applications.
       tallEmbed: z.boolean().default(false),
+      mobileTallEmbed: z.boolean().default(false),
       contentType: z.enum(['map', 'notebook']).default('map'),
       tools: z.array(z.string()).default([]),
       tags: z.array(z.string()).default([]),

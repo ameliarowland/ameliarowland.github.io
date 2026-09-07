@@ -1089,7 +1089,18 @@ body.article-embed .embed-panel-open.is-visible { display: block; }
   .sidebar { padding: 14px; }
   .list-heading { align-items: stretch; flex-direction: column; }
   .list-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .map-tip { top: 10px; max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }
+  .map-tip {
+    top: 10px;
+    max-width: calc(100vw - 110px);
+    min-height: 36px;
+    padding: 7px 10px;
+    justify-content: center;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .map-tip svg { flex: 0 0 auto; }
 
   body.article-embed .sidebar {
     top: auto;
