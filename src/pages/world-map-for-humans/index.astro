@@ -1,6 +1,6 @@
 ---
 const title = 'World Map for Humans';
-const description = 'An interactive, boundary-free world map built from coastlines, water, population, and satellite imagery.';
+const description = 'An interactive, boundary-free world map built from water, population, and satellite imagery.';
 ---
 
 <!doctype html>
@@ -44,22 +44,17 @@ const description = 'An interactive, boundary-free world map built from coastlin
 
         <div class="layer-section" aria-labelledby="physical-heading">
           <h3 id="physical-heading">Physical + human</h3>
-          <div class="layer-item">
-            <button class="layer-toggle is-on" type="button" data-layer="coastlines" aria-pressed="true">
-              <span class="layer-swatch swatch-coastline" aria-hidden="true"></span>
-              <span class="layer-copy"><strong>Coastlines</strong></span>
-              <span class="switch" aria-hidden="true"><span></span></span>
-            </button>
-            <a class="layer-source" href="https://osmdata.openstreetmap.de/data/coastlines.html" target="_blank" rel="noreferrer">OSMData · ODbL ↗</a>
-          </div>
-
-          <div class="layer-item">
+          <div class="layer-item layer-item-with-sources">
             <button class="layer-toggle is-on" type="button" data-layer="water" aria-pressed="true">
               <span class="layer-swatch swatch-water" aria-hidden="true"></span>
-              <span class="layer-copy"><strong>Water polygons</strong></span>
+              <span class="layer-copy"><strong>Water</strong></span>
               <span class="switch" aria-hidden="true"><span></span></span>
             </button>
-            <a class="layer-source" href="https://osmdata.openstreetmap.de/data/water-polygons.html" target="_blank" rel="noreferrer">OSMData · ODbL ↗</a>
+            <div class="layer-sources" aria-label="Water data sources">
+              <a href="https://openmaptiles.org/schema/#water" target="_blank" rel="noreferrer">Water polygons ↗</a>
+              <span aria-hidden="true">·</span>
+              <a href="https://openmaptiles.org/schema/#waterway" target="_blank" rel="noreferrer">Rivers + waterways ↗</a>
+            </div>
           </div>
 
           <div class="layer-item">
@@ -129,6 +124,6 @@ const description = 'An interactive, boundary-free world map built from coastlin
     </main>
 
     <script is:inline defer src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
-    <script is:inline defer src="/world-map-for-humans/map.js?v=8"></script>
+    <script is:inline defer src="/world-map-for-humans/map.js?v=10"></script>
   </body>
 </html>
