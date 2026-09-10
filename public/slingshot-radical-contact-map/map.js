@@ -144,6 +144,7 @@
         activeRegion = region;
         renderRegions();
         applyFilters(true);
+        if (region !== 'All') closeDirectory();
       });
       regionRow.appendChild(button);
     });
@@ -165,6 +166,12 @@
     activeRegion = 'All';
     renderRegions();
     applyFilters(false);
+  }
+
+  function closeDirectory() {
+    panel.classList.remove('is-open');
+    panel.classList.add('is-closed');
+    openButton.classList.add('is-visible');
   }
 
   async function start() {
@@ -195,11 +202,7 @@
 
   searchInput.addEventListener('input', () => applyFilters(true));
   resetButton.addEventListener('click', resetFilters);
-  closeButton.addEventListener('click', () => {
-    panel.classList.remove('is-open');
-    panel.classList.add('is-closed');
-    openButton.classList.add('is-visible');
-  });
+  closeButton.addEventListener('click', closeDirectory);
   openButton.addEventListener('click', () => {
     panel.classList.remove('is-closed');
     panel.classList.add('is-open');
@@ -208,4 +211,3 @@
 
   start();
 })();
-
