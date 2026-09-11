@@ -46,7 +46,7 @@ Ultimately, I selected the basemap developed by the **H**umanitarian **O**pen St
 
 ## Data Scraping and Cleaning
 
-A [Python scraper](https://github.com/ameliarowland/slingshot/blob/main/scripts/scrape_slingshot.py) crawled the directory’s nested country/region pages and extracted names and plain-text addresses. Records were parsed, cleaned, deduplicated, and reviewed country by country; inactive/defunct spaces were removed. Reliable addresses were then geocoded using Nominatim, while uncertain locations were excluded rather than mapped inaccurately. The final dataset contains 962 locations with source links.
+A Python scraper crawled the directory’s nested country/region pages and extracted names and plain-text addresses. Records were parsed, cleaned, deduplicated, and reviewed country by country; inactive/defunct spaces were removed. Reliable addresses were then geocoded using Nominatim, while uncertain locations were excluded rather than mapped inaccurately. the final dataset contains 956 locations with source links.
 
 ## Mapping Approach
 

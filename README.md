@@ -57,6 +57,20 @@ Every published map article must meet these requirements:
 
 3. Commit and push to `main` — GitHub Actions builds and deploys automatically.
 
+### Sync the Slingshot map
+
+The private `slingshot` repository is the source of truth for the published
+directory data. With both repositories stored in the same parent folder, run:
+
+```bash
+npm run sync:slingshot
+```
+
+The command validates the source directory, builds the complete static map,
+copies it into the portfolio, and updates the location count in the Slingshot
+article. Pass a different repository path after `--` when needed, for example
+`npm run sync:slingshot -- D:/projects/slingshot`.
+
 Delete the two `sample-*.md` files (and their SVGs in `public/maps/`) once real
 maps are in.
 

@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "sync:slingshot": "node scripts/sync-slingshot-map.mjs",
     "astro": "astro"
   },
   "dependencies": {
