@@ -30,7 +30,9 @@ function draw() {
  if(available) {
   map.getSource('qualifying').setData(mergedHighlights(qualified,shapes,color,lanes));
   const mapped=route?records.find(r=>r.route===route)?.ntadName:null;
-  map.setFilter('network',route?['==',['get','name'],mapped||route]:null);
+  // Service filters narrow comparisons, while the full route network stays visible.
+  map.setFilter('network',null);
+  map.setPaintProperty('network','line-opacity',route?['case',['==',['get','name'],mapped||route],1,.6]:.9);
  }
  if(selected&&!filtered.some(r=>r.id===selected.id))closeSelection();
  shown=40;renderResults();syncURL();
@@ -89,10 +91,10 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
   map.on('load',()=>{
    map.addSource('network',{type:'geojson',data:routeData});
-   const offset=['interpolate',['linear'],['zoom'],3,['*',['get','lane'],1.6],7,['*',['get','lane'],4.5],11,['*',['get','lane'],6]];
-   map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':2,'line-offset':offset,'line-opacity':.85}});
+   const offset=['interpolate',['linear'],['zoom'],3,['*',['get','lane'],3.5],7,['*',['get','lane'],5.5],11,['*',['get','lane'],7]];
+   map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,2.5,7,3.2,11,4],'line-offset':offset,'line-opacity':.9}});
    map.addSource('qualifying',{type:'geojson',data:empty()});
-   map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':3,'line-offset':offset,'line-opacity':.95}});
+   map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':offset,'line-opacity':1}});
    map.addSource('selected',{type:'geojson',data:empty()});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:stationData});
