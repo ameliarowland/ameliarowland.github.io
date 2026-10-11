@@ -31,7 +31,6 @@ function draw() {
   map.getSource('qualifying').setData(mergedHighlights(qualified,shapes,color,lanes));
   const mapped=route?records.find(r=>r.route===route)?.ntadName:null;
   map.setFilter('network',route?['==',['get','name'],mapped||route]:null);
-  map.setFilter('network-casing',route?['==',['get','name'],mapped||route]:null);
  }
  if(selected&&!filtered.some(r=>r.id===selected.id))closeSelection();
  shown=40;renderResults();syncURL();
@@ -91,13 +90,10 @@ async function init() {
   map.on('load',()=>{
    map.addSource('network',{type:'geojson',data:routeData});
    const offset=['interpolate',['linear'],['zoom'],3,['*',['get','lane'],1.6],7,['*',['get','lane'],4.5],11,['*',['get','lane'],6]];
-   map.addLayer({id:'network-casing',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#101b2a','line-width':4.5,'line-offset':offset,'line-opacity':.7}});
    map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':2,'line-offset':offset,'line-opacity':.85}});
    map.addSource('qualifying',{type:'geojson',data:empty()});
-   map.addLayer({id:'qualified-casing',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#101b2a','line-width':6,'line-offset':offset,'line-opacity':.8}});
    map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':3,'line-offset':offset,'line-opacity':.95}});
    map.addSource('selected',{type:'geojson',data:empty()});
-   map.addLayer({id:'selected-casing',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#101b2a','line-width':11}});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:stationData});
    // Soft halos stay separate from the crisp, clickable white station centers.
