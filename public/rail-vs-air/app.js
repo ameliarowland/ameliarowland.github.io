@@ -76,7 +76,7 @@ async function init() {
   const [routeData,stationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
   records=comparisons;shapes=shapeData;lanes=prepareLanes(records,shapes);airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
   const names=[...new Set([...routeData.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
-  colors=new Map(names.map((name,i)=>[name,`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${32+(i%2)*8}%)`]));
+  colors=new Map(names.map((name,i)=>[name,`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of routeData.features)feature.properties.color=color(feature.properties.name);
   const services=[...new Set(records.map(r=>r.route))].sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
@@ -86,21 +86,24 @@ async function init() {
   $('coverage').textContent=`${manifest.routeCount} NTAD routes · ${manifest.stationCount} filtered train stations · ${manifest.matchedPairs.toLocaleString()} matched comparisons of ${manifest.directRailPairs.toLocaleString()} direct rail service/station/direction pairs. ${manifest.geometryMissing} comparisons have no usable journey geometry. Source snapshots, not live booking information.`;
   draw();
   if(!window.maplibregl){$('status').textContent+=' Map library unavailable; the comparison list and CSV still work.';return;}
-  map=new maplibregl.Map({container:'map',style:{version:8,sources:{basemap:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}},layers:[{id:'basemap',type:'raster',source:'basemap',paint:{'raster-saturation':-.7,'raster-opacity':.8}}]},bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});
+  map=new maplibregl.Map({container:'map',style:{version:8,sources:{basemap:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}},layers:[{id:'background',type:'background',paint:{'background-color':'#101b2a'}},{id:'basemap',type:'raster',source:'basemap',paint:{'raster-saturation':-1,'raster-brightness-min':.015,'raster-brightness-max':.28,'raster-contrast':.15,'raster-opacity':.8}}]},bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
   map.on('load',()=>{
    map.addSource('network',{type:'geojson',data:routeData});
    const offset=['interpolate',['linear'],['zoom'],3,['*',['get','lane'],1.6],7,['*',['get','lane'],4.5],11,['*',['get','lane'],6]];
-   map.addLayer({id:'network-casing',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#fffdf8','line-width':4.5,'line-offset':offset,'line-opacity':.7}});
-   map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':2,'line-offset':offset,'line-opacity':.62}});
+   map.addLayer({id:'network-casing',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#101b2a','line-width':4.5,'line-offset':offset,'line-opacity':.7}});
+   map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':2,'line-offset':offset,'line-opacity':.85}});
    map.addSource('qualifying',{type:'geojson',data:empty()});
-   map.addLayer({id:'qualified-casing',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#fffdf8','line-width':6,'line-offset':offset,'line-opacity':.8}});
+   map.addLayer({id:'qualified-casing',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#101b2a','line-width':6,'line-offset':offset,'line-opacity':.8}});
    map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':3,'line-offset':offset,'line-opacity':.95}});
    map.addSource('selected',{type:'geojson',data:empty()});
-   map.addLayer({id:'selected-casing',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#fff','line-width':11}});
-   map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#183d33','line-width':6}});
+   map.addLayer({id:'selected-casing',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#101b2a','line-width':11}});
+   map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:stationData});
-   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,1.8,7,3.2,12,5],'circle-color':'#183d33','circle-stroke-width':1,'circle-stroke-color':'#fffdf8'}});
+   // Soft halos stay separate from the crisp, clickable white station centers.
+   map.addLayer({id:'station-glow',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,5,7,9,12,13],'circle-color':'#ffffff','circle-blur':.9,'circle-opacity':.4}});
+   map.addLayer({id:'station-inner-glow',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,3,7,5,12,7],'circle-color':'#ffffff','circle-blur':.65,'circle-opacity':.5}});
+   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,1.8,7,3.2,12,4.5],'circle-color':'#ffffff','circle-stroke-width':.4,'circle-stroke-color':'#ffffff'}});
    map.on('click','stations',e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);});
    map.on('click','network',e=>{const name=e.features[0].properties.name;const service=records.find(r=>r.ntadName===name)?.route;if(service){$('route').value=service;draw();}else{new maplibregl.Popup().setLngLat(e.lngLat).setText(`${name}: no matched travel-time comparisons in this snapshot.`).addTo(map);}});
    for(const id of ['stations','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
