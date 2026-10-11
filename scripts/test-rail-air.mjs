@@ -12,6 +12,14 @@ const lanes=prepareLanes(records,shapes);
 assert.deepEqual(lanes.get('forward|A'),[-.5,-.5]);
 assert.deepEqual(lanes.get('reverse|B'),[-.5,-.5]); // reversed vector = opposite physical offset
 assert.equal(mergedHighlights(records,shapes,()=> '#000',lanes).features.length,2);
+// Heading reversals around a bend must not swap the sides of a shared track.
+const bend=[[0,0],[2,1],[1,2],[-1,3]],bendShapes={a:bend,b:[...bend].reverse()};
+const bent=prepareLanes([{shapeId:'a',route:'A'},{shapeId:'b',route:'B'}],bendShapes);
+for(const values of bent.values())assert(values.every(v=>v===values[0]));
+// Highlight lanes must follow the base network even if their own membership differs.
+const reference={type:'FeatureCollection',features:[{type:'Feature',properties:{name:'A',lane:1.5},geometry:{type:'LineString',coordinates:bend}}]};
+const aligned=prepareLanes([{shapeId:'a',route:'A'}],bendShapes,reference);
+assert.deepEqual(aligned.get('a|A'),[1.5,1.5,1.5]);
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
