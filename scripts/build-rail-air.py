@@ -35,9 +35,43 @@ def simplify(points,tolerance=.0003):
   if best>tolerance*tolerance:keep.add(idx);stack.extend([(lo,idx),(idx,hi)])
  return [points[i] for i in sorted(keep)]
 
+def corridor_chains(edges):
+ # Pair the straightest continuations at junctions, regardless of route membership.
+ # Orient the complete corridor once, not each membership run or individual edge.
+ adjacency=defaultdict(list)
+ for a,b in edges:adjacency[a].append(b);adjacency[b].append(a)
+ continuation={}
+ for vertex,neighbors in adjacency.items():
+  remaining=set(neighbors)
+  while len(remaining)>=2:
+   candidates=[]
+   ns=sorted(remaining)
+   for i,a in enumerate(ns):
+    for b in ns[i+1:]:
+     ax,ay=a[0]-vertex[0],a[1]-vertex[1];bx,by=b[0]-vertex[0],b[1]-vertex[1]
+     cosine=(ax*bx+ay*by)/math.sqrt((ax*ax+ay*ay)*(bx*bx+by*by))
+     candidates.append((cosine,a,b))
+   cosine,a,b=min(candidates)
+   if len(neighbors)>2 and cosine>-.25:break
+   continuation[(vertex,a)]=b;continuation[(vertex,b)]=a
+   remaining.remove(a);remaining.remove(b)
+ unused=set(edges);chains=[]
+ def walk(a,b):
+  points=[a,b];unused.remove(tuple(sorted((a,b))))
+  while (b,a) in continuation:
+   c=continuation[(b,a)];edge=tuple(sorted((b,c)))
+   if edge not in unused:break
+   unused.remove(edge);points.append(c);a,b=b,c
+  if points[0]>points[-1]:points.reverse()
+  chains.append(points)
+ starts=sorted((v,n) for v,neighbors in adjacency.items() for n in neighbors if (v,n) not in continuation)
+ for a,b in starts:
+  if tuple(sorted((a,b))) in unused:walk(a,b)
+ while unused:
+  a,b=min(unused);walk(a,b)
+ return chains
+
 def parallel_routes(fc):
- # Shared edges before simplification. Canonical direction means offsets do not
- # collide when two source routes traverse the same track in opposite directions.
  edges=defaultdict(set)
  for f in fc['features']:
   geom=f['geometry'];lines=geom['coordinates'] if geom['type']=='MultiLineString' else [geom['coordinates']]
@@ -45,30 +79,18 @@ def parallel_routes(fc):
    for p,q in zip(line,line[1:]):
     a,b=tuple(round(v,6) for v in p[:2]),tuple(round(v,6) for v in q[:2])
     if a!=b:edges[tuple(sorted((a,b)))].add(f['properties']['name'])
- grouped=defaultdict(list)
- for edge,names in edges.items():grouped[tuple(sorted(names))].append(edge)
- features=[];shared=0
- for names,es in grouped.items():
-  adjacency=defaultdict(list);unused=set(es)
-  for edge in es:
-   a,b=edge;adjacency[a].append(b);adjacency[b].append(a)
-  starts=[p for p in adjacency if len(adjacency[p])!=2]
-  def walk(a,b):
-   pts=[a,b];unused.remove(tuple(sorted((a,b))))
-   while len(adjacency[b])==2:
-    candidates=[c for c in adjacency[b] if tuple(sorted((b,c))) in unused]
-    if not candidates:break
-    c=candidates[0];unused.remove(tuple(sorted((b,c))));pts.append(c);a,b=b,c
-   if pts[0]>pts[-1]:pts.reverse()
-   coords=simplify(pts)
+ features=[]
+ for points in corridor_chains(edges):
+  start=0;names=tuple(sorted(edges[tuple(sorted((points[0],points[1])))]))
+  def emit(a,b,names):
+   coords=simplify(points[a:b+1])
    for i,name in enumerate(names):
     features.append({'type':'Feature','properties':{'name':name,'lane':i-(len(names)-1)/2,'shared':len(names)},'geometry':{'type':'LineString','coordinates':coords}})
-  for a in sorted(starts):
-   for b in adjacency[a]:
-    if tuple(sorted((a,b))) in unused:walk(a,b)
-  while unused:
-   a,b=min(unused);walk(a,b)
-  if len(names)>1:shared+=len(es)
+  for i in range(1,len(points)-1):
+   next_names=tuple(sorted(edges[tuple(sorted((points[i],points[i+1])))]))
+   if next_names!=names:emit(start,i,names);start=i;names=next_names
+  emit(start,len(points)-1,names)
+ shared=sum(len(names)>1 for names in edges.values())
  return {'type':'FeatureCollection','features':features},shared
 
 def build(args):
