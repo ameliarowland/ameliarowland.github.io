@@ -180,8 +180,9 @@ def build(args):
  times=defaultdict(list)
  for t in readzip(z,'stop_times.txt'):
   if t['trip_id'] in trips:times[t['trip_id']].append(t)
- from rail_topology import simplify_display_sections,join_display_tails
+ from rail_topology import simplify_display_sections,join_display_tails,restore_north_philadelphia_connector
  parallel,shared=parallel_routes(route_geo)
+ parallel=restore_north_philadelphia_connector(parallel)
  parallel,suppressed=simplify_display_sections(parallel)
  parallel,joined=join_display_tails(parallel,stations)
  dump('routes.geojson',parallel)
@@ -258,7 +259,7 @@ def build(args):
   evidence[filename]=rows
  if 'calendar_dates.txt' in z.namelist():evidence['calendar_dates.txt']=readzip(z,'calendar_dates.txt')
  dump('gtfs-evidence.json',evidence)
- manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'routeLanePriority':DISPLAY_ROUTE_PRIORITY,'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':750},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
+ manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'routeLanePriority':DISPLAY_ROUTE_PRIORITY,'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':750,'preserveConnectingSections':True,'sourceGapDisplayRepairs':['Crescent at North Philadelphia; existing shared NEC track']},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
  dump('manifest.json',manifest)
  print(json.dumps(manifest,indent=2))
  print('Default qualifying route/station/direction records:',sum(r['railMinutes']<=r['flightMinutes']+240 for r in records))
