@@ -603,7 +603,7 @@ export function alignLaneFrames(collection) {
     if(!bundles.has(key))bundles.set(key,[]);bundles.get(key).push(f);
   }
   for(const bundle of bundles.values()) {
-    if(!bundle.some(f=>Number.isFinite(f.properties.lanePriority)))continue;
+    if(!bundle.some(f=>Number.isFinite(f.properties.lanePriority)||Number.isFinite(f.properties.laneSouthPriority)))continue;
     const p=bundle[0].geometry.coordinates;
     let direction=p.at(-1)[0]>=p[0][0]?1:-1;
     // The Philadelphia approach bends back west before reaching the station.
@@ -619,7 +619,7 @@ export function alignLaneFrames(collection) {
     const symbols=new Map();
     for(const f of bundle) {
       const name=f.properties.symbologyName||f.properties.name;
-      if(!symbols.has(name))symbols.set(name,{name,lane:f.properties.lane*direction,priority:f.properties.lanePriority??Infinity});
+      if(!symbols.has(name))symbols.set(name,{name,lane:f.properties.lane*direction,priority:f.properties.lanePriority??Infinity,south:f.properties.laneSouthPriority??Infinity});
     }
     const manhattan=['Adirondack','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf'];
     const newYork=p.every(q=>q[0]>=-74.0021&&q[0]<=-73.99&&q[1]>=40.749&&q[1]<=40.755);
@@ -627,7 +627,7 @@ export function alignLaneFrames(collection) {
       const index=manhattan.indexOf(symbol.name);
       symbol.priority=index>=0?index:(symbol.priority===Infinity?Infinity:manhattan.length+symbol.priority);
     }
-    const ordered=[...symbols.values()].sort((a,b)=>a.priority-b.priority||a.lane-b.lane);
+    const ordered=[...symbols.values()].sort((a,b)=>Number.isFinite(a.south)-Number.isFinite(b.south)||(Number.isFinite(a.south)&&Number.isFinite(b.south)?a.south-b.south:a.priority-b.priority||a.lane-b.lane));
     for(const f of bundle)f.properties.lane=values[ordered.findIndex(s=>s.name===(f.properties.symbologyName||f.properties.name))]*direction;
   }
   return {type:'FeatureCollection',features};
