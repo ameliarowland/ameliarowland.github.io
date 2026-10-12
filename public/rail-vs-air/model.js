@@ -180,3 +180,50 @@ export function networkHighlights(records, shapes, network, color) {
   }
   return {type:'FeatureCollection',features};
 }
+
+// Compute perpendicular offsets explicitly instead of using the renderer's
+// unbounded line-offset corner intersections. Acute joins are beveled at 2x offset.
+function simplifyScreen(points,tolerance=2) {
+  if(points.length<3)return points;
+  const keep=new Set([0,points.length-1]),stack=[[0,points.length-1]];
+  while(stack.length) {
+    const [lo,hi]=stack.pop(),a=points[lo],b=points[hi],dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;
+    let distance=-1,index=lo;
+    for(let j=lo+1;j<hi;j++) {
+      const p=points[j],t=den?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/den)):0;
+      const d=(p[0]-a[0]-t*dx)**2+(p[1]-a[1]-t*dy)**2;
+      if(d>distance){distance=d;index=j;}
+    }
+    if(distance>tolerance*tolerance){keep.add(index);stack.push([lo,index],[index,hi]);}
+  }
+  return [...keep].sort((a,b)=>a-b).map(i=>points[i]);
+}
+export function offsetNetwork(collection, zoom) {
+  const world=512*2**zoom;
+  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+  const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
+  const spacing=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7;
+  const features=collection.features.map(f=>{
+    const d=(f.properties.lane||0)*spacing;
+    const points=simplifyScreen(f.geometry.coordinates.map(project).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7)).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7);
+    if(points.length<2)return f;
+    const normals=[];
+    for(let i=0;i<points.length-1;i++) {
+      const dx=points[i+1][0]-points[i][0],dy=points[i+1][1]-points[i][1],len=Math.hypot(dx,dy);
+      normals.push([-dy/len,dx/len]);
+    }
+    const shifted=[];
+    const add=(p,n,amount=d)=>shifted.push([p[0]+n[0]*amount,p[1]+n[1]*amount]);
+    add(points[0],normals[0]);
+    for(let i=1;i<points.length-1;i++) {
+      const a=normals[i-1],b=normals[i],sx=a[0]+b[0],sy=a[1]+b[1],length=Math.hypot(sx,sy);
+      if(length<1e-6){add(points[i],a);add(points[i],b);continue;}
+      const bisector=[sx/length,sy/length],den=bisector[0]*b[0]+bisector[1]*b[1],miter=d/den;
+      if(!Number.isFinite(miter)||Math.abs(miter)>Math.abs(d)*2){add(points[i],a);add(points[i],b);}
+      else add(points[i],bisector,miter);
+    }
+    add(points.at(-1),normals.at(-1));
+    return {...f,geometry:{type:'LineString',coordinates:shifted.map(unproject)}};
+  });
+  return {type:'FeatureCollection',features};
+}
