@@ -130,5 +130,14 @@ const actualSymbols=stationSymbols(stationData,actualNetwork,offsetNetwork(actua
 for(const code of ['PHL','NYP','RVR'])assert(actualSymbols.bars.features.some(f=>f.properties.Code===code));
 assert(actualSymbols.dots.features.some(f=>f.properties.Code==='DOW'));
 assert.equal(actualSymbols.dots.features.length+actualSymbols.bars.features.length,stationData.features.length);
+// Curved displayed lanes may cross the station's perpendicular at a different
+// heading than the source tangent; they must still contribute to the bar.
+for(const zoom of [6,7,7.5,8,10,12]) {
+ const style=routeDrawingStyle(actualNetwork,zoom);
+ const station=stationData.features.find(f=>f.properties.Code==='WIL');
+ const symbols=stationSymbols({type:'FeatureCollection',features:[station]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
+ assert(symbols.bars.features.some(f=>f.properties.Code==='WIL'),`Wilmington reverted to a dot at zoom ${zoom}`);
+}
+
 
 console.log(`Verified ${comparisons.length} comparisons against retained GTFS evidence, station filters, geometry bounds, threshold boundaries, and opposite-direction offsets.`);
