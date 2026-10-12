@@ -1,4 +1,4 @@
-import {createLayoutEngine} from './layout-core.js?v=station-schematic-10';
+import {createLayoutEngine} from './layout-core.js?v=station-schematic-11';
 let layout,pending=null,timer=null;
 self.onmessage=async ({data})=>{
  if(data.type==='init') {
