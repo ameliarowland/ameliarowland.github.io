@@ -829,3 +829,67 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
   return {dots:{type:'FeatureCollection',features:dots},passes:{type:'FeatureCollection',features:passes}};
 }
 
+
+// Shared station anchors collapse the whole corridor, including passing lines.
+// Timetable membership affects markers only, never the shape of a junction.
+export function pinchedNetwork(collection,zoom,style=routeDrawingStyle(collection,zoom),stations=null) {
+  const world=512*2**zoom;
+  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+  const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
+  const anchored=anchorStationGeometry(collection,stations),stationByCode=new Map((stations?.features||[]).map(s=>[s.properties.Code,s]));
+  const targets=new Map(),associations=new Map();
+  for(const a of anchored.stationAnchorAssociations||[]) {
+    const station=stationByCode.get(a.Code);if(!station)continue;
+    targets.set(a.key,project(station.geometry.coordinates));
+    const key=a.name+'|'+a.key;if(!associations.has(key))associations.set(key,[]);associations.get(key).push(a.Code);
+  }
+  const paths=continuousRoutePaths(simplifyDisplayGeometry(anchored,zoom));
+  return {type:'FeatureCollection',features:paths.features.map(f=>{
+    const coords=f.geometry.coordinates,p=coords.map(project),distance=[0],name=stationRouteName(f.properties.symbologyName||f.properties.name);
+    for(let i=1;i<p.length;i++)distance.push(distance.at(-1)+Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]));
+    const stops=coords.flatMap((c,i)=>targets.has(coordinateKey(c))?[{index:i,t:distance[i],target:targets.get(coordinateKey(c))}]:[]);
+    const maxOffset=style.spacing*Math.max(1,...f.properties.edgeLanes.map(Math.abs));
+    const taper=Math.max(24,maxOffset*2.5),window=Math.max(6,maxOffset);
+    function locate(t) {
+      t=Math.max(0,Math.min(distance.at(-1),t));let lo=0,hi=distance.length-1;
+      while(hi-lo>1){const mid=(lo+hi)>>1;if(distance[mid]<=t)lo=mid;else hi=mid;}
+      const u=(t-distance[lo])/(distance[hi]-distance[lo]||1);
+      return {i:lo,u,point:[p[lo][0]+(p[hi][0]-p[lo][0])*u,p[lo][1]+(p[hi][1]-p[lo][1])*u]};
+    }
+    const samples=new Set(distance);
+    for(const stop of stops) {
+      const start=Math.max(0,stop.t-taper),end=Math.min(distance.at(-1),stop.t+taper);
+      for(let t=start;t<end;t+=4)samples.add(t);samples.add(end);
+    }
+    const stationPositions=[];
+    for(const stop of stops)for(const Code of associations.get(name+'|'+coordinateKey(coords[stop.index]))||[])stationPositions.push({Code,name,coordinates:unproject(stop.target)});
+    const points=[...samples].sort((a,b)=>a-b).map(t=>{
+      const {i,u,point}=locate(t),a=locate(t-window).point,b=locate(t+window).point;
+      const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy)||1;
+      const lanes=f.properties.edgeLanes;
+      const left=i?((lanes[i-1]+lanes[i])/2):lanes[i];
+      const right=i+1<lanes.length?((lanes[i]+lanes[i+1])/2):lanes[i];
+      const lane=left+(right-left)*(u*u*(3-2*u));
+      let nearest=null,d=taper;
+      for(const stop of stops){const gap=Math.abs(stop.t-t);if(gap<=d){d=gap;nearest=stop;}}
+      let factor=1;
+      if(nearest) {
+        const u=d/taper;factor=u*u*(3-2*u);
+        const delta=[nearest.target[0]-p[nearest.index][0],nearest.target[1]-p[nearest.index][1]];
+        point[0]+=delta[0]*(1-factor);point[1]+=delta[1]*(1-factor);
+      }
+      const offset=lane*style.spacing*factor;
+      return unproject([point[0]-dy/length*offset,point[1]+dx/length*offset]);
+    });
+    return {...f,properties:{...f.properties,stationPositions},geometry:{type:'LineString',coordinates:points}};
+  })};
+}
+export function pinchedStationSymbols(stations,displayed,zoom,activeRouteName=null) {
+  const active=activeRouteName?stationRouteName(activeRouteName):null;
+  const color=displayed.features.find(f=>stationRouteName(f.properties.symbologyName||f.properties.name)===active)?.properties.color||'#e4e7eb';
+  return {type:'FeatureCollection',features:stations.features.filter(s=>active?(s.properties.routeNames||[]).includes(active):(s.properties.routeNames||[]).length>0).map(s=>({
+    type:'Feature',properties:{...s.properties,symbolRoutes:active?[active]:s.properties.routeNames,stopStatus:'stop',color,
+      radius:Math.min(4.8,2.7+Math.max(0,zoom-3)*.18),ringWidth:active?1.6:1,focusRadius:Math.min(4.8,2.7+Math.max(0,zoom-3)*.18)},
+    geometry:s.geometry
+  }))};
+}
