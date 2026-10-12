@@ -82,4 +82,6 @@ The entire network uses shared through-corridor tangents at coincident source ve
 
 Bundle translations into wider/narrower shared sections are spread along their approaches without changing the spacing within each bundle. Screen-space offset self-loops and reversing spikes are removed globally only where they are drawing artifacts; every station anchor is protected. If an offset corner would overshoot a stop, non-station vertices may be simplified into a direct connection to that retained stop.
 
-`DISPLAY_ROUTE_SOUTHERN` groups Acela, Northeast Regional, and Vermonter in that order on the southern/outside slots of shared east-west corridors. The northern Pennsylvanian/Keystone priorities and the Manhattan approach override remain in place.
+`DISPLAY_ROUTE_SOUTHERN` groups Northeast Regional, Vermonter, and Acela in that order on the southern/outside slots of shared east-west corridors. The northern Pennsylvanian/Keystone priorities and the Manhattan approach override remain in place.
+
+Large hub approaches use a smooth transition to their fixed stop anchors when the displayed bundle is wider than a source corner. All earlier/later stops are retained. The same treatment smooths existing legacy terminal caps without adding scheduled stops. Acela is the outermost southern member; Northeast Regional and Vermonter are immediately inside. Auto Train is excluded from the displayed network, comparisons, legend and stop symbols; the original source snapshots retain it.
