@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-12';
+import {stationRouteName} from './model.js?v=station-schematic-13';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -59,6 +59,20 @@ export function createSchematicEngine(routes,stations) {
   const angle=.5*Math.atan2(2*xy,xx-yy);let normal=[-Math.sin(angle),Math.cos(angle)];if(normal[1]>0||(Math.abs(normal[1])<1e-8&&normal[0]<0))normal=normal.map(v=>-v);
   node.normal=chicagoSteps.has(id)?[Math.SQRT1_2,-Math.SQRT1_2]:normal;
  }
+ // Row directions are resolved once from track topology, not from zoom.
+ const fixedNormal=[Math.SQRT1_2,-Math.SQRT1_2],fixedRows=new Set();
+ for(let iteration=0;iteration<=nodes.size;iteration++){
+  const bad=new Set();for(const key of groups.keys()){
+   const [from,to]=key.split('|'),a=nodes.get(from),b=nodes.get(to),p=frameProject(a.coordinate),q=frameProject(b.coordinate),dx=q[0]-p[0],dy=q[1]-p[1];
+   const left=-dy*a.normal[0]+dx*a.normal[1],right=-dy*b.normal[0]+dx*b.normal[1];
+   if(left*right<0){if(!fixedRows.has(from))bad.add(from);if(!fixedRows.has(to))bad.add(to);}
+  }
+  if(!bad.size)break;for(const id of bad){fixedRows.add(id);nodes.get(id).normal=fixedNormal;}
+ }
+ for(const node of nodes.values()){
+  const p=frameProject(node.coordinate);let nearest=Infinity;for(const edge of node.edges){const q=frameProject(nodes.get(edge.other).coordinate),d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d>1e-12)nearest=Math.min(nearest,d);}
+  node.maxRowSpacing=nearest*.5/Math.max(1,node.order.length-1);
+ }
  function journey(record){
   const name=stationRouteName(record.ntadName||record.route),key=name+'|'+record.origin+'|'+record.destination;
   if(pathCache.has(key))return pathCache.get(key);
@@ -75,18 +89,10 @@ export function createSchematicEngine(routes,stations) {
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
   const radius=Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth=Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05);
-  const rowSpacing=Math.min(spacing,2*(radius+ringWidth)*.88),screen=new Map(),safeFrames=new Set();
-  const place=()=>{for(const [id,node] of nodes){const p=project(node.coordinate),normal=safeFrames.has(id)?[Math.SQRT1_2,-Math.SQRT1_2]:node.normal;node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*rowSpacing;screen.set(id+'|'+name,[p[0]+normal[0]*offset,p[1]+normal[1]*offset]);});}};
-  const side=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
-  // At tight bends/branch hubs a perpendicular row may flip a bundle. Retain
-  // the common diagonal frame only where needed to avoid those crossings.
-  for(let iteration=0;iteration<=nodes.size;iteration++){
-   place();const bad=new Set();
-   for(const [key,names] of groups){const [from,to]=key.split('|'),ordered=[...names];for(let i=0;i<ordered.length;i++)for(let j=i+1;j<ordered.length;j++){
-    const a=screen.get(from+'|'+ordered[i]),b=screen.get(to+'|'+ordered[i]),c=screen.get(from+'|'+ordered[j]),d=screen.get(to+'|'+ordered[j]);
-    if(side(a,b,c)*side(a,b,d)<-1e-8&&side(c,d,a)*side(c,d,b)<-1e-8){if(!safeFrames.has(from))bad.add(from);if(!safeFrames.has(to))bad.add(to);}
-   }}
-   if(!bad.size)break;for(const id of bad)safeFrames.add(id);
+  const rowSpacing=Math.min(spacing,2*(radius+ringWidth)*.88),screen=new Map();
+  for(const [id,node] of nodes){
+   const p=project(node.coordinate),stationSpacing=Math.min(rowSpacing,node.maxRowSpacing*world);
+   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;screen.set(id+'|'+name,[p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]);});
   }
   for(const [key,p] of screen)positions.set(key,unproject(p));
   const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
