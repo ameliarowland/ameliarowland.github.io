@@ -1,9 +1,9 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=leaflet-offset-2';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=source-junctions-3';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
-let colors=new Map(),networkData=null,stationDataCache=null,qualifiedRecords=[],activeRouteName=null,lastRenderZoom=null,available=false;
+let colors=new Map(),networkData=null,stationDataCache=null,comparisonStationCache=null,qualifiedRecords=[],activeRouteName=null,lastRenderZoom=null,available=false;
 const geometryCache=new Map();
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
@@ -28,6 +28,7 @@ function draw() {
  $('download').disabled=!filtered.length;
  const qualified=filtered.filter(r=>qualifies(r,t));
  $('status').textContent=filtered.length?`${qualified.length.toLocaleString()} qualify. Directions and train services count separately.`:'No matched journeys for these filters. This is not evidence that flying is faster.';
+ if(!filtered.length&&(manifest.commuterServices||[]).includes(route))$('status').textContent=`${route} is included in the timetable analysis. No nonstop flight pairs match this service under the current flight-data and airport-distance rules.`;
  if(available) {
   qualifiedRecords=qualified;
   renderRouteGeometry();
@@ -58,7 +59,10 @@ function renderRouteGeometry() {
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
  const allDots=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle).dots;
- const dots=activeRouteName?{...allDots,features:allDots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName)))}:allDots;
+ let dots=activeRouteName?{...allDots,features:allDots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName)))}:allDots;
+ if(activeRouteName&&(manifest.commuterServices||[]).includes(activeRouteName)) {
+  dots={type:'FeatureCollection',features:comparisonStationCache.features.filter(f=>(f.properties.comparisonRouteNames||[]).includes(activeRouteName)).map(f=>({...f,properties:{...f.properties,symbolRoutes:[activeRouteName],radius:3,ringWidth:1.2,color:color(activeRouteName)}}))};
+ }
  dots.features=dots.features.map(f=>({...f,properties:{...f.properties,focusRadius:f.properties.radius}}));
  map.getSource('stations').setData(dots);
  map.getSource('station-focus').setData(activeRouteName?dots:empty());
@@ -112,15 +116,15 @@ $('download').onclick=()=>{
 async function load(name) {const response=await fetch(`/rail-vs-air/data/${name}`);if(!response.ok)throw Error(`${name}: HTTP ${response.status}`);return response.json();}
 async function init() {
  try {
-  const [routeData,stationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
+  const [routeData,stationData,comparisonStationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparison-stations.json','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
   const visible=filterDisplayData(routeData,stationData,comparisons);
-  stationDataCache=visible.stations;records=visible.comparisons;shapes=shapeData;networkData=visible.routes;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
+  stationDataCache=visible.stations;comparisonStationCache=comparisonStationData;records=visible.comparisons;shapes=shapeData;networkData=visible.routes;airports=airportData;manifest=metadata;stations=Object.fromEntries([...stationData.features,...comparisonStationData.features].map(f=>[f.properties.Code,f]));
   const names=[...new Set([...visible.routes.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   const colorNames=[...new Set([...(manifest.sourceRouteNames||names),...names])].sort();
   colors=new Map(colorNames.map((name,i)=>[name,manifest.routeColors?.[name]||`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=optimizeLaneOrder(alignLaneFrames(visible.routes));
-  const services=[...new Set(records.map(r=>r.route))].sort();
+  const services=[...new Set([...(manifest.railServices||[]),...records.map(r=>r.route)])].filter(name=>name!=="Auto Train").sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
   if(services.includes(params.get('route')))$('route').value=params.get('route');
   const legendNames=[...new Set(names.map(name=>manifest.symbologyGroups?.[name]||name))].sort();
