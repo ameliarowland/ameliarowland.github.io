@@ -12,6 +12,7 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
   if(order.includes('Vermonter')&&order.includes('Acela')){const v=order.indexOf('Vermonter'),a=order.indexOf('Acela');if(normal[0]>=0?v>a:v<a){order[v]='Acela';order[a]='Vermonter';}}
   for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(order.includes(west)&&order.includes(east)){const w=order.indexOf(west),e=order.indexOf(east);if(normal[0]>=0?w>e:w<e){order[w]=east;order[e]=west;}}
   if(order.includes('Maple Leaf')){const index=order.indexOf('Maple Leaf');order.splice(index,1);if(normal[1]>=0)order.unshift('Maple Leaf');else order.push('Maple Leaf');}
+  if(order.includes('Pere Marquette')){const index=order.indexOf('Pere Marquette');order.splice(index,1);if(normal[1]>=0)order.unshift('Pere Marquette');else order.push('Pere Marquette');}
   for(const [below,above] of [['Capitol Limited','Floridian'],['Borealis','Empire Builder']])if(order.includes(below)&&order.includes(above)){
    const b=order.indexOf(below),a=order.indexOf(above);if(normal[1]>=0?b<a:b>a){order[b]=above;order[a]=below;}
   }
