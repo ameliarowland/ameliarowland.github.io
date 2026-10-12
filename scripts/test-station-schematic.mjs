@@ -83,3 +83,18 @@ for(const code of ['CHI','NYP'])for(const zoom of [4,8,12,16]){
  assert(distance>diameter*.8,'Hub overlap must stay modest at '+code+' zoom '+zoom);
 }
 console.log('Slight station-circle overlap verified at Chicago Union and New York Penn.');
+
+const hammond=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='HMI')hammond.set(p.name,p.coordinates[1]);
+assert.deepEqual([...hammond].sort((a,b)=>b[1]-a[1]).map(([name])=>name),['Pere Marquette','Blue Water','Wolverine','Lake Shore Limited','Capitol Limited','Floridian']);
+console.log('Hammond–Whiting north-to-south order verified.');
+
+for(const zoom of [4,8,12,16]){
+ const result=engine.render({id:6,zoom,records:[]}),stations=new Map(),diameter=2*(result.dots.features[0].properties.radius+result.dots.features[0].properties.ringWidth);
+ const project=p=>[(p[0]+180)/360*512*2**zoom,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**zoom];
+ for(const f of result.displayed.features)for(const p of f.properties.stationPositions){if(!stations.has(p.Code))stations.set(p.Code,new Map());stations.get(p.Code).set(p.name,p.coordinates);}
+ for(const [code,routes] of stations){const points=[...routes.values()].sort((a,b)=>a[0]-b[0]);for(let i=1;i<points.length;i++){
+  const a=project(points[i-1]),b=project(points[i]),distance=Math.hypot(a[0]-b[0],a[1]-b[1]);
+  assert(distance<diameter&&distance>diameter*.8,'Modest adjacent-lane dot overlap at '+code+' zoom '+zoom);
+ }}
+}
+console.log('Slight overlap verified for adjacent route positions at every station.');
