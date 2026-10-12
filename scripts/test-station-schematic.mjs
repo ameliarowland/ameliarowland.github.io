@@ -53,7 +53,7 @@ console.log('Silver Meteor continuity and zoom sizing checks passed.');
 const chicago=engine.render({id:4,zoom:12,records:[]}),chicagoPositions=new Map();
 for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='CHI')chicagoPositions.set(p.name,p.coordinates[0]);
 const westToEast=[...chicagoPositions].sort((a,b)=>a[1]-b[1]).map(([name])=>name);
-assert.deepEqual(westToEast,['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Carl Sandburg','Illinois Zephyr','Southwest Chief','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
+assert.deepEqual(westToEast,['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
 console.log('Chicago Union Station west-to-east order verified for all 20 lanes.');
 
 for(const code of ['HMI','NBU','SOB']){
