@@ -37,3 +37,30 @@ def noded_route_edges(fc):
    if not members:raise ValueError(f'No source route for noded display edge {a} / {b}')
    edges[tuple(sorted((a,b)))].update(members)
  return edges
+
+
+def simplify_display_sections(fc,tolerance_meters=75):
+ """Suppress shorter same-service paths wholly inside a longer path's 75 m
+ corridor. This is cartographic generalization of duplicate/parallel track
+ sections, not a deletion from the source snapshot or timetable network.
+ """
+ import math
+ def projected(f):
+  return LineString([(6378137*math.radians(x),6378137*math.log(math.tan(math.pi/4+math.radians(y)/2))) for x,y in f['geometry']['coordinates']])
+ groups=defaultdict(list)
+ for i,f in enumerate(fc['features']):groups[f['properties']['name']].append((i,projected(f)))
+ removed=set()
+ for group in groups.values():
+  kept=[]
+  for i,line in sorted(group,key=lambda item:-item[1].length):
+   coords=fc['features'][i]['geometry']['coordinates'];latitude=sum(p[1] for p in coords)/len(coords)
+   tolerance=tolerance_meters/math.cos(math.radians(latitude))
+   envelope=line.envelope
+   redundant=False
+   for j,reference in kept:
+    if not envelope.intersects(reference.envelope.buffer(tolerance)):continue
+    if line.covered_by(reference.buffer(tolerance,quad_segs=4)):
+     redundant=True;break
+   if redundant:removed.add(i)
+   else:kept.append((i,line))
+ return {'type':'FeatureCollection','features':[f for i,f in enumerate(fc['features']) if i not in removed]},len(removed)
