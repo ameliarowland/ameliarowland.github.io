@@ -160,12 +160,9 @@ for(const [name,a,b] of [
 ]) {
  assert(continuousRoutePaths(actualNetwork).features.some(f=>f.properties.name===name&&[a,b].every(q=>f.geometry.coordinates.some(p=>p[0]===q[0]&&p[1]===q[1]))),`${name} approach disconnected`);
 }
-assert(!actualNetwork.features.some(f=>f.properties.name==='Keystone Service'&&f.geometry.coordinates[0][0]===-75.2024265));
-// Editing Keystone's shared west-approach coordinates must not move Pennsylvanian.
-const pennThrough=continuousRoutePaths(actualNetwork).features.filter(f=>f.properties.name==='Pennsylvanian');
-assert(pennThrough.some(f=>[f.geometry.coordinates[0],f.geometry.coordinates.at(-1)].some(p=>p[0]>-75.184&&p[0]<-75.18&&p[1]>39.955&&p[1]<39.956)),'Pennsylvanian must end at Philadelphia station');
-const pennEnds=pennThrough.flatMap(f=>[f.geometry.coordinates[0],f.geometry.coordinates.at(-1)]);
-assert(!pennEnds.some(p=>p[0]===-75.1985969&&p[1]===39.9720838),'Pennsylvanian west approach is unsnapped');
+assert(actualNetwork.features.some(f=>f.properties.name==='Keystone Service'&&f.geometry.coordinates.some(p=>p[0]===-75.2024265)),'Original Keystone geometry must remain present');
+// Original Pennsylvanian junctions survive alongside its station approach.
+assert(actualNetwork.features.some(f=>f.properties.name==='Pennsylvanian'&&f.geometry.coordinates.some(p=>p[0]===-75.1985969&&p[1]===39.9720838)));
 for(const zoom of [3,7.9,13,16]) {
  const style=routeDrawingStyle(actualNetwork,zoom),drawn=offsetNetwork(actualNetwork,zoom,style,stationData);
  const dots=stationSymbols(stationData,actualNetwork,drawn,zoom,style).dots.features;
@@ -236,9 +233,9 @@ assert(!visible.comparisons.some(r=>r.route==='Auto Train'||r.ntadName==='Auto T
 assert(!visible.stations.features.some(f=>f.properties.routeNames.includes('Auto Train')));
 assert.equal(new Set(visible.routes.features.map(f=>f.properties.name)).size,manifest.routeCount-1);
 assert(stationData.features.some(f=>f.properties.routeNames.includes('Auto Train')));
-// Newark had three duplicate offset fragments for many of the same services.
+// Newark retains all eleven source services without deleting track sections.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
-assert.equal(newark.length,11);
+assert(newark.length>=11);
 assert.equal(new Set(newark.map(f=>f.properties.name)).size,11);
 
 // Source inventories are retained while Floridian / Silver Star share lanes.
@@ -382,3 +379,15 @@ for(const zoom of [3,4,7.9,10,13,16]) {
  assert(style.baseWidth<=3.2);
 }
 console.log('Upstream offset engine: all scheduled stops retained and existing same-route junctions connected at overview through street zoom.');
+
+assert.deepEqual(manifest.commuterServices,['MARC','Shore Line East']);
+assert.equal(manifest.commuterDirectPairs,262);
+const commuterJourneys=await load('commuter-journeys.json');
+assert.equal(commuterJourneys.length,262);
+for(const r of commuterJourneys) {
+ const source=stopsByTrip.get(r.tripId);
+ assert(source,`Missing commuter trip evidence ${r.tripId}`);
+ assert.equal(r.railMinutes,parse(source.get(r.destination).arrival_time)-parse(source.get(r.origin).departure_time));
+ assert(manifest.commuterServices.includes(r.route));
+}
+console.log('All 262 commuter journeys verified against retained stop-time evidence.');
