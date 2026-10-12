@@ -1,9 +1,9 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,mergedHighlights,prepareLanes} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights} from './model.js';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
-let colors=new Map(),lanes=new Map(),available=false;
+let colors=new Map(),networkData=null,available=false;
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
 const coords=code=>stations[code]?.geometry.coordinates;
@@ -28,7 +28,7 @@ function draw() {
  const qualified=filtered.filter(r=>qualifies(r,t));
  $('status').textContent=filtered.length?`${qualified.length.toLocaleString()} qualify. Directions and train services count separately.`:'No matched journeys for these filters. This is not evidence that flying is faster.';
  if(available) {
-  map.getSource('qualifying').setData(mergedHighlights(qualified,shapes,color,lanes));
+  map.getSource('qualifying').setData(networkHighlights(qualified,shapes,networkData,color));
   // Service filters narrow comparisons, while the full route network stays visible.
   map.setFilter('network',null);
   map.setPaintProperty('network','line-opacity',1);
@@ -74,7 +74,7 @@ async function load(name) {const response=await fetch(`/rail-vs-air/data/${name}
 async function init() {
  try {
   const [routeData,stationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
-  records=comparisons;shapes=shapeData;lanes=prepareLanes(records,shapes,routeData);airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
+  records=comparisons;shapes=shapeData;networkData=routeData;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
   const names=[...new Set([...routeData.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   colors=new Map(names.map((name,i)=>[name,`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of routeData.features)feature.properties.color=color(feature.properties.name);
