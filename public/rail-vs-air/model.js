@@ -225,5 +225,43 @@ export function offsetNetwork(collection, zoom) {
     add(points.at(-1),normals.at(-1));
     return {...f,geometry:{type:'LineString',coordinates:shifted.map(unproject)}};
   });
+  // Connect only endpoints that already coincide in the source for the SAME
+  // named service. Offset sections can finish at different pixel positions.
+  const joins=new Map();
+  collection.features.forEach((source,index)=>{
+    const rendered=features[index],original=source.geometry.coordinates,coords=rendered.geometry.coordinates;
+    if(coords.length<2)return;
+    for(const side of [0,1]) {
+      const anchor=original[side?original.length-1:0];
+      const key=(source.properties.name||source.properties.route)+'|'+anchor.map(v=>v.toFixed(6)).join(',');
+      const p=project(coords[side?coords.length-1:0]),q=project(coords[side?coords.length-2:1]);
+      const len=Math.hypot(q[0]-p[0],q[1]-p[1]);if(!len)continue;
+      if(!joins.has(key))joins.set(key,[]);
+      joins.get(key).push({index,p,out:[(q[0]-p[0])/len,(q[1]-p[1])/len],properties:source.properties});
+    }
+  });
+  for(const endpoints of joins.values()) {
+    if(endpoints.length<2)continue;
+    // Match the straightest continuation first; remaining branches attach to it.
+    let best=null;
+    for(let i=0;i<endpoints.length;i++)for(let j=i+1;j<endpoints.length;j++) {
+      const a=endpoints[i],b=endpoints[j];if(a.index===b.index)continue;
+      const dot=a.out[0]*b.out[0]+a.out[1]*b.out[1];
+      if(!best||dot<best.dot)best={a,b,dot};
+    }
+    if(!best)continue;
+    const pairs=[[best.a,best.b],...endpoints.filter(p=>p!==best.a&&p!==best.b).map(p=>[p,best.a])];
+    for(const [a,b] of pairs) {
+      const gap=Math.hypot(a.p[0]-b.p[0],a.p[1]-b.p[1]);if(gap<.1)continue;
+      const handle=Math.min(20,gap*.45);
+      const c1=[a.p[0]-a.out[0]*handle,a.p[1]-a.out[1]*handle],c2=[b.p[0]-b.out[0]*handle,b.p[1]-b.out[1]*handle];
+      const path=[];
+      for(let i=0;i<=12;i++) {
+        const t=i/12,u=1-t;
+        path.push(unproject([u**3*a.p[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t**3*b.p[0],u**3*a.p[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t**3*b.p[1]]));
+      }
+      features.push({type:'Feature',properties:{...a.properties,displayJoin:true},geometry:{type:'LineString',coordinates:path}});
+    }
+  }
   return {type:'FeatureCollection',features};
 }
