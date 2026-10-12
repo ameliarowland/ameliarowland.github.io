@@ -8,3 +8,6 @@
 .key-stop{display:inline-block;width:9px;height:9px;border:2px solid #2d6a4f;border-radius:50%;background:#3d3f42;vertical-align:middle;margin:0 4px 0 9px}
 
 .map-zoom{position:absolute;right:10px;bottom:36px;z-index:2;padding:3px 6px;border-radius:3px;background:#3d3f42c9;color:#d4d9dd;font-size:10px;line-height:1.3;font-variant-numeric:tabular-nums;pointer-events:none}
+
+.route-hover-bubble{position:absolute;z-index:5;pointer-events:none;background:#142333;color:#fff;border:1px solid;border-radius:5px;padding:5px 8px;font:500 12px/1.3 system-ui,sans-serif;box-shadow:0 2px 8px #0005;max-width:240px;}
+.route-hover-bubble[hidden]{display:none;}
