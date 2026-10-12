@@ -36,7 +36,7 @@ def simplify(points,tolerance=.0003):
  return [points[i] for i in sorted(keep)]
 
 def corridor_chains(edges):
- # Pair the straightest continuations at junctions, regardless of route membership.
+ # Prefer the continuation carrying the same service bundle, then its angle.
  # Orient the complete corridor once, not each membership run or individual edge.
  adjacency=defaultdict(list)
  for a,b in edges:adjacency[a].append(b);adjacency[b].append(a)
@@ -50,8 +50,9 @@ def corridor_chains(edges):
     for b in ns[i+1:]:
      ax,ay=a[0]-vertex[0],a[1]-vertex[1];bx,by=b[0]-vertex[0],b[1]-vertex[1]
      cosine=(ax*bx+ay*by)/math.sqrt((ax*ax+ay*ay)*(bx*bx+by*by))
-     candidates.append((cosine,a,b))
-   cosine,a,b=min(candidates)
+     shared=len(edges[tuple(sorted((vertex,a)))] & edges[tuple(sorted((vertex,b)))])
+     candidates.append((-shared,cosine,a,b))
+   _shared,cosine,a,b=min(candidates)
    if len(neighbors)>2 and cosine>-.25:break
    continuation[(vertex,a)]=b;continuation[(vertex,b)]=a
    remaining.remove(a);remaining.remove(b)
