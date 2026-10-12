@@ -150,6 +150,16 @@ for(const zoom of [6,7,8,10,12,15]) {
  const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols({type:'FeatureCollection',features:[lancaster]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
  assert(symbols.bars.features.some(f=>f.properties.Code==='LNC'&&f.properties.symbolRoutes.length===2),`Lancaster bar missing at zoom ${zoom}`);
 }
+// Miami's terminal branches are not all in the 75m through-track corridor.
+// Both actual stopping services must remain marked; the NTAD-only Silver Star
+// must not receive a station marker from the retained timetable.
+const miami=stationData.features.find(f=>f.properties.Code==='MIA');
+assert.deepEqual(miami.properties.routeNames,['Floridian','Silver Meteor']);
+for(const zoom of [5,7,10,12,15]) {
+ const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols({type:'FeatureCollection',features:[miami]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
+ const marked=new Set([...symbols.dots.features,...symbols.bars.features].flatMap(f=>f.properties.symbolRoutes));
+ assert.deepEqual([...marked].sort(),['Floridian','Silver Meteor'],`Miami missing a stopping route at zoom ${zoom}`);
+}
 // Curved displayed lanes may cross the station's perpendicular at a different
 // heading than the source tangent; they must still contribute to the bar.
 for(const zoom of [6,7,7.5,8,10,12]) {
