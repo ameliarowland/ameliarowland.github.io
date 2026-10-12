@@ -214,41 +214,54 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
     const d=(f.properties.lane||0)*spacing;
     const points=simplifyScreen(f.geometry.coordinates.map(project).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7)).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7);
     if(points.length<2)return f;
-    // Insert a few transition samples, not a dense resampling of the national network.
-    const lengths=[0];
-    for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]));
-    const total=lengths.at(-1),taper=40;
-    const positions=[...lengths,total/2,...[taper/3,taper*2/3,taper].flatMap(x=>[x,total-x])].filter(x=>x>=0&&x<=total).sort((a,b)=>a-b);
-    const path=[],at=[];let segment=0;
-    for(const length of positions) {
-      if(at.length&&Math.abs(length-at.at(-1))<1e-7)continue;
-      while(segment<points.length-2&&length>lengths[segment+1])segment++;
-      const span=lengths[segment+1]-lengths[segment],t=span?(length-lengths[segment])/span:0;
-      path.push([points[segment][0]+(points[segment+1][0]-points[segment][0])*t,points[segment][1]+(points[segment+1][1]-points[segment][1])*t]);at.push(length);
-    }
-    const normals=[];
+    const path=points,normals=[];
     for(let i=0;i<path.length-1;i++) {
       const dx=path[i+1][0]-path[i][0],dy=path[i+1][1]-path[i][1],len=Math.hypot(dx,dy);
       normals.push([-dy/len,dx/len]);
     }
-    const amountAt=i=>{
-      const t=Math.max(0,Math.min(1,at[i]/taper,(total-at[i])/taper));
-      return d*t*t*(3-2*t);
-    };
     const shifted=[];
     const add=(p,n,amount=d)=>shifted.push([p[0]+n[0]*amount,p[1]+n[1]*amount]);
-    add(path[0],normals[0],0);
+    add(path[0],normals[0],d);
     for(let i=1;i<path.length-1;i++) {
-      const localOffset=amountAt(i);
+      const localOffset=d;
       const a=normals[i-1],b=normals[i],sx=a[0]+b[0],sy=a[1]+b[1],length=Math.hypot(sx,sy);
       if(length<1e-6){add(path[i],a,localOffset);add(path[i],b,localOffset);continue;}
       const bisector=[sx/length,sy/length],den=bisector[0]*b[0]+bisector[1]*b[1],miter=localOffset/den;
       if(!Number.isFinite(miter)||Math.abs(miter)>Math.abs(localOffset)*2){add(path[i],a,localOffset);add(path[i],b,localOffset);}
       else add(path[i],bisector,miter);
     }
-    add(path.at(-1),normals.at(-1),0);
+    add(path.at(-1),normals.at(-1),d);
     return {...f,geometry:{type:'LineString',coordinates:shifted.map(unproject)}};
   });
+  // Maintain the full lane offset at endpoints. Join only same-service sections
+  // whose original endpoints coincide; never pull the bundle into its center.
+  const endpoints=new Map();
+  collection.features.forEach((source,index)=>{
+    const original=source.geometry.coordinates,rendered=features[index].geometry.coordinates;
+    for(const side of [0,1]) {
+      const anchor=original[side?original.length-1:0],end=rendered[side?rendered.length-1:0];
+      const key=(source.properties.name||source.properties.route)+'|'+anchor.map(v=>v.toFixed(6)).join(',');
+      if(!endpoints.has(key))endpoints.set(key,[]);
+      endpoints.get(key).push({index,end,properties:source.properties});
+    }
+  });
+  for(const ends of endpoints.values()) {
+    if(ends.length<2)continue;
+    // A small spanning tree connects branch junctions without duplicate strokes.
+    const connected=[ends[0]],pending=ends.slice(1);
+    while(pending.length) {
+      let best=null;
+      for(let i=0;i<pending.length;i++)for(const a of connected) {
+        const b=pending[i];if(a.index===b.index)continue;
+        const x=project(a.end),y=project(b.end),distance=Math.hypot(x[0]-y[0],x[1]-y[1]);
+        if(!best||distance<best.distance)best={a,b,i,distance};
+      }
+      if(!best)break;
+      const {a,b,i,distance}=best;pending.splice(i,1);connected.push(b);
+      if(distance<.1)continue;
+      features.push({type:'Feature',properties:{...a.properties,displayJoin:true},geometry:{type:'LineString',coordinates:[a.end,b.end]}});
+    }
+  }
   return {type:'FeatureCollection',features};
 }
 
