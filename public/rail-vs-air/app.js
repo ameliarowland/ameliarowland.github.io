@@ -1,5 +1,5 @@
-import {createSchematicEngine} from './schematic.js?v=station-schematic-1';
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-1';
+import {createSchematicEngine} from './schematic.js?v=station-schematic-2';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-2';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -131,7 +131,7 @@ async function init() {
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=visible.routes;
   schematicEngine=createSchematicEngine(networkData,stationDataCache);
-  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-1",{type:"module"});
+  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-2",{type:"module"});
   layoutWorker.onmessage=({data})=>{if(data.type==="layout")applyRouteLayout(data);else if(data.type==="error")$("status").textContent=`Map layout failed: ${data.message}`;};
   layoutWorker.onerror=event=>{$("status").textContent=`Map layout worker failed: ${event.message}`;};
   layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache});
@@ -161,7 +161,7 @@ async function init() {
    map.addSource('station-focus',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'station-focus-halo',type:'circle',source:'station-focus',paint:{'circle-radius':['+',['get','focusRadius'],['/',['get','ringWidth'],2],.5],'circle-color':'#3d3f42','circle-stroke-color':'#ffffff','circle-stroke-width':.5}});
    map.addLayer({id:'station-focus',type:'circle',source:'station-focus',paint:{'circle-radius':['get','focusRadius'],'circle-color':'#3d3f42','circle-stroke-color':['get','color'],'circle-stroke-width':['get','ringWidth']}});
-   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`Stops on: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
+   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=String(p.Name||"").trim()||p.StationName||p.Code;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`Stops on: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
    const stationLayers=['station-focus','stations'];
    function chooseRoute(name) {
     activeRouteName=name;
