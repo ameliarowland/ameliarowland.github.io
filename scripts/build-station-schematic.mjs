@@ -107,6 +107,28 @@ for(const station of stations.features)for(const name of station.properties.rout
  if(!other)throw Error('No station graph for '+station.properties.Code+' '+name);
  stationEdges.push({type:'Feature',properties:{name,symbologyName:name,from:station.properties.Code,to:other,distanceKm:km(station.geometry.coordinates,inventory.get(other).geometry.coordinates),connectionEvidence:'Source station inventory schematic link'},geometry:{type:'LineString',coordinates:[station.geometry.coordinates,inventory.get(other).geometry.coordinates]}});
 }
-const output={type:'FeatureCollection',schematic:true,features:stationEdges};
+// Junction contraction can produce a clique between three branch stations.
+// Keep the connections used by actual timetable sequences; remove only unused
+// cycle edges, so no station or connected component can disappear.
+const removedBranchLinks=[];
+for(const name of routeGroups.keys()){
+ const edges=stationEdges.filter(f=>f.properties.name===name),graph=new Map(),used=new Set();let tripCount=0;
+ for(const f of edges)for(const [a,b] of [[f.properties.from,f.properties.to],[f.properties.to,f.properties.from]]){if(!graph.has(a))graph.set(a,[]);graph.get(a).push({node:b,cost:f.properties.distanceKm,edge:f});}
+ for(const [tripId,stops] of times){const trip=tripById.get(tripId);if((routeById.get(trip?.route_id)||'').toLowerCase()!==name.toLowerCase())continue;tripCount++;
+  const sequence=[...stops].sort((a,b)=>Number(a.stop_sequence)-Number(b.stop_sequence)).filter(s=>inventory.has(s.stop_id));
+  for(let i=1;i<sequence.length;i++){
+   const start=sequence[i-1].stop_id,end=sequence[i].stop_id,cost=new Map([[start,0]]),prev=new Map(),queue=new Set([start]);
+   while(queue.size){let a;for(const id of queue)if(a===undefined||cost.get(id)<cost.get(a))a=id;queue.delete(a);if(a===end)break;for(const e of graph.get(a)||[]){const d=cost.get(a)+e.cost;if(d<(cost.get(e.node)??Infinity)){cost.set(e.node,d);prev.set(e.node,{node:a,edge:e.edge});queue.add(e.node);}}}
+   let node=end;while(prev.has(node)){const e=prev.get(node);used.add(e.edge);node=e.node;}
+  }
+ }
+ if(!tripCount)continue;
+ for(const edge of edges){if(used.has(edge))continue;const start=edge.properties.from,end=edge.properties.to,visited=new Set(),queue=[start];
+  while(queue.length){const id=queue.pop();if(visited.has(id))continue;visited.add(id);for(const e of graph.get(id)||[])if(e.edge!==edge&&stationEdges.includes(e.edge))queue.push(e.node);}
+  if(visited.has(end)){stationEdges.splice(stationEdges.indexOf(edge),1);removedBranchLinks.push({name,from:start,to:end});}
+ }
+}
+const sourceStationPasses=[...new Set(anchored.stationAnchorAssociations.map(a=>a.Code+'|'+a.name))];
+const output={type:'FeatureCollection',schematic:true,sourceStationPasses,removedBranchLinks,features:stationEdges};
 fs.writeFileSync('public/rail-vs-air/data/station-schematic.geojson',JSON.stringify(output));
-console.log(JSON.stringify({segments:stationEdges.length,bytes:JSON.stringify(output).length,passThroughAssociations:anchored.stationAnchorAssociations.length}));
+console.log(JSON.stringify({segments:stationEdges.length,bytes:JSON.stringify(output).length,passThroughAssociations:sourceStationPasses.length,removedBranchLinks}));
