@@ -137,11 +137,11 @@ async function init() {
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:empty()});
    map.addSource('station-passes',{type:'geojson',data:empty()});
-   map.addLayer({id:'station-pass-gap',minzoom:7,type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#252a2e','line-width':['interpolate',['linear'],['zoom'],3,1.8,12,3,16,3.4]}});
+   map.addLayer({id:'station-pass-gap',minzoom:7,type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#3d3f42','line-width':['interpolate',['linear'],['zoom'],3,1.8,12,3,16,3.4]}});
    map.addLayer({id:'station-passes',minzoom:7,type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#c7cdd0','line-width':['interpolate',['linear'],['zoom'],3,.6,12,1,16,1.2]}});
-   map.addLayer({id:'stations',minzoom:7,type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#252a2e','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
+   map.addLayer({id:'stations',minzoom:7,type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#3d3f42','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
    map.addSource('station-overview',{type:'geojson',data:empty()});
-   map.addLayer({id:'station-overview',maxzoom:7,type:'circle',source:'station-overview',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,1.8,6,2.1],'circle-color':'#252a2e','circle-stroke-color':'#f7f9fa','circle-stroke-width':.9}});
+   map.addLayer({id:'station-overview',maxzoom:7,type:'circle',source:'station-overview',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,1.8,6,2.1],'circle-color':'#3d3f42','circle-stroke-color':['get','color'],'circle-stroke-width':.9}});
    const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`${p.stopStatus==='no-stop'?'Passes without stopping':'Stops on'}: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
    for(const id of ['station-overview','stations','station-passes'])map.on('click',id,stationPopup);
    function chooseRoute(name) {
