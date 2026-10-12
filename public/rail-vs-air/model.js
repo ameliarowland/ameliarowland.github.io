@@ -380,8 +380,17 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
     }
     if(!best){dots.push(station);continue;}
     const {q,tangent}=best,normal=[-tangent[1],tangent[0]],crossings=new Map();
+    // Restrict the span to the physical track corridor. At small zooms an
+    // unrelated branch may also cross the same screen-space perpendicular.
+    const bundleNames=new Set();
+    for(const e of sourceNear(unproject(q))) {
+      if(Math.abs((e.dx*tangent[0]+e.dy*tangent[1])/e.length)<.7)continue;
+      const t=Math.max(0,Math.min(1,((q[0]-e.a[0])*e.dx+(q[1]-e.a[1])*e.dy)/(e.length*e.length)));
+      if(Math.hypot(e.a[0]+t*e.dx-q[0],e.a[1]+t*e.dy-q[1])*metersPerPixel<=75)bundleNames.add(e.name);
+    }
     for(const e of displayNear(unproject(q))) {
       // Span all parallel visible lanes in this bundle, including passing lines.
+      if(!bundleNames.has(e.name))continue;
       if(Math.abs((e.dx*tangent[0]+e.dy*tangent[1])/e.length)<.7)continue;
       const alongA=(e.a[0]-q[0])*tangent[0]+(e.a[1]-q[1])*tangent[1];
       const alongB=(e.b[0]-q[0])*tangent[0]+(e.b[1]-q[1])*tangent[1];
@@ -391,8 +400,18 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
       if(Math.abs(across)>maxOffset+style.spacing*2)continue;
       if(!crossings.has(e.name)||Math.abs(across)<Math.abs(crossings.get(e.name)))crossings.set(e.name,across);
     }
-    if([...names].filter(name=>crossings.has(name)).length<2){dots.push(station);continue;}
-    const values=[...crossings.values()],padding=style.highlightWidth/2+3;
+    const clusters=[];
+    for(const item of [...crossings.entries()].sort((a,b)=>a[1]-b[1])) {
+      const last=clusters.at(-1);
+      if(!last||item[1]-last.at(-1)[1]>style.spacing*1.75)clusters.push([item]);else last.push(item);
+    }
+    const served=cluster=>cluster.filter(([name])=>names.has(name)).length;
+    const nearest=cluster=>Math.min(...cluster.map(([,value])=>Math.abs(value)));
+    const bundle=clusters.filter(cluster=>served(cluster)>=2).sort((a,b)=>served(b)-served(a)||b.length-a.length||nearest(a)-nearest(b))[0];
+    if(!bundle){dots.push(station);continue;}
+    // A 5px rounded outline extends 2.5px past each geometry endpoint.
+    // Account for that cap so the whole symbol ends at the outer route edges.
+    const values=bundle.map(([,value])=>value),padding=style.highlightWidth/2-2.5;
     const lo=Math.min(...values)-padding,hi=Math.max(...values)+padding;
     bars.push({type:'Feature',properties:{...station.properties},geometry:{type:'LineString',coordinates:[unproject([q[0]+normal[0]*lo,q[1]+normal[1]*lo]),unproject([q[0]+normal[0]*hi,q[1]+normal[1]*hi])]}});
   }
