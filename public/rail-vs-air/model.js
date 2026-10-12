@@ -374,9 +374,13 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
       if(oriented.length<2)continue;
       const end=project(oriented.at(-1)),prior=project(oriented.at(-2)),target=project(join.point),span=Math.hypot(end[0]-prior[0],end[1]-prior[1]);
       if(!span||Math.hypot(target[0]-end[0],target[1]-end[1])>spacing*12)continue;
-      const ratio=Math.min(1,Math.max(24,spacing*2)/span),start=[end[0]+(prior[0]-end[0])*ratio,end[1]+(prior[1]-end[1])*ratio];
+      const gap=Math.hypot(target[0]-end[0],target[1]-end[1]);
+      const ratio=Math.min(1,Math.max(24,spacing*2,gap*2.5)/span),start=[end[0]+(prior[0]-end[0])*ratio,end[1]+(prior[1]-end[1])*ratio];
+      const incoming=[(end[0]-prior[0])/span,(end[1]-prior[1])/span];
+      const forward=Math.max(0,(target[0]-start[0])*incoming[0]+(target[1]-start[1])*incoming[1]);
+      const control=[start[0]+incoming[0]*forward*.5,start[1]+incoming[1]*forward*.5];
       const curve=[];
-      for(let i=0;i<=8;i++) {const t=i/8,u=1-t;curve.push(unproject([u*u*start[0]+2*u*t*end[0]+t*t*target[0],u*u*start[1]+2*u*t*end[1]+t*t*target[1]]));}
+      for(let i=0;i<=8;i++) {const t=i/8,u=1-t;curve.push(unproject([u*u*start[0]+2*u*t*control[0]+t*t*target[0],u*u*start[1]+2*u*t*control[1]+t*t*target[1]]));}
       const joined=[...oriented.slice(0,-1),...curve];
       features[index].geometry.coordinates=side?joined:joined.reverse();
     }
@@ -455,7 +459,17 @@ export function alignLaneFrames(collection) {
   }
   for(const bundle of bundles.values()) {
     if(!bundle.some(f=>Number.isFinite(f.properties.lanePriority)))continue;
-    const p=bundle[0].geometry.coordinates,direction=p.at(-1)[0]>=p[0][0]?1:-1;
+    const p=bundle[0].geometry.coordinates;
+    let direction=p.at(-1)[0]>=p[0][0]?1:-1;
+    // The Philadelphia approach bends back west before reaching the station.
+    // Preserve its through-corridor frame rather than reordering at each bend.
+    if(p.every(q=>q[0]>-75.201&&q[0]<-75.175&&q[1]>=39.9516&&q[1]<=39.97806)) {
+      const reference=bundle.find(f=>f.properties.name==='Acela');
+      if(reference) {
+        const original=collection.features[features.indexOf(reference)].properties.lane;
+        if(original)direction=Math.sign(reference.properties.lane/original);
+      }
+    }
     const values=[...new Set(bundle.map(f=>f.properties.lane*direction))].sort((a,b)=>a-b);
     const symbols=new Map();
     for(const f of bundle) {
