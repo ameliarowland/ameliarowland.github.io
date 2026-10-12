@@ -50,11 +50,13 @@ const sections={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'B',lane:2},geometry:{type:'LineString',coordinates:[[0,0],[0,.01]]}}
 ]};
 const joined=offsetNetwork(sections,12);
-assert.equal(joined.features.length,sections.features.length); // no synthetic bridges
+const connections=joined.features.filter(f=>f.properties.displayJoin);
+assert.equal(connections.length,1);assert.equal(connections[0].properties.name,'A');
 const near=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-10;
-assert(near(joined.features[0].geometry.coordinates.at(-1),[0,0]));
-assert(near(joined.features[1].geometry.coordinates[0],[0,0]));
-assert(near(joined.features[2].geometry.coordinates[0],[0,0]));
+assert(!near(joined.features[0].geometry.coordinates.at(-1),[0,0])); // no station-center taper
+assert(!near(joined.features[1].geometry.coordinates[0],[0,0]));
+assert(near(connections[0].geometry.coordinates[0],joined.features[0].geometry.coordinates.at(-1)));
+assert(near(connections[0].geometry.coordinates.at(-1),joined.features[1].geometry.coordinates[0]));
 // Reversed stored sections must retain the same physical lane ordering.
 const reversedFrames={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'A',lane:-1},geometry:{type:'LineString',coordinates:[[-.01,0],[0,0]]}},
