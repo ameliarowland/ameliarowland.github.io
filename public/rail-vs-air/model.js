@@ -414,8 +414,9 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
         dots.push({type:'Feature',properties,geometry:{type:'Point',coordinates:position(run[0][1])}});
         return;
       }
-      // A 5px rounded outline extends 2.5px beyond the geometry endpoints.
-      const values=run.map(([,value])=>value),padding=style.highlightWidth/2-2.5;
+      // Flat square ends stop at the geometry endpoints, aligned with the
+      // outer route strokes; there is no round-cap extension to subtract.
+      const values=run.map(([,value])=>value),padding=style.highlightWidth/2;
       const lo=Math.min(...values)-padding,hi=Math.max(...values)+padding;
       bars.push({type:'Feature',properties,geometry:{type:'LineString',coordinates:[position(lo),position(hi)]}});
     }
