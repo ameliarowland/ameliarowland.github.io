@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import './offset-engine-node.mjs';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry,filterDisplayData,pinchedNetwork,pinchedStationSymbols} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry,filterDisplayData,pinchedNetwork,pinchedStationSymbols,untangledNetwork,optimizeLaneOrder} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -368,3 +369,16 @@ for(const zoom of [3,7.9,13,16]) {
  for(const f of real.features)for(const stop of f.properties.stationPositions)assert(f.geometry.coordinates.some(p=>Math.hypot(p[0]-stop.coordinates[0],p[1]-stop.coordinates[1])<1e-9),'Stop must be a vertex on its train line');
 }
 console.log('Pinched station layout and selected-route stop eligibility passed at all tested zooms.');
+
+const untangledSource=optimizeLaneOrder(alignLaneFrames(visible.routes));
+assert(untangledSource.orderingAudit.optimizedCost<=untangledSource.orderingAudit.initialCost);
+for(const zoom of [3,4,7.9,10,13,16]) {
+ const style=routeDrawingStyle(untangledSource,zoom),drawn=untangledNetwork(untangledSource,zoom,style,visible.stations);
+ assert.equal(drawn.connectivityAudit.brokenJunctions.length,0,JSON.stringify(drawn.connectivityAudit.brokenJunctions));
+ for(const f of drawn.features)for(const stop of f.properties.stationPositions)assert(f.geometry.coordinates.some(p=>Math.hypot(p[0]-stop.coordinates[0],p[1]-stop.coordinates[1])<1e-9),`Disconnected stop ${stop.Code} ${stop.name} at ${zoom}`);
+ const symbols=stationSymbols(visible.stations,untangledSource,drawn,zoom,style).dots;
+ const expected=new Set(visible.stations.features.flatMap(s=>s.properties.routeNames.map(name=>s.properties.Code+'|'+name)));
+ assert.deepEqual(new Set(symbols.features.map(f=>f.properties.Code+'|'+f.properties.symbolRoutes[0])),expected);
+ assert(style.baseWidth<=3.2);
+}
+console.log('Upstream offset engine: all scheduled stops retained and existing same-route junctions connected at overview through street zoom.');
