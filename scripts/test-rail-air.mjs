@@ -86,8 +86,10 @@ for(const zoom of [4,10,15]) {
  const [a,b]=symbols.bars.features[0].geometry.coordinates;
  assert(Math.abs(a[0]-b[0])<1e-10); // north–south bar across east–west track
  const latitudes=display.features.map(f=>f.geometry.coordinates[0][1]);
- assert(Math.min(a[1],b[1])<Math.min(...latitudes));
- assert(Math.max(a[1],b[1])>Math.max(...latitudes));
+ const world=512*2**zoom,y=latitude=>(1-Math.log(Math.tan(Math.PI/4+latitude*Math.PI/360))/Math.PI)/2*world;
+ const symbolMin=Math.min(y(a[1]),y(b[1]))-2.5,symbolMax=Math.max(y(a[1]),y(b[1]))+2.5;
+ const routeMin=Math.min(...latitudes.map(y))-style.highlightWidth/2,routeMax=Math.max(...latitudes.map(y))+style.highlightWidth/2;
+ assert(Math.abs(symbolMin-routeMin)<1e-5);assert(Math.abs(symbolMax-routeMax)<1e-5);
 }
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
@@ -96,10 +98,15 @@ const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['c
 const actualNetwork=alignLaneFrames(await load('routes.geojson'));
 for(const [name,expected] of [['Pennsylvanian',.5],['Keystone Service',-.5]]) {
  const corridor=actualNetwork.features.filter(f=>f.properties.name===name&&f.geometry.coordinates.some(p=>p[0]>-75.85&&p[0]<-75.65&&p[1]>39.98&&p[1]<40.06));
- assert(corridor.length>=2);
+ assert(corridor.length>=1);
  assert(corridor.every(f=>f.properties.lane===expected),`${name} changed sides on the Pennsylvania corridor`);
 }
 assert.equal(new Set(actualNetwork.features.map(f=>f.properties.name)).size,manifest.routeCount);
+// Newark had three duplicate offset fragments for many of the same services.
+const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
+assert.equal(newark.length,11);
+assert.equal(new Set(newark.map(f=>f.properties.name)).size,11);
+
 const stopsByTrip=new Map();
 for(const stop of evidence['stop_times.txt']){if(!stopsByTrip.has(stop.trip_id))stopsByTrip.set(stop.trip_id,new Map());stopsByTrip.get(stop.trip_id).set(stop.stop_id,stop);}
 const parse=t=>{const [h,m,s]=t.split(':').map(Number);return h*60+m+s/60;};
