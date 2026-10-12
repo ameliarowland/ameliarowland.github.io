@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -50,13 +50,12 @@ const sections={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'B',lane:2},geometry:{type:'LineString',coordinates:[[0,0],[0,.01]]}}
 ]};
 const joined=offsetNetwork(sections,12);
-const connections=joined.features.filter(f=>f.properties.displayJoin);
-assert.equal(connections.length,1);assert.equal(connections[0].properties.name,'A');
-const near=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-10;
-assert(!near(joined.features[0].geometry.coordinates.at(-1),[0,0])); // no station-center taper
-assert(!near(joined.features[1].geometry.coordinates[0],[0,0]));
-assert(near(connections[0].geometry.coordinates[0],joined.features[0].geometry.coordinates.at(-1)));
-assert(near(connections[0].geometry.coordinates.at(-1),joined.features[1].geometry.coordinates[0]));
+assert.equal(joined.features.length,2); // one continuous A path, separate B branch
+assert(joined.features.every(f=>!f.properties.displayJoin));
+const continuous=continuousRoutePaths(sections);
+const aPath=continuous.features.find(f=>f.properties.name==='A');
+assert.deepEqual(aPath.geometry.coordinates,[[-.01,0],[0,0],[.01,0]]);
+assert.deepEqual(aPath.properties.edgeLanes,[-1,1]);
 // Reversed stored sections must retain the same physical lane ordering.
 const reversedFrames={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'A',lane:-1},geometry:{type:'LineString',coordinates:[[-.01,0],[0,0]]}},
@@ -65,9 +64,24 @@ const reversedFrames={type:'FeatureCollection',features:[
 const alignedFrames=alignLaneFrames(reversedFrames);
 assert.equal(alignedFrames.features[0].properties.lane,-alignedFrames.features[1].properties.lane);
 const style=routeDrawingStyle(alignedFrames,12);assert(style.baseWidth<style.spacing);assert(style.highlightWidth<style.spacing);
+// A branch must not impose contradictory all-pairs lane-direction constraints.
+const branchFrames={type:'FeatureCollection',features:[
+ {type:'Feature',properties:{name:'A',lane:.5},geometry:{type:'LineString',coordinates:[[0,0],[1,0]]}},
+ {type:'Feature',properties:{name:'A',lane:.5},geometry:{type:'LineString',coordinates:[[1,0],[2,0]]}},
+ {type:'Feature',properties:{name:'A',lane:.5},geometry:{type:'LineString',coordinates:[[1,0],[1,1]]}}
+]};
+assert(alignLaneFrames(branchFrames).features.every(f=>f.properties.lane===.5));
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
+// Regression for the reported Coatesville–Downingtown color switching.
+const actualNetwork=alignLaneFrames(await load('routes.geojson'));
+for(const [name,expected] of [['Pennsylvanian',.5],['Keystone Service',-.5]]) {
+ const corridor=actualNetwork.features.filter(f=>f.properties.name===name&&f.geometry.coordinates.some(p=>p[0]>-75.85&&p[0]<-75.65&&p[1]>39.98&&p[1]<40.06));
+ assert(corridor.length>=2);
+ assert(corridor.every(f=>f.properties.lane===expected),`${name} changed sides on the Pennsylvania corridor`);
+}
+assert.equal(new Set(actualNetwork.features.map(f=>f.properties.name)).size,manifest.routeCount);
 const stopsByTrip=new Map();
 for(const stop of evidence['stop_times.txt']){if(!stopsByTrip.has(stop.trip_id))stopsByTrip.set(stop.trip_id,new Map());stopsByTrip.get(stop.trip_id).set(stop.stop_id,stop);}
 const parse=t=>{const [h,m,s]=t.split(':').map(Number);return h*60+m+s/60;};
