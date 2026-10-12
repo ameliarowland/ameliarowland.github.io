@@ -203,9 +203,9 @@ function smoothLaneTransitions(points,radius=24) {
   });
 }
 export function routeDrawingStyle(collection,zoom) {
-  const nominal=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7;
+  const nominal=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7+Math.max(0,Math.min(5,zoom-11));
   const maxLane=Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)));
-  const cap=16+Math.max(0,zoom-12)*12;
+  const cap=16+Math.max(0,zoom-12)*60;
   const spacing=1.5*Math.min(nominal,cap/maxLane);
   return {spacing,baseWidth:Math.min(zoom<7?3.75:4.8,spacing*.78),highlightWidth:Math.min(zoom<7?5.25:6.3,spacing*.95)};
 }
@@ -247,13 +247,37 @@ export function continuousRoutePaths(collection) {
   collection.features.forEach((f,index)=>{if(!used.has(index))walk(index,0);});
   return {type:'FeatureCollection',features};
 }
+// Union retained vertices across services so a shared source vertex is either
+// kept for every route or removed for every route. Error stays below one pixel
+// at wide zooms and fades to zero at zoom 13; endpoints remain fixed.
+export function simplifyDisplayGeometry(collection,zoom) {
+  const tolerance=zoom<=6?.9:zoom>=13?0:.9*(13-zoom)/7;
+  if(!tolerance)return collection;
+  const world=512*2**zoom,keep=new Set();
+  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+  for(const f of collection.features) {
+    const p=f.geometry.coordinates,xy=p.map(project),stack=[[0,p.length-1]];
+    keep.add(coordinateKey(p[0]));keep.add(coordinateKey(p.at(-1)));
+    while(stack.length) {
+      const [lo,hi]=stack.pop(),a=xy[lo],b=xy[hi],dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;
+      let index=lo,max=tolerance*tolerance;
+      for(let j=lo+1;j<hi;j++) {
+        const t=den?Math.max(0,Math.min(1,((xy[j][0]-a[0])*dx+(xy[j][1]-a[1])*dy)/den)):0;
+        const d=(xy[j][0]-a[0]-t*dx)**2+(xy[j][1]-a[1]-t*dy)**2;
+        if(d>max){max=d;index=j;}
+      }
+      if(index!==lo){keep.add(coordinateKey(p[index]));stack.push([lo,index],[index,hi]);}
+    }
+  }
+  return {type:'FeatureCollection',features:collection.features.map(f=>({...f,geometry:{type:'LineString',coordinates:f.geometry.coordinates.filter(p=>keep.has(coordinateKey(p)))}}))};
+}
 export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom)) {
   const world=512*2**zoom;
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=drawingStyle.spacing;
   const tangentRadius=Math.max(4,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0))));
-  const features=continuousRoutePaths(collection).features.map(f=>{
+  const features=continuousRoutePaths(simplifyDisplayGeometry(collection,zoom)).features.map(f=>{
     const lanes=f.properties.edgeLanes;
     const projected=f.geometry.coordinates.map((p,i)=>{
       const xy=project(p),lane=i===0?lanes[0]:i===lanes.length?lanes.at(-1):(lanes[i-1]+lanes[i])/2;
@@ -351,7 +375,7 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
     for(const f of collection.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
       const u=f.geometry.coordinates[i-1],v=f.geometry.coordinates[i],a=project(u),b=project(v),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);
       if(!length)continue;
-      const entry={a,b,dx,dy,length,name:f.properties.name};
+      const entry={a,b,dx,dy,length,name:f.properties.symbologyName||f.properties.name};
       const first=screen?a:u,last=screen?b:v;
       for(let x=Math.floor(Math.min(first[0],last[0])/cell);x<=Math.floor(Math.max(first[0],last[0])/cell);x++)for(let y=Math.floor(Math.min(first[1],last[1])/cell);y<=Math.floor(Math.max(first[1],last[1])/cell);y++) {
         const key=x+','+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(entry);
