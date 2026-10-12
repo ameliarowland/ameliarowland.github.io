@@ -82,14 +82,11 @@ def parallel_routes(fc):
  features=[]
  for points in corridor_chains(edges):
   memberships=[edges[tuple(sorted((a,b)))] for a,b in zip(points,points[1:])]
-  slots=[{name:0 for name in members} for members in memberships]
-  i=0
-  while i<len(memberships):
-   if len(memberships[i])<2:i+=1;continue
-   start=i;names=set()
-   while i<len(memberships) and len(memberships[i])>=2:names.update(memberships[i]);i+=1
-   ordered=sorted(names);ranks={name:j-(len(ordered)-1)/2 for j,name in enumerate(ordered)}
-   for j in range(start,i):slots[j]={name:ranks[name] for name in memberships[j]}
+  # Center only the routes present on this track; do not reserve empty lanes
+  # for services that join hundreds of miles away.
+  slots=[]
+  for members in memberships:
+   ordered=sorted(members);slots.append({name:j-(len(ordered)-1)/2 for j,name in enumerate(ordered)})
   # Simplify each common section once so every route uses identical bend vertices.
   breaks=[0]+[i for i in range(1,len(memberships)) if memberships[i]!=memberships[i-1] or slots[i]!=slots[i-1]]+[len(memberships)]
   display=[];display_index={}
