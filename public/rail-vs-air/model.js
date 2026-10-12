@@ -1,4 +1,5 @@
 export const AIRPORT_OVERHEAD = 180;
+export const stationRouteName=name=>name==='Lincol Service Missouri River Runner'?'Lincoln Service Missouri River Runner':name;
 export function delta(record) { return record.railMinutes - record.flightMinutes - AIRPORT_OVERHEAD; }
 export function qualifies(record, tolerance) { return delta(record) <= tolerance; }
 export function duration(minutes) { const n = Math.round(minutes); return `${Math.floor(n / 60)}h ${String(n % 60).padStart(2, '0')}m`; }
@@ -205,7 +206,7 @@ function smoothLaneTransitions(points,radius=24) {
 export function routeDrawingStyle(collection,zoom) {
   const nominal=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7+Math.max(0,Math.min(5,zoom-11));
   const maxLane=Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)));
-  const cap=16+Math.max(0,zoom-12)*60;
+  const cap=zoom<=6?16:zoom<7?16+(zoom-6)*32:zoom<=12?48+(zoom-7)*12:108+(zoom-12)*60;
   const spacing=1.5*Math.min(nominal,cap/maxLane);
   return {spacing,baseWidth:Math.min(zoom<7?3.75:4.8,spacing*.78),highlightWidth:Math.min(zoom<7?5.25:6.3,spacing*.95)};
 }
@@ -257,7 +258,7 @@ export function anchorStationGeometry(collection,stations) {
   if(cached?.stations===stations)return cached.result;
   const grid=new Map(),cell=.05,anchors=new Map(),keys=new Set();
   for(const f of collection.features) {
-    const name=f.properties.symbologyName||f.properties.name,p=f.geometry.coordinates;
+    const name=stationRouteName(f.properties.symbologyName||f.properties.name),p=f.geometry.coordinates;
     for(let i=1;i<p.length;i++) {
       const a=p[i-1],b=p[i],entry={a,b,name};
       for(let x=Math.floor(Math.min(a[0],b[0])/cell);x<=Math.floor(Math.max(a[0],b[0])/cell);x++)for(let y=Math.floor(Math.min(a[1],b[1])/cell);y<=Math.floor(Math.max(a[1],b[1])/cell);y++) {
@@ -421,7 +422,7 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
     for(const f of collection.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
       const u=f.geometry.coordinates[i-1],v=f.geometry.coordinates[i],a=project(u),b=project(v),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);
       if(!length)continue;
-      const entry={a,b,dx,dy,length,name:f.properties.symbologyName||f.properties.name,originalName:f.properties.name,color:f.properties.color||'#ffffff'};
+      const entry={a,b,dx,dy,length,name:stationRouteName(f.properties.symbologyName||f.properties.name),originalName:f.properties.name,color:f.properties.color||'#ffffff'};
       const first=screen?a:u,last=screen?b:v;
       for(let x=Math.floor(Math.min(first[0],last[0])/cell);x<=Math.floor(Math.max(first[0],last[0])/cell);x++)for(let y=Math.floor(Math.min(first[1],last[1])/cell);y<=Math.floor(Math.max(first[1],last[1])/cell);y++) {
         const key=x+','+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(entry);
@@ -435,12 +436,18 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
   }
   const sourceNear=index(network),displayNear=index(displayed,zoom<9),dots=[],passes=[];
   const known=activeRoutes||new Set(stations.features.flatMap(f=>f.properties.routeNames||[]));
+  const colorByRoute=new Map(network.features.map(f=>[stationRouteName(f.properties.symbologyName||f.properties.name),f.properties.color||'#ffffff']));
   for(const station of stations.features) {
     const names=new Set(station.properties.routeNames||[]);
     const coordinate=station.geometry.coordinates,p=project(coordinate);
     // NTAD stations and tracks can differ slightly. Keep the association within
     // 750 m and require an actual stopping service's named route.
     const metersPerPixel=40075016.686*Math.cos(coordinate[1]*Math.PI/180)/world;
+    function stopProperties(name,color) {
+      const ringWidth=Math.min(1.8,.75+Math.max(0,zoom-3)*.08,style.spacing*.18);
+      const radius=Math.max(2,Math.min(4.8,1.7+Math.max(0,zoom-3)*.26,style.spacing*.5-ringWidth));
+      return {...station.properties,symbolRoutes:[name],stopStatus:'stop',color,radius,ringWidth};
+    }
     let best=null,distance=750/metersPerPixel;
     for(const e of sourceNear(coordinate)) {
       if(names.size?!names.has(e.name):!known.has(e.name))continue;
@@ -448,7 +455,7 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
       const q=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(q[0]-p[0],q[1]-p[1]);
       if(d<distance){distance=d;best={q,tangent:[e.dx/e.length,e.dy/e.length]};}
     }
-    if(!best)continue;
+    if(!best){for(const name of names)dots.push({type:'Feature',properties:{...stopProperties(name,colorByRoute.get(name)||'#ffffff'),geometryFallback:true},geometry:{type:'Point',coordinates:coordinate}});continue;}
     const {q,tangent}=best,normal=[-tangent[1],tangent[0]],crossings=new Map();
     // Restrict the span to the physical track corridor. At small zooms an
     // unrelated branch may also cross the same screen-space perpendicular.
@@ -472,11 +479,6 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
       if(Math.abs(across)>maxOffset+style.spacing*2)continue;
       if(!crossings.has(e.name)||Math.abs(across)<Math.abs(crossings.get(e.name).value))crossings.set(e.name,{value:across,point:[x,y],normal:[-e.dy/e.length,e.dx/e.length],color:e.color});
     }
-    function stopProperties(name,color) {
-      const ringWidth=Math.min(1.8,.75+Math.max(0,zoom-3)*.08,style.spacing*.18);
-      const radius=Math.max(.5,Math.min(4.8,1.7+Math.max(0,zoom-3)*.26,style.spacing*.5-ringWidth));
-      return {...station.properties,symbolRoutes:[name],stopStatus:'stop',color,radius,ringWidth};
-    }
     for(const [name,crossing] of crossings) {
       if(names.has(name))dots.push({type:'Feature',properties:stopProperties(name,crossing.color),geometry:{type:'Point',coordinates:unproject(crossing.point)}});
       else if(known.has(name)) {
@@ -499,29 +501,9 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
         const point=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(point[0]-p[0],point[1]-p[1]);
         if(d<limit){limit=d;nearest=point;nearestColor=e.color;}
       }
-      if(nearest)dots.push({type:'Feature',properties:stopProperties(name,nearestColor),geometry:{type:'Point',coordinates:unproject(nearest)}});
+      dots.push({type:'Feature',properties:{...stopProperties(name,nearest?nearestColor:colorByRoute.get(name)||'#ffffff'),geometryFallback:!nearest},geometry:{type:'Point',coordinates:nearest?unproject(nearest):coordinate}});
     }
   }
   return {dots:{type:'FeatureCollection',features:dots},passes:{type:'FeatureCollection',features:passes}};
 }
 
-// Country overview: one small, high-contrast marker per scheduled station.
-// Keep markers on an actual stopping lane and space crowded markers on screen.
-export function overviewStations(stops,zoom) {
-  const groups=new Map(),world=512*2**zoom;
-  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
-  for(const f of stops.features){const code=f.properties.Code;if(!groups.has(code))groups.set(code,[]);groups.get(code).push(f);}
-  const candidates=[...groups.values()].map(group=>{
-    const ordered=[...group].sort((a,b)=>a.properties.symbolRoutes[0].localeCompare(b.properties.symbolRoutes[0]));
-    const center=ordered[Math.floor(ordered.length/2)],routes=[...new Set(group.flatMap(f=>f.properties.symbolRoutes))].sort();
-    return {...center,properties:{...center.properties,symbolRoutes:routes,overview:true}};
-  }).sort((a,b)=>b.properties.symbolRoutes.length-a.properties.symbolRoutes.length||a.properties.Code.localeCompare(b.properties.Code));
-  const gap=zoom<5.5?9:8,grid=new Map(),features=[];
-  for(const f of candidates){
-    const p=project(f.geometry.coordinates),gx=Math.floor(p[0]/gap),gy=Math.floor(p[1]/gap);let crowded=false;
-    for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const q of grid.get(x+','+y)||[])if(Math.hypot(p[0]-q[0],p[1]-q[1])<gap)crowded=true;
-    if(crowded)continue;
-    features.push(f);const key=gx+','+gy;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(p);
-  }
-  return {type:'FeatureCollection',features};
-}
