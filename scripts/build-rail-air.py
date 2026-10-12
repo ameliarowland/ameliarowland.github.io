@@ -2,7 +2,7 @@
 """Rebuild auditable rail/air comparisons from downloaded primary-source files.
 No modeled speeds or invented flight durations. Shapely is used for shared-track display topology.
 """
-import argparse,csv,io,json,zipfile,math,statistics,datetime,hashlib
+import argparse,csv,io,json,zipfile,math,statistics,datetime,hashlib,colorsys
 from collections import defaultdict,Counter
 from pathlib import Path
 
@@ -104,6 +104,41 @@ def parallel_routes(fc):
  shared=sum(len(names)>1 for names in edges.values())
  return {'type':'FeatureCollection','features':features},shared
 
+def route_colors(fc):
+ # Greedy perceptual contrast assignment: services sharing an exact source
+ # edge constrain each other, instead of receiving neighboring hues by name.
+ groups={f['properties'].get('symbologyName',f['properties']['name']) for f in fc['features']}
+ edges=defaultdict(set)
+ for f in fc['features']:
+  name=f['properties'].get('symbologyName',f['properties']['name']);p=f['geometry']['coordinates']
+  for a,b in zip(p,p[1:]):edges[tuple(sorted((tuple(a),tuple(b))))].add(name)
+ neighbors={name:set() for name in groups}
+ for members in edges.values():
+  for name in members:neighbors[name].update(members-{name})
+ def lab(rgb):
+  r,g,b=[v/12.92 if v<=.04045 else ((v+.055)/1.055)**2.4 for v in rgb]
+  xyz=[(.4124564*r+.3575761*g+.1804375*b)/.95047,.2126729*r+.7151522*g+.072175*b,(.0193339*r+.119192*g+.9503041*b)/1.08883]
+  x,y,z=[v**(1/3) if v>.008856 else 7.787*v+16/116 for v in xyz]
+  return (116*y-16,500*(x-y),200*(y-z))
+ palette=[]
+ for hue in range(0,360,15):
+  for lightness in [.58,.70]:
+   for saturation in [.65,.85]:
+    rgb=colorsys.hls_to_rgb(hue/360,lightness,saturation);palette.append((lab(rgb),'#'+''.join(f'{round(v*255):02x}' for v in rgb),hue))
+ distance=lambda a,b:math.sqrt(sum((x-y)**2 for x,y in zip(a,b)))
+ assigned={};used=set()
+ for name in sorted(groups,key=lambda n:(-len(neighbors[n]),n)):
+  nearby=[assigned[n][0] for n in neighbors[name] if n in assigned]
+  def score(candidate):
+   color,hexcode,hue=candidate
+   primary=min((distance(color,c) for c in nearby),default=70-abs(hue-210)/10)
+   spread=min((distance(color,c[0]) for c in assigned.values()),default=0)
+   return primary+.08*spread
+  choice=max((c for c in palette if c[1] not in used),key=score);assigned[name]=choice;used.add(choice[1])
+ result={name:entry[1] for name,entry in assigned.items()}
+ for f in fc['features']:result[f['properties']['name']]=result[f['properties'].get('symbologyName',f['properties']['name'])]
+ return result
+
 def station_services(stations,routes,trips,times,ntad_names):
  memberships=defaultdict(set)
  for tid,rows in times.items():
@@ -144,9 +179,10 @@ def build(args):
  times=defaultdict(list)
  for t in readzip(z,'stop_times.txt'):
   if t['trip_id'] in trips:times[t['trip_id']].append(t)
- from rail_topology import simplify_display_sections
+ from rail_topology import simplify_display_sections,join_display_tails
  parallel,shared=parallel_routes(route_geo)
  parallel,suppressed=simplify_display_sections(parallel)
+ parallel,joined=join_display_tails(parallel,stations)
  dump('routes.geojson',parallel)
  station_services(stations,routes,trips,times,ntad_names)
  dump('stations.geojson',stations)
@@ -221,7 +257,7 @@ def build(args):
   evidence[filename]=rows
  if 'calendar_dates.txt' in z.namelist():evidence['calendar_dates.txt']=readzip(z,'calendar_dates.txt')
  dump('gtfs-evidence.json',evidence)
- manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
+ manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':750},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
  dump('manifest.json',manifest)
  print(json.dumps(manifest,indent=2))
  print('Default qualifying route/station/direction records:',sum(r['railMinutes']<=r['flightMinutes']+240 for r in records))
