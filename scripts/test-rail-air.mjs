@@ -129,6 +129,14 @@ for(const lanes of sharedLanes.values()) {
 }
 assert(priorityEdges>200);
 assert.equal(new Set(actualNetwork.features.map(f=>f.properties.name)).size,manifest.routeCount);
+// All eleven routes continue across North Philadelphia, including the source
+// Crescent gap drawn along the retained shared NEC track.
+const phnA=[-75.1585532,39.995913],phnB=[-75.1575273,39.9962988];
+for(const name of ['Pennsylvanian','Acela','Cardinal','Carolinian','Crescent','Keystone Service','Northeast Regional','Palmetto','Silver Meteor','Silver Star','Vermonter']) {
+ const through=continuousRoutePaths(actualNetwork).features.find(f=>f.properties.name===name&&f.geometry.coordinates.some(p=>p[0]===phnA[0]&&p[1]===phnA[1])&&f.geometry.coordinates.some(p=>p[0]===phnB[0]&&p[1]===phnB[1]));
+ assert(through,`${name} is disconnected at North Philadelphia`);
+ assert(![through.geometry.coordinates[0],through.geometry.coordinates.at(-1)].some(p=>[phnA,phnB].some(q=>p[0]===q[0]&&p[1]===q[1])),`${name} ends at the connection`);
+}
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
