@@ -42,8 +42,8 @@
         <div id="map"></div>
         <div id="map-zoom" class="map-zoom" hidden></div>
         <div class="map-actions"><button id="reset">U.S. network ↗</button><button id="layers" aria-expanded="false" aria-controls="legend">Legend</button></div>
-        <div class="map-key"><div id="route-focus-label" hidden aria-live="polite"></div><span class="key-line"></span>Qualifying train journey <span class="key-stop"></span>Stop<br /><small>Station circles show scheduled stops at every zoom</small></div>
-        <div id="legend" hidden><h2>Map legend</h2><p>Colors follow the NTAD NAME field. Silver Star and Floridian share a color and lane where their tracks overlap; both source routes are retained.</p><p><span class="key-stop"></span> Scheduled stop. No circle = no scheduled stop for that route.</p><div id="legend-list"></div></div>
+        <div class="map-key"><div id="route-focus-label" hidden aria-live="polite"></div><span class="key-line"></span>Qualifying train journey <span class="key-stop"></span>Stop<br /><small>Select a route to see its scheduled stops</small></div>
+        <div id="legend" hidden><h2>Map legend</h2><p>Colors follow the NTAD NAME field. Silver Star and Floridian share a color and lane where their tracks overlap; both source routes are retained.</p><p><span class="key-stop"></span> Lines meet at stations. Select a route: a circle means a scheduled stop; no circle means no scheduled stop for that route.</p><div id="legend-list"></div></div>
         <div id="selection" hidden aria-live="polite"></div>
       </section>
     </div>
@@ -51,6 +51,6 @@
     <noscript><p>This map requires JavaScript. Read the <a href="/maps/rail-vs-air/">article and methodology</a>, or download the <a href="/rail-vs-air/data/comparisons.json">sourced comparisons</a>.</p></noscript>
   </main>
   <script is:inline src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
-  <script is:inline type="module" src="/rail-vs-air/app.js"></script>
+  <script is:inline type="module" src="/rail-vs-air/app.js?v=pinched-stations-1"></script>
 </body>
 </html>
