@@ -1,3 +1,11 @@
+export const displayRouteAllowed=name=>String(name).toLowerCase().replace(/[\s-]/g,'')!=='autotrain';
+export function filterDisplayData(routes,stations,comparisons) {
+ return {
+  routes:{...routes,features:routes.features.filter(f=>displayRouteAllowed(f.properties.name))},
+  stations:{...stations,features:stations.features.map(f=>({...f,properties:{...f.properties,routeNames:(f.properties.routeNames||[]).filter(displayRouteAllowed)}}))},
+  comparisons:comparisons.filter(r=>displayRouteAllowed(r.ntadName||r.route)&&displayRouteAllowed(r.route))
+ };
+}
 export const AIRPORT_OVERHEAD = 180;
 export const stationRouteName=name=>name==='Lincol Service Missouri River Runner'?'Lincoln Service Missouri River Runner':name;
 export function delta(record) { return record.railMinutes - record.flightMinutes - AIRPORT_OVERHEAD; }
@@ -357,7 +365,7 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
   const sourcePaths=continuousRoutePaths(simplifyDisplayGeometry(anchored,zoom));
   // Use one through-corridor tangent for every coincident centerline vertex.
   // Service-specific terminal tangents otherwise pull neighboring lanes inward.
-  const support=new Map(),tangents=new Map();
+  const support=new Map(),tangents=new Map(),anchorKeys=new Set(anchored.stationAnchorKeys||[]);
   for(const f of sourcePaths.features) {
     const p=f.geometry.coordinates;
     for(let i=1;i<p.length;i++){const [key]=edgeKey(p[i-1],p[i]);support.set(key,(support.get(key)||0)+1);}
@@ -374,8 +382,18 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
       const a=at(distance[i]-tangentRadius),b=at(distance[i]+tangentRadius),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);if(!length)continue;
       const left=i?(support.get(edgeKey(coordinates[i-1],coordinates[i])[0])||0):0;
       const right=i+1<p.length?(support.get(edgeKey(coordinates[i],coordinates[i+1])[0])||0):0;
-      const quality=Math.min(left,right)*1000+Math.min(distance[i],distance.at(-1)-distance[i],tangentRadius);
-      const key=coordinateKey(coordinates[i]);if(!tangents.has(key)||quality>tangents.get(key).quality)tangents.set(key,{dx:dx/length,dy:dy/length,quality});
+      const key=coordinateKey(coordinates[i]);
+      let tx=dx/length,ty=dy/length;
+      const station=anchorKeys.has(key);
+      const transition=left!==right;
+      // At stops and bundle joins, follow the actual dominant shared segment.
+      // A large context window can turn toward another branch beyond the stop.
+      if(station||transition) {
+        const a=left>=right&&i>0?p[i-1]:p[i],b=left>=right&&i>0?p[i]:p[Math.min(i+1,p.length-1)],span=Math.hypot(b[0]-a[0],b[1]-a[1]);
+        if(span){tx=(b[0]-a[0])/span;ty=(b[1]-a[1])/span;}
+      }
+      const quality=Math.max(left,right)*1000+Math.min(distance[i],distance.at(-1)-distance[i],tangentRadius);
+      if(!tangents.has(key)||quality>tangents.get(key).quality)tangents.set(key,{dx:tx,dy:ty,quality});
     }
   }
   const sourcePositions=sourcePaths.features.map(()=>new Map());
@@ -480,8 +498,10 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
       // through lane. The source join can sit beyond the outer displayed lane.
       if(['Pennsylvanian','Keystone Service'].includes(f.properties.name)&&source.some(p=>p[0]===-75.198326&&p[1]===39.9720475)) {
         const main=features[join.index].geometry.coordinates.map(project),branch=oriented.map(project),target=project(join.point);
+        const stopKeys=new Set((features[index].properties.stationPositions||[]).map(stop=>coordinateKey(stop.coordinates)));
+        let lastStop=-1;for(let i=0;i<oriented.length;i++)if(stopKeys.has(coordinateKey(oriented[i])))lastStop=i;
         let crossing=null;
-        for(let j=Math.max(1,branch.length-12);j<branch.length&&!crossing;j++) {
+        for(let j=Math.max(1,branch.length-12,lastStop+1);j<branch.length&&!crossing;j++) {
           const a=branch[j-1],b=branch[j],rx=b[0]-a[0],ry=b[1]-a[1];
           for(let k=1;k<main.length;k++) {
             const c=main[k-1],d=main[k],sx=d[0]-c[0],sy=d[1]-c[1],den=rx*sy-ry*sx;
@@ -528,6 +548,78 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
         if(!best||distance<best.distance)best={i,distance};
       }
       if(best&&best.distance<.001)features[index].geometry.coordinates=stationEnd[0]?[dot.geometry.coordinates,...line.slice(best.i)]:[...line.slice(0,best.i),dot.geometry.coordinates];
+    });
+  }
+  // For a large station hub, a source corner can be shorter than the displayed
+  // bundle width. Route each approach directly into the retained stop anchor,
+  // preserving every preceding/following station rather than folding the lanes.
+  if(stations) {
+    const hubs=new Map(stations.features.filter(s=>(s.properties.routeNames||[]).length>=8).map(s=>[s.properties.Code,s]));
+    const pointCodes=new Map();
+    for(const a of anchored.stationAnchorAssociations||[]) {
+      if(!pointCodes.has(a.key))pointCodes.set(a.key,new Set());pointCodes.get(a.key).add(a.Code);
+    }
+    sourcePaths.features.forEach((source,index)=>{
+      const p=source.geometry.coordinates,xy=p.map(project),distance=[0];
+      for(let i=1;i<p.length;i++)distance.push(distance.at(-1)+Math.hypot(xy[i][0]-xy[i-1][0],xy[i][1]-xy[i-1][1]));
+      const name=stationRouteName(source.properties.symbologyName||source.properties.name);
+      const layouts=[...(features[index].properties.stationPositions||[])];
+      // Retained legacy geometry can end at a hub without an operating stop.
+      // Smooth that existing line cap too, without creating a station marker.
+      for(const [Code,hub] of hubs) {
+        if(layouts.some(stop=>stop.Code===Code))continue;
+        const center=project(hub.geometry.coordinates),scale=40075016.686*Math.cos(hub.geometry.coordinates[1]*Math.PI/180)/world;
+        for(const endpointIndex of [0,p.length-1]) {
+          if(Math.hypot(xy[endpointIndex][0]-center[0],xy[endpointIndex][1]-center[1])*scale>750)continue;
+          const coordinates=sourcePositions[index].get(coordinateKey(p[endpointIndex]));
+          if(coordinates)layouts.push({Code,name,coordinates,endpointIndex,layoutOnly:true});
+        }
+      }
+      for(const stop of layouts) {
+        const hub=hubs.get(stop.Code);if(!hub)continue;
+        const k=stop.layoutOnly?stop.endpointIndex:p.findIndex(q=>(associations.get(name+'|'+coordinateKey(q))||[]).includes(stop.Code));if(k<0)continue;
+        const sourceStop=xy[k],metersPerPixel=40075016.686*Math.cos(p[k][1]*Math.PI/180)/world;
+        const nearby=[];
+        for(let i=Math.max(1,k-8);i<Math.min(p.length-1,k+9);i++) {
+          if(Math.hypot(xy[i][0]-sourceStop[0],xy[i][1]-sourceStop[1])*metersPerPixel>750)continue;
+          const left=support.get(edgeKey(p[i-1],p[i])[0])||0,right=support.get(edgeKey(p[i],p[i+1])[0])||0;
+          if(left!==right)nearby.push(i);
+        }
+        const ends=[0,p.length-1].map(i=>Math.hypot(xy[i][0]-sourceStop[0],xy[i][1]-sourceStop[1])*metersPerPixel<=750);
+        if(!nearby.length&&!ends.some(Boolean))continue;
+        for(const side of [0,1]) {
+          const terminal=ends[side],hasJoin=nearby.some(i=>side===0?i>k:i<k);
+          // side 1 approaches from before the stop; side 0 from after it.
+          const reachesTerminal=terminal&&((side===1&&k>p.length/2)||(side===0&&k<p.length/2));
+          if(!reachesTerminal&&!hasJoin)continue;
+          const step=side===1?-1:1,window=Math.max(80,tangentRadius*3);
+          let j=k;
+          while(j+step>=0&&j+step<p.length&&Math.abs(distance[j]-distance[k])<window) {
+            j+=step;
+            const codes=pointCodes.get(coordinateKey(p[j]));
+            if(codes&&[...codes].some(Code=>Code!==stop.Code))break;
+          }
+          if(j===k)continue;
+          const start=sourcePositions[index].get(coordinateKey(p[j]));if(!start)continue;
+          const line=features[index].geometry.coordinates;
+          const oriented=side===1?line:[...line].reverse();
+          const startIndex=oriented.findIndex(q=>coordinateKey(q)===coordinateKey(start));
+          const stopIndex=oriented.findIndex(q=>coordinateKey(q)===coordinateKey(stop.coordinates));
+          if(startIndex<0||stopIndex<=startIndex)continue;
+          // Do not erase a stop if another geometry branch placed it here.
+          const protectedKeys=new Set((features[index].properties.stationPositions||[]).filter(s=>s.Code!==stop.Code).map(s=>coordinateKey(s.coordinates)));
+          if(oriented.slice(startIndex+1,stopIndex).some(q=>protectedKeys.has(coordinateKey(q))))continue;
+          const a=project(start),b=project(stop.coordinates),previous=project(oriented[Math.max(0,startIndex-1)]);
+          let dx=a[0]-previous[0],dy=a[1]-previous[1],length=Math.hypot(dx,dy);
+          if(!length){dx=b[0]-a[0];dy=b[1]-a[1];length=Math.hypot(dx,dy)||1;}
+          const forward=Math.max(0,(b[0]-a[0])*dx/length+(b[1]-a[1])*dy/length);
+          const control=[a[0]+dx/length*forward*.55,a[1]+dy/length*forward*.55],curve=[];
+          for(let i=1;i<=24;i++){const t=i/24,u=1-t;curve.push(unproject([u*u*a[0]+2*u*t*control[0]+t*t*b[0],u*u*a[1]+2*u*t*control[1]+t*t*b[1]]));}
+          const isTerminal=side===1?ends[1]:ends[0];
+          const joined=[...oriented.slice(0,startIndex+1),...curve,...(isTerminal?[]:oriented.slice(stopIndex+1))];
+          features[index].geometry.coordinates=side===1?joined:joined.reverse();
+        }
+      }
     });
   }
   return {type:'FeatureCollection',features};
