@@ -1,11 +1,11 @@
-import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-22';
-import {stationRouteName} from './model.js?v=station-schematic-22';
+import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-23';
+import {stationRouteName} from './model.js?v=station-schematic-23';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Acela','Vermonter','Northeast Regional'];
 export const chicagoUnionOrder=['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Capitol Limited','Floridian','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette'];
 const rank=n=>north.includes(n)?north.indexOf(n):south.includes(n)?1000+south.indexOf(n):100;
-export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6)),baseWidth=3.2+3.8*t;return {baseWidth,highlightWidth:baseWidth,hoverWidth:baseWidth+1.5,laneSpacing:baseWidth+.7};}
+export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6)),baseWidth=3.2+3.8*t;return {baseWidth,highlightWidth:baseWidth,hoverWidth:baseWidth+1.5,laneSpacing:baseWidth+.6};}
 export function createSchematicEngine(routes,stations) {
  const nodes=new Map(),groups=new Map(),graphs=new Map(),pathCache=new Map();
  routes.features.forEach((f,i)=>{
