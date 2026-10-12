@@ -35,14 +35,16 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
   const source=data.routes.features[group[0].properties.edgeId].geometry.coordinates.map(screen),dx=source[1][0]-source[0][0],dy=source[1][1]-source[0][1],length=Math.hypot(dx,dy),normal=[-dy/length,dx/length];
   if(length<1e-8)continue; // Two inventory codes can represent the same physical station.
   const lane=f=>{const p=screen(f.properties.parallelBody[0]),c=screen(data.routes.features[f.properties.edgeId].geometry.coordinates[0]);return (p[0]-c[0])*normal[0]+(p[1]-c[1])*normal[1];};
+  for(const f of group){const ends=f.properties.parallelBody.map(screen),anchors=f.properties.stationPositions.map(p=>screen(p.coordinates));for(let i=0;i<2;i++){const delta=[ends[i][0]-anchors[i][0],ends[i][1]-anchors[i][1]];assert(Math.abs(delta[0]*dx/length+delta[1]*dy/length)<1e-6,'Station joins must trim at the displayed dot, without overshooting to the original station at '+pair);}}
   for(const f of group){const [a,b]=f.properties.parallelBody.map(screen),vector=[b[0]-a[0],b[1]-a[1]];assert(Math.abs(vector[0]*normal[0]+vector[1]*normal[1])<1e-6,'Every interstation body is parallel to its source at '+pair+' '+Math.abs(vector[0]*normal[0]+vector[1]*normal[1]));}
   const unique=[...new Map(group.map(f=>[f.properties.symbologyName,f])).values()].sort((a,b)=>lane(a)-lane(b));
   for(let i=1;i<unique.length;i++)assert(Math.abs(lane(unique[i])-lane(unique[i-1])-spacing)<1e-6,'Constant perpendicular lane gap at '+pair);
   const byName=new Map(group.map(f=>[f.properties.symbologyName,f]));
   for(const [below,above] of [['Borealis','Empire Builder'],['Capitol Limited','Floridian']])if(byName.has(below)&&byName.has(above))assert((lane(byName.get(below))-lane(byName.get(above)))*normal[1]>=-1e-6,below+' stays south of '+above+' at '+pair);
   if(byName.has('Vermonter')&&byName.has('Acela'))assert((lane(byName.get('Vermonter'))-lane(byName.get('Acela')))*normal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
-  for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
+  for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
   if(unique.length===1&&!pair.split('|').includes('CHI'))assert(Math.abs(lane(unique[0]))<1e-6,'Single-route corridors must not inherit a distant hub displacement at '+pair);
+  if(byName.has('Coast Starlight')&&byName.has('Pacific Surfliner'))assert((lane(byName.get('Pacific Surfliner'))-lane(byName.get('Coast Starlight')))*(normal[0]-normal[1])>0,'Pacific Surfliner stays on the northeast side of Coast Starlight at '+pair);
   if(byName.has('Pere Marquette'))for(const [name,f] of byName)assert((lane(byName.get('Pere Marquette'))-lane(f))*normal[1]<=1e-6,'Pere Marquette stays north of every shared route at '+pair);
   if(byName.has('Maple Leaf'))for(const [name,f] of byName)assert((lane(byName.get('Maple Leaf'))-lane(f))*normal[1]<=1e-6,'Maple Leaf stays north at '+pair);
  }
