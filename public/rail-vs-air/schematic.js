@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-13';
+import {stationRouteName} from './model.js?v=station-schematic-14';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -59,15 +59,28 @@ export function createSchematicEngine(routes,stations) {
   const angle=.5*Math.atan2(2*xy,xx-yy);let normal=[-Math.sin(angle),Math.cos(angle)];if(normal[1]>0||(Math.abs(normal[1])<1e-8&&normal[0]<0))normal=normal.map(v=>-v);
   node.normal=chicagoSteps.has(id)?[Math.SQRT1_2,-Math.SQRT1_2]:normal;
  }
+ // Union Station's northwest-to-southeast row matches its separate northern,
+ // western and southern arrivals. Carry that frame along shared west-side
+ // approaches; keep the eastern Hammond-Whiting family in its existing frame.
+ const chicagoWestRows=new Set(['CHI']),westOrder=chicagoUnionOrder.slice(0,chicagoUnionOrder.indexOf('Cardinal'));
+ for(let i=0;i<westOrder.length;i++)for(let j=i+1;j<westOrder.length;j++){
+  const links=new Map();for(const [key,names] of groups){if(!names.has(westOrder[i])||!names.has(westOrder[j]))continue;const [a,b]=key.split('|');for(const [from,to] of [[a,b],[b,a]]){if(!links.has(from))links.set(from,new Set());links.get(from).add(to);}}
+  const queue=['CHI'],seen=new Set();while(queue.length){const id=queue.pop();if(seen.has(id))continue;seen.add(id);chicagoWestRows.add(id);for(const other of links.get(id)||[])queue.push(other);}
+ }
+ for(const id of chicagoWestRows)if(nodes.has(id))nodes.get(id).normal=[Math.SQRT1_2,Math.SQRT1_2];
  // Row directions are resolved once from track topology, not from zoom.
- const fixedNormal=[Math.SQRT1_2,-Math.SQRT1_2],fixedRows=new Set();
+ const fixedNormal=[Math.SQRT1_2,-Math.SQRT1_2],fixedRows=new Set(chicagoWestRows);
  for(let iteration=0;iteration<=nodes.size;iteration++){
-  const bad=new Set();for(const key of groups.keys()){
+  const bad=new Map();for(const [key,names] of groups){
+   if(names.size<2)continue;
    const [from,to]=key.split('|'),a=nodes.get(from),b=nodes.get(to),p=frameProject(a.coordinate),q=frameProject(b.coordinate),dx=q[0]-p[0],dy=q[1]-p[1];
    const left=-dy*a.normal[0]+dx*a.normal[1],right=-dy*b.normal[0]+dx*b.normal[1];
-   if(left*right<0){if(!fixedRows.has(from))bad.add(from);if(!fixedRows.has(to))bad.add(to);}
+   if(left*right<0){
+    if(chicagoWestRows.has(from)||chicagoWestRows.has(to)){for(const id of [from,to])if(!chicagoWestRows.has(id))bad.set(id,true);}
+    else{if(!fixedRows.has(from)&&!bad.has(from))bad.set(from,false);if(!fixedRows.has(to)&&!bad.has(to))bad.set(to,false);}
+   }
   }
-  if(!bad.size)break;for(const id of bad){fixedRows.add(id);nodes.get(id).normal=fixedNormal;}
+  if(!bad.size)break;for(const [id,west] of bad){fixedRows.add(id);if(west)chicagoWestRows.add(id);nodes.get(id).normal=west?[Math.SQRT1_2,Math.SQRT1_2]:fixedNormal;}
  }
  for(const node of nodes.values()){
   const p=frameProject(node.coordinate);let nearest=Infinity;for(const edge of node.edges){const q=frameProject(nodes.get(edge.other).coordinate),d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d>1e-12)nearest=Math.min(nearest,d);}
