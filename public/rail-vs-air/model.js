@@ -433,11 +433,14 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
     const shown=new Set([...dots,...bars].filter(f=>f.properties.Code===station.properties.Code).flatMap(f=>f.properties.symbolRoutes||[]));
     for(const name of names) {
       if(shown.has(name))continue;
-      let nearest=null,limit=maxOffset+style.spacing*2;
-      for(const e of displayNear(unproject(q))) {
-        if(e.name!==name||!bundleNames.has(name))continue;
-        const t=Math.max(0,Math.min(1,((q[0]-e.a[0])*e.dx+(q[1]-e.a[1])*e.dy)/(e.length*e.length)));
-        const point=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(point[0]-q[0],point[1]-q[1]);
+      let nearest=null,limit=750/metersPerPixel+maxOffset;
+      // Terminal/platform branches need their own station association. They
+      // may lie outside the narrow through-track bundle but still serve this
+      // exact GTFS stop. Use the same 750 m source association limit.
+      for(const e of displayNear(coordinate)) {
+        if(e.name!==name)continue;
+        const t=Math.max(0,Math.min(1,((p[0]-e.a[0])*e.dx+(p[1]-e.a[1])*e.dy)/(e.length*e.length)));
+        const point=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(point[0]-p[0],point[1]-p[1]);
         if(d<limit){limit=d;nearest=point;}
       }
       if(nearest)dots.push({type:'Feature',properties:{...station.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:unproject(nearest)}});
