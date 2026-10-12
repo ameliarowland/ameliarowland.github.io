@@ -1,6 +1,6 @@
-import {closestRouteAtPoint} from './hover.js?v=station-schematic-16';
-import {createSchematicEngine} from './schematic.js?v=station-schematic-16';
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-16';
+import {closestRouteAtPoint} from './hover.js?v=station-schematic-17';
+import {createSchematicEngine} from './schematic.js?v=station-schematic-17';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-17';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -62,6 +62,7 @@ function applyRouteLayout(result) {
  $('route-focus-label').textContent=activeRouteName?`Selected: ${activeRouteName==='Floridian'?'Floridian / Silver Star':activeRouteName}`:'';
  // Clip coverage from the final displayed lines, never offset a second copy.
  map.getSource('qualifying').setData(result.qualifying);
+ map.setPaintProperty('network-separator','line-width',drawingStyle.laneSpacing);
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
  map.setPaintProperty('route-hover','line-width',drawingStyle.hoverWidth);
@@ -134,7 +135,7 @@ async function init() {
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=visible.routes;
   schematicEngine=createSchematicEngine(networkData,stationDataCache);
-  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-16",{type:"module"});
+  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-17",{type:"module"});
   layoutWorker.onmessage=({data})=>{if(data.type==="layout")applyRouteLayout(data);else if(data.type==="error")$("status").textContent=`Map layout failed: ${data.message}`;};
   layoutWorker.onerror=event=>{$("status").textContent=`Map layout worker failed: ${event.message}`;};
   layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache});
@@ -151,6 +152,7 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
   map.on('load',()=>{
    map.addSource('network',{type:'geojson',tolerance:0,data:empty()});
+   map.addLayer({id:'network-separator',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#f8f5ee','line-width':3.9,'line-opacity':1}});
    map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,2.5,7,3.2,11,4],'line-offset':0,'line-opacity':1}});
    map.addSource('qualifying',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':0,'line-opacity':1}});
@@ -161,10 +163,10 @@ async function init() {
    map.addSource('selected',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',tolerance:0,data:empty()});
-   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#3d3f42','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
+   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#ffffff','circle-stroke-width':0}});
    map.addSource('station-focus',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'station-focus-halo',type:'circle',source:'station-focus',paint:{'circle-radius':['+',['get','focusRadius'],['/',['get','ringWidth'],2],.5],'circle-color':'#3d3f42','circle-stroke-color':'#ffffff','circle-stroke-width':.5}});
-   map.addLayer({id:'station-focus',type:'circle',source:'station-focus',paint:{'circle-radius':['get','focusRadius'],'circle-color':'#3d3f42','circle-stroke-color':['get','color'],'circle-stroke-width':['get','ringWidth']}});
+   map.addLayer({id:'station-focus',type:'circle',source:'station-focus',paint:{'circle-radius':['get','focusRadius'],'circle-color':'#ffffff','circle-stroke-width':0}});
    const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=String(p.Name||"").trim()||p.StationName||p.Code;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`Stops on: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
    const stationLayers=['station-focus','stations'];
    function chooseRoute(name) {
