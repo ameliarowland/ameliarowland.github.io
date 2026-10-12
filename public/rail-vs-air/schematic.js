@@ -1,11 +1,11 @@
-import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-16';
-import {stationRouteName} from './model.js?v=station-schematic-16';
+import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-17';
+import {stationRouteName} from './model.js?v=station-schematic-17';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Acela','Vermonter','Northeast Regional'];
 export const chicagoUnionOrder=['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Capitol Limited','Floridian','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette'];
 const rank=n=>north.includes(n)?north.indexOf(n):south.includes(n)?1000+south.indexOf(n):100;
-export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6));return {baseWidth:1.1+1.4*t,highlightWidth:1.8+1.7*t,hoverWidth:2.9+1.4*t};}
+export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6)),baseWidth=3.2+3.8*t;return {baseWidth,highlightWidth:baseWidth,hoverWidth:baseWidth+1.5,laneSpacing:baseWidth+.7};}
 export function createSchematicEngine(routes,stations) {
  const nodes=new Map(),groups=new Map(),graphs=new Map(),pathCache=new Map();
  routes.features.forEach((f,i)=>{
@@ -113,6 +113,7 @@ export function createSchematicEngine(routes,stations) {
   const slots=node.order.map((name,i)=>family.includes(name)?i:-1).filter(i=>i>=0);family.forEach((name,i)=>node.order[slots[i]]=name);
  }
  for(const node of nodes.values())if(node.names.has('Vermonter')&&node.names.has('Acela')){const v=node.order.indexOf('Vermonter'),a=node.order.indexOf('Acela');if(v>a){node.order[v]='Acela';node.order[a]='Vermonter';}}
+ for(const node of nodes.values())for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(node.names.has(west)&&node.names.has(east)){const w=node.order.indexOf(west),e=node.order.indexOf(east);if(node.normal[0]>=0?w>e:w<e){node.order[w]=east;node.order[e]=west;}}
  for(const node of nodes.values())if(node.names.has('Maple Leaf')){node.order=node.order.filter(name=>name!=='Maple Leaf');node.order.unshift('Maple Leaf');}
  for(const [id,node] of nodes)if(id!=='CHI'){
   for(const [below,above] of [['Capitol Limited','Floridian'],['Borealis','Empire Builder']])if(node.names.has(below)&&node.names.has(above)){
@@ -138,8 +139,8 @@ export function createSchematicEngine(routes,stations) {
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
-  const radius=Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth=Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05);
-  const rowSpacing=2*(radius+ringWidth),screen=new Map();
+  const drawingStyle=schematicDrawingStyle(job.zoom),radius=Math.min(1.8,.85+Math.max(0,job.zoom-4)*.16),ringWidth=0;
+  const rowSpacing=drawingStyle.laneSpacing,screen=new Map();
   for(const [id,node] of nodes){
    const p=project(node.coordinate),stationSpacing=id==='CHI'?Math.min(spacing,rowSpacing*.88,node.maxRowSpacing*world):rowSpacing;
    node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;
