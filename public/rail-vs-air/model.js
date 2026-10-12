@@ -198,70 +198,99 @@ function simplifyScreen(points,tolerance=2) {
   }
   return [...keep].sort((a,b)=>a-b).map(i=>points[i]);
 }
-export function offsetNetwork(collection, zoom) {
+export function routeDrawingStyle(collection,zoom) {
+  const nominal=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7;
+  const maxLane=Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)));
+  const cap=16+Math.max(0,zoom-12)*12;
+  const spacing=Math.min(nominal,cap/maxLane);
+  return {spacing,baseWidth:Math.min(zoom<7?2.5:3.2,spacing*.78),highlightWidth:Math.min(zoom<7?3.5:4.2,spacing*.95)};
+}
+export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom)) {
   const world=512*2**zoom;
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
-  const spacing=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7;
+  const spacing=drawingStyle.spacing;
   const features=collection.features.map(f=>{
     const d=(f.properties.lane||0)*spacing;
     const points=simplifyScreen(f.geometry.coordinates.map(project).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7)).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7);
     if(points.length<2)return f;
+    // Insert a few transition samples, not a dense resampling of the national network.
+    const lengths=[0];
+    for(let i=1;i<points.length;i++)lengths.push(lengths.at(-1)+Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]));
+    const total=lengths.at(-1),taper=40;
+    const positions=[...lengths,total/2,...[taper/3,taper*2/3,taper].flatMap(x=>[x,total-x])].filter(x=>x>=0&&x<=total).sort((a,b)=>a-b);
+    const path=[],at=[];let segment=0;
+    for(const length of positions) {
+      if(at.length&&Math.abs(length-at.at(-1))<1e-7)continue;
+      while(segment<points.length-2&&length>lengths[segment+1])segment++;
+      const span=lengths[segment+1]-lengths[segment],t=span?(length-lengths[segment])/span:0;
+      path.push([points[segment][0]+(points[segment+1][0]-points[segment][0])*t,points[segment][1]+(points[segment+1][1]-points[segment][1])*t]);at.push(length);
+    }
     const normals=[];
-    for(let i=0;i<points.length-1;i++) {
-      const dx=points[i+1][0]-points[i][0],dy=points[i+1][1]-points[i][1],len=Math.hypot(dx,dy);
+    for(let i=0;i<path.length-1;i++) {
+      const dx=path[i+1][0]-path[i][0],dy=path[i+1][1]-path[i][1],len=Math.hypot(dx,dy);
       normals.push([-dy/len,dx/len]);
     }
+    const amountAt=i=>{
+      const t=Math.max(0,Math.min(1,at[i]/taper,(total-at[i])/taper));
+      return d*t*t*(3-2*t);
+    };
     const shifted=[];
     const add=(p,n,amount=d)=>shifted.push([p[0]+n[0]*amount,p[1]+n[1]*amount]);
-    add(points[0],normals[0]);
-    for(let i=1;i<points.length-1;i++) {
+    add(path[0],normals[0],0);
+    for(let i=1;i<path.length-1;i++) {
+      const localOffset=amountAt(i);
       const a=normals[i-1],b=normals[i],sx=a[0]+b[0],sy=a[1]+b[1],length=Math.hypot(sx,sy);
-      if(length<1e-6){add(points[i],a);add(points[i],b);continue;}
-      const bisector=[sx/length,sy/length],den=bisector[0]*b[0]+bisector[1]*b[1],miter=d/den;
-      if(!Number.isFinite(miter)||Math.abs(miter)>Math.abs(d)*2){add(points[i],a);add(points[i],b);}
-      else add(points[i],bisector,miter);
+      if(length<1e-6){add(path[i],a,localOffset);add(path[i],b,localOffset);continue;}
+      const bisector=[sx/length,sy/length],den=bisector[0]*b[0]+bisector[1]*b[1],miter=localOffset/den;
+      if(!Number.isFinite(miter)||Math.abs(miter)>Math.abs(localOffset)*2){add(path[i],a,localOffset);add(path[i],b,localOffset);}
+      else add(path[i],bisector,miter);
     }
-    add(points.at(-1),normals.at(-1));
+    add(path.at(-1),normals.at(-1),0);
     return {...f,geometry:{type:'LineString',coordinates:shifted.map(unproject)}};
   });
-  // Connect only endpoints that already coincide in the source for the SAME
-  // named service. Offset sections can finish at different pixel positions.
-  const joins=new Map();
-  collection.features.forEach((source,index)=>{
-    const rendered=features[index],original=source.geometry.coordinates,coords=rendered.geometry.coordinates;
-    if(coords.length<2)return;
+  return {type:'FeatureCollection',features};
+}
+
+// Keep the lane frame consistent across section boundaries, even when the source
+// stores both adjoining sections toward (or away from) their common endpoint.
+export function alignLaneFrames(collection) {
+  const n=collection.features.length,parent=Array.from({length:n},(_,i)=>i),sign=Array(n).fill(1),rank=Array(n).fill(0);
+  function find(i){if(parent[i]===i)return [i,1];const [root,s]=find(parent[i]);sign[i]*=s;parent[i]=root;return [root,sign[i]];}
+  function link(a,b,relation){
+    const [ra,sa]=find(a),[rb,sb]=find(b);if(ra===rb)return;
+    const parity=relation*sa*sb;
+    if(rank[ra]<rank[rb]){parent[ra]=rb;sign[ra]=parity;}
+    else{parent[rb]=ra;sign[rb]=parity;if(rank[ra]===rank[rb])rank[ra]++;}
+  }
+  const point=p=>p.map(v=>v.toFixed(6)).join(','),edges=new Map(),ends=new Map();
+  collection.features.forEach((f,index)=>{
+    const p=f.geometry.coordinates;
+    for(let j=0;j<p.length-1;j++) {
+      const a=point(p[j]),b=point(p[j+1]);if(a===b)continue;
+      const key=a<b?a+'|'+b:b+'|'+a,direction=a<b?1:-1;
+      if(edges.has(key)){const prior=edges.get(key);link(prior.index,index,prior.direction*direction);}
+      else edges.set(key,{index,direction});
+    }
     for(const side of [0,1]) {
-      const anchor=original[side?original.length-1:0];
-      const key=(source.properties.name||source.properties.route)+'|'+anchor.map(v=>v.toFixed(6)).join(',');
-      const p=project(coords[side?coords.length-1:0]),q=project(coords[side?coords.length-2:1]);
-      const len=Math.hypot(q[0]-p[0],q[1]-p[1]);if(!len)continue;
-      if(!joins.has(key))joins.set(key,[]);
-      joins.get(key).push({index,p,out:[(q[0]-p[0])/len,(q[1]-p[1])/len],properties:source.properties});
+      const a=p[side?p.length-1:0],b=p[side?p.length-2:1];
+      const key=(f.properties.name||f.properties.route)+'|'+point(a),dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
+      if(!len)continue;
+      if(!ends.has(key))ends.set(key,[]);ends.get(key).push({index,side,out:[dx/len,dy/len]});
     }
   });
-  for(const endpoints of joins.values()) {
-    if(endpoints.length<2)continue;
-    // Match the straightest continuation first; remaining branches attach to it.
-    let best=null;
-    for(let i=0;i<endpoints.length;i++)for(let j=i+1;j<endpoints.length;j++) {
-      const a=endpoints[i],b=endpoints[j];if(a.index===b.index)continue;
-      const dot=a.out[0]*b.out[0]+a.out[1]*b.out[1];
-      if(!best||dot<best.dot)best={a,b,dot};
+  for(const group of ends.values()) {
+    const pairs=[];
+    for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++) {
+      const a=group[i],b=group[j];if(a.index!==b.index)pairs.push({a,b,dot:a.out[0]*b.out[0]+a.out[1]*b.out[1]});
     }
-    if(!best)continue;
-    const pairs=[[best.a,best.b],...endpoints.filter(p=>p!==best.a&&p!==best.b).map(p=>[p,best.a])];
-    for(const [a,b] of pairs) {
-      const gap=Math.hypot(a.p[0]-b.p[0],a.p[1]-b.p[1]);if(gap<.1)continue;
-      const handle=Math.min(20,gap*.45);
-      const c1=[a.p[0]-a.out[0]*handle,a.p[1]-a.out[1]*handle],c2=[b.p[0]-b.out[0]*handle,b.p[1]-b.out[1]*handle];
-      const path=[];
-      for(let i=0;i<=12;i++) {
-        const t=i/12,u=1-t;
-        path.push(unproject([u**3*a.p[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t**3*b.p[0],u**3*a.p[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t**3*b.p[1]]));
-      }
-      features.push({type:'Feature',properties:{...a.properties,displayJoin:true},geometry:{type:'LineString',coordinates:path}});
-    }
+    pairs.sort((a,b)=>a.dot-b.dot);
+    for(const {a,b} of pairs)link(a.index,b.index,a.side===b.side?-1:1);
   }
-  return {type:'FeatureCollection',features};
+  // Anchor each component to its first stored frame for stable redraws.
+  const anchor=new Map();
+  for(let i=0;i<n;i++){const [root,s]=find(i);if(!anchor.has(root))anchor.set(root,s);}
+  return {type:'FeatureCollection',features:collection.features.map((f,i)=>{
+    const [root,s]=find(i);return {...f,properties:{...f.properties,lane:(f.properties.lane||0)*s*anchor.get(root)}};
+  })};
 }
