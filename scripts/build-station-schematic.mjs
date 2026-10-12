@@ -38,9 +38,53 @@ for(const station of stations.features)for(const name of station.properties.rout
  let best=null,bestDistance=Infinity;const p=station.geometry.coordinates,cos=Math.cos(p[1]*Math.PI/180);
  for(const f of features){if(f.properties.symbologyName!==name)continue;const [a,b]=f.geometry.coordinates,dx=(b[0]-a[0])*cos,dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*cos*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1))),d=Math.hypot((p[0]-a[0])*cos-t*dx,p[1]-a[1]-t*dy);if(d<bestDistance){bestDistance=d;best=f;}}
  if(!best)throw Error('No source route for scheduled stop '+station.properties.Code+' '+name);
- const id=station.properties.Code,{from,to}=best.properties,[a,b]=best.geometry.coordinates;
- features.splice(features.indexOf(best),1,{...best,properties:{...best.properties,to:id,distanceKm:km(a,p)},geometry:{type:'LineString',coordinates:[a,p]}},{...best,properties:{...best.properties,from:id,distanceKm:km(p,b)},geometry:{type:'LineString',coordinates:[p,b]}});
+ const id=station.properties.Code,{from,to}=best.properties;
+ // Split the whole physical corridor, not just the services that stop here.
+ // Airport inventory points in particular can lie beyond the track tolerance.
+ const corridor=features.filter(f=>[f.properties.from,f.properties.to].sort().join('|')===[from,to].sort().join('|'));
+ for(const f of corridor){const [a,b]=f.geometry.coordinates;
+ features.splice(features.indexOf(f),1,{...f,properties:{...f.properties,to:id,distanceKm:km(a,p)},geometry:{type:'LineString',coordinates:[a,p]}},{...f,properties:{...f.properties,from:id,distanceKm:km(p,b)},geometry:{type:'LineString',coordinates:[p,b]}});}
 }
-const output={type:'FeatureCollection',schematic:true,features};
+// Traverse physical junctions to the next station. They establish connectivity
+// but do not become additional vertices in the station schematic.
+const stationEdges=[],routeGroups=Map.groupBy(features,f=>f.properties.name);
+for(const [name,edges] of routeGroups){
+ const graph=new Map();for(const f of edges)for(const [a,b] of [[f.properties.from,f.properties.to],[f.properties.to,f.properties.from]]){if(!graph.has(a))graph.set(a,[]);graph.get(a).push({node:b,cost:f.properties.distanceKm});}
+ const seenPairs=new Set();
+ for(const start of graph.keys()){
+  if(start.startsWith('junction:'))continue;
+  const queue=new Set([start]),cost=new Map([[start,0]]),visited=new Set();
+  while(queue.size){let a;for(const id of queue)if(a===undefined||cost.get(id)<cost.get(a))a=id;queue.delete(a);if(visited.has(a))continue;visited.add(a);
+   if(a!==start&&!a.startsWith('junction:')){
+    const pair=[start,a].sort().join('|');if(!seenPairs.has(pair)){seenPairs.add(pair);stationEdges.push({type:'Feature',properties:{name,symbologyName:edges[0].properties.symbologyName,from:start,to:a,distanceKm:cost.get(a)},geometry:{type:'LineString',coordinates:[inventory.get(start).geometry.coordinates,inventory.get(a).geometry.coordinates]}});}continue;
+   }
+   for(const e of graph.get(a)||[]){const d=cost.get(a)+e.cost;if(d<(cost.get(e.node)??Infinity)){cost.set(e.node,d);queue.add(e.node);}}
+  }
+ }
+}
+// If a source component ends before a scheduled terminal, connect station
+// nodes only when an actual retained GTFS trip establishes their adjacency.
+const evidence=load('gtfs-evidence.json'),routeById=new Map(evidence['routes.txt'].map(r=>[r.route_id,r.route_long_name])),tripById=new Map(evidence['trips.txt'].map(t=>[t.trip_id,t])),times=Map.groupBy(evidence['stop_times.txt'],t=>t.trip_id);
+for(const [name,sourceEdges] of routeGroups){
+ const parents=new Map();const find=id=>{if(!parents.has(id))parents.set(id,id);if(parents.get(id)!==id)parents.set(id,find(parents.get(id)));return parents.get(id);},join=(a,b)=>parents.set(find(a),find(b));
+ for(const f of stationEdges.filter(f=>f.properties.name===name))join(f.properties.from,f.properties.to);
+ for(const [tripId,stops] of times){
+  const trip=tripById.get(tripId);if((routeById.get(trip?.route_id)||'').toLowerCase()!==name.toLowerCase())continue;
+  const sequence=[...stops].sort((a,b)=>Number(a.stop_sequence)-Number(b.stop_sequence)).filter(s=>inventory.has(s.stop_id));
+  for(let i=1;i<sequence.length;i++){const a=sequence[i-1].stop_id,b=sequence[i].stop_id;if(a===b||find(a)===find(b))continue;
+   stationEdges.push({type:'Feature',properties:{name,symbologyName:sourceEdges[0].properties.symbologyName,from:a,to:b,distanceKm:km(inventory.get(a).geometry.coordinates,inventory.get(b).geometry.coordinates),connectionEvidence:'GTFS trip '+tripId},geometry:{type:'LineString',coordinates:[inventory.get(a).geometry.coordinates,inventory.get(b).geometry.coordinates]}});join(a,b);
+  }
+ }
+}
+// Retain inventory terminal nodes even for historical source services with no
+// retained GTFS trips. This is a schematic link, not a physical track repair.
+for(const station of stations.features)for(const name of station.properties.routeNames||[]){
+ if(stationEdges.some(f=>f.properties.symbologyName===name&&[f.properties.from,f.properties.to].includes(station.properties.Code)))continue;
+ const candidates=new Set(stationEdges.filter(f=>f.properties.symbologyName===name).flatMap(f=>[f.properties.from,f.properties.to]));
+ const other=[...candidates].sort((a,b)=>km(station.geometry.coordinates,inventory.get(a).geometry.coordinates)-km(station.geometry.coordinates,inventory.get(b).geometry.coordinates))[0];
+ if(!other)throw Error('No station graph for '+station.properties.Code+' '+name);
+ stationEdges.push({type:'Feature',properties:{name,symbologyName:name,from:station.properties.Code,to:other,distanceKm:km(station.geometry.coordinates,inventory.get(other).geometry.coordinates),connectionEvidence:'Source station inventory schematic link'},geometry:{type:'LineString',coordinates:[station.geometry.coordinates,inventory.get(other).geometry.coordinates]}});
+}
+const output={type:'FeatureCollection',schematic:true,features:stationEdges};
 fs.writeFileSync('public/rail-vs-air/data/station-schematic.geojson',JSON.stringify(output));
-console.log(JSON.stringify({segments:features.length,bytes:JSON.stringify(output).length,passThroughAssociations:anchored.stationAnchorAssociations.length}));
+console.log(JSON.stringify({segments:stationEdges.length,bytes:JSON.stringify(output).length,passThroughAssociations:anchored.stationAnchorAssociations.length}));
