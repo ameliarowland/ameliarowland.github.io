@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -40,7 +40,7 @@ for(const zoom of [4,8,12,16]) {
    const t=den?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/den)):0;
    return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);
   });
-  assert(Math.min(...distances)<=44.00001); // 2x offset + 2px generalization
+  assert(Math.min(...distances)<=2*3*routeDrawingStyle(hairpin,zoom).spacing+1); // bounded offset plus subpixel generalization
  }
 }
 // Adjacent source sections of the same service must remain connected after a lane change.
@@ -118,6 +118,30 @@ const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0
 assert.equal(newark.length,11);
 assert.equal(new Set(newark.map(f=>f.properties.name)).size,11);
 
+// Source inventories are retained while Floridian / Silver Star share lanes.
+assert(actualNetwork.features.some(f=>f.properties.name==='Silver Star'));
+assert(actualNetwork.features.some(f=>f.properties.name==='Capitol Limited'));
+const groupedEdges=new Map();
+for(const f of actualNetwork.features.filter(f=>['Floridian','Silver Star'].includes(f.properties.name))) {
+ const p=f.geometry.coordinates;
+ for(let i=1;i<p.length;i++) {
+  const a=p[i-1].join(','),b=p[i].join(','),key=a<b?a+'|'+b:b+'|'+a,lane=f.properties.lane*(a<b?1:-1);
+  if(!groupedEdges.has(key))groupedEdges.set(key,[]);groupedEdges.get(key).push({name:f.properties.name,lane});
+ }
+}
+const sharedGroupEdges=[...groupedEdges.values()].filter(e=>new Set(e.map(v=>v.name)).size===2);
+assert(sharedGroupEdges.length>10);
+for(const entries of sharedGroupEdges)assert(entries.every(e=>e.lane===entries[0].lane));
+assert(routeDrawingStyle(actualNetwork,16).spacing>routeDrawingStyle(actualNetwork,12).spacing);
+// Subpixel overview simplification retains common vertices for every service
+// and leaves the detailed display untouched at closer zooms.
+const wiggle=[[-.01,0],[-.005,.0001],[0,-.0001],[.005,.0001],[.01,0]];
+const sharedWiggle={type:'FeatureCollection',features:['A','B'].map(name=>({type:'Feature',properties:{name,lane:0},geometry:{type:'LineString',coordinates:wiggle}}))};
+const overview=simplifyDisplayGeometry(sharedWiggle,6);
+assert.equal(overview.features[0].geometry.coordinates.length,2);
+assert.deepEqual(overview.features[0].geometry.coordinates,overview.features[1].geometry.coordinates);
+assert.equal(simplifyDisplayGeometry(sharedWiggle,13),sharedWiggle);
+assert.equal(simplifyDisplayGeometry(actualNetwork,13),actualNetwork);
 const stopsByTrip=new Map();
 for(const stop of evidence['stop_times.txt']){if(!stopsByTrip.has(stop.trip_id))stopsByTrip.set(stop.trip_id,new Map());stopsByTrip.get(stop.trip_id).set(stop.stop_id,stop);}
 const parse=t=>{const [h,m,s]=t.split(':').map(Number);return h*60+m+s/60;};
@@ -150,6 +174,12 @@ for(const zoom of [6,7,8,10,12,15]) {
  const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols({type:'FeatureCollection',features:[lancaster]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
  assert(symbols.bars.features.some(f=>f.properties.Code==='LNC'&&f.properties.symbolRoutes.length===2),`Lancaster bar missing at zoom ${zoom}`);
 }
+const aberdeen=stationData.features.find(f=>f.properties.Code==='ABE');
+assert.deepEqual(aberdeen.properties.routeNames,['Northeast Regional']);
+const aberdeenSymbols=stationSymbols({type:'FeatureCollection',features:[aberdeen]},actualNetwork,offsetNetwork(actualNetwork,12,actualStyle),12,actualStyle);
+assert.equal(aberdeenSymbols.bars.features.length,0);
+assert.equal(aberdeenSymbols.dots.features.length,1);
+assert.deepEqual(aberdeenSymbols.dots.features[0].properties.symbolRoutes,['Northeast Regional']);
 // Miami's terminal branches are not all in the 75m through-track corridor.
 // Both actual stopping services must remain marked; the NTAD-only Silver Star
 // must not receive a station marker from the retained timetable.
