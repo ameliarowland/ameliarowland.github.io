@@ -1,9 +1,8 @@
-import {loadOffsetEngine} from './offset-engine.js?v=raw-geometry-4';
-import {createLayoutEngine} from './layout-core.js?v=raw-geometry-4';
+import {createLayoutEngine} from './layout-core.js?v=station-schematic-1';
 let layout,pending=null,timer=null;
 self.onmessage=async ({data})=>{
  if(data.type==='init') {
-  try{layout=createLayoutEngine(data.routes,data.stations,data.shapes,await loadOffsetEngine());self.postMessage({type:'ready'});if(pending)schedule();}
+  try{layout=createLayoutEngine(data.routes,data.stations);self.postMessage({type:'ready'});if(pending)schedule();}
   catch(error){self.postMessage({type:'error',message:error.message});}
  }else if(data.type==='layout'){pending=data;schedule();}
 };
