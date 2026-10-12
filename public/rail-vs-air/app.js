@@ -1,4 +1,4 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,stationSymbols,overviewStations} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName} from './model.js';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,8 +55,8 @@ function renderRouteGeometry() {
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
  const symbols=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle);
  map.getSource('stations').setData(symbols.dots);
- map.getSource('station-passes').setData(symbols.passes);
- map.getSource('station-overview').setData(overviewStations(symbols.dots,zoom));
+ const selectedStops={type:'FeatureCollection',features:symbols.dots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName))).map(f=>({...f,properties:{...f.properties,focusRadius:f.properties.radius+.8}}))};
+ map.getSource('station-focus').setData(selectedStops);
 }
 // Selection is a transient map state, never restored from URL filters.
 const deselectionClicks=new WeakSet();
@@ -111,7 +111,7 @@ async function init() {
   stationDataCache=stationData;records=comparisons;shapes=shapeData;networkData=routeData;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
   const names=[...new Set([...routeData.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   const colorNames=[...new Set([...(manifest.sourceRouteNames||names),...names])].sort();
-  colors=new Map(colorNames.map((name,i)=>[name,`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
+  colors=new Map(colorNames.map((name,i)=>[name,manifest.routeColors?.[name]||`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of routeData.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=alignLaneFrames(routeData);
   const services=[...new Set(records.map(r=>r.route))].sort();
@@ -136,14 +136,12 @@ async function init() {
    map.addSource('selected',{type:'geojson',data:empty()});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:empty()});
-   map.addSource('station-passes',{type:'geojson',data:empty()});
-   map.addLayer({id:'station-pass-gap',minzoom:7,type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#3d3f42','line-width':['interpolate',['linear'],['zoom'],3,1.8,12,3,16,3.4]}});
-   map.addLayer({id:'station-passes',minzoom:7,type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#c7cdd0','line-width':['interpolate',['linear'],['zoom'],3,.6,12,1,16,1.2]}});
-   map.addLayer({id:'stations',minzoom:7,type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#3d3f42','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
-   map.addSource('station-overview',{type:'geojson',data:empty()});
-   map.addLayer({id:'station-overview',maxzoom:7,type:'circle',source:'station-overview',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,2.4,6,2.8],'circle-color':'#3d3f42','circle-stroke-color':['get','color'],'circle-stroke-width':1.1}});
-   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`${p.stopStatus==='no-stop'?'Passes without stopping':'Stops on'}: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
-   for(const id of ['station-overview','stations','station-passes'])map.on('click',id,stationPopup);
+   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#3d3f42','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
+   map.addSource('station-focus',{type:'geojson',data:empty()});
+   map.addLayer({id:'station-focus-halo',type:'circle',source:'station-focus',paint:{'circle-radius':['+',['get','focusRadius'],1.2],'circle-color':'#3d3f42','circle-stroke-color':'#ffffff','circle-stroke-width':1}});
+   map.addLayer({id:'station-focus',type:'circle',source:'station-focus',paint:{'circle-radius':['get','focusRadius'],'circle-color':'#3d3f42','circle-stroke-color':['get','color'],'circle-stroke-width':['get','ringWidth']}});
+   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`Stops on: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
+   const stationLayers=['station-focus','stations'];
    function chooseRoute(name) {
     activeRouteName=name;
     const service=records.find(r=>(r.ntadName||r.route)===name)?.route;
@@ -153,9 +151,10 @@ async function init() {
    // hit on a thin stroke. Ambiguous hits offer explicit route choices.
    const nearbyRoutes=point=>[...new Set(map.queryRenderedFeatures([[point.x-9,point.y-9],[point.x+9,point.y+9]],{layers:['network']}).map(f=>f.properties.symbologyName||f.properties.name))].sort();
    map.on('click',e=>{
-    // A click that clears a selection must not immediately select a nearby line.
+    const stationHits=map.queryRenderedFeatures(e.point,{layers:stationLayers});
+    if(stationHits.length){stationPopup({features:stationHits,lngLat:e.lngLat});return;}
+    // A clearing click must not immediately select a nearby route.
     if(deselectionClicks.has(e.originalEvent))return;
-    if(map.queryRenderedFeatures(e.point,{layers:['station-overview','stations','station-passes']}).length)return;
     const names=nearbyRoutes(e.point);if(!names.length)return;
     if(names.length===1){chooseRoute(names[0]);return;}
     const div=document.createElement('div'),title=document.createElement('strong');title.textContent='Choose a route';div.append(title);
@@ -163,8 +162,8 @@ async function init() {
     for(const name of names){const button=document.createElement('button');button.className='route-choice';button.textContent=name==='Floridian'?'Floridian / Silver Star':name;button.style.borderLeft=`5px solid ${color(name)}`;button.onclick=()=>{chooseRoute(name);popup.remove();};div.append(button);}
     popup.setDOMContent(div).addTo(map);
    });
-   map.on('mousemove',e=>{map.getCanvas().style.cursor=nearbyRoutes(e.point).length||map.queryRenderedFeatures(e.point,{layers:['station-overview','stations','station-passes']}).length?'pointer':'';});
-   for(const id of ['station-overview','stations','station-passes','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
+   map.on('mousemove',e=>{map.getCanvas().style.cursor=nearbyRoutes(e.point).length||map.queryRenderedFeatures(e.point,{layers:stationLayers}).length?'pointer':'';});
+   for(const id of ['station-focus','stations','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
    const updateZoomReadout=()=>{const value=map.getZoom().toFixed(1);$('map-zoom').hidden=false;$('map-zoom').textContent=`Zoom ${value}`;$('map-zoom').setAttribute('aria-label',`Map zoom level ${value}`);};
    updateZoomReadout();map.on('zoom',updateZoomReadout);
    available=true;draw();
