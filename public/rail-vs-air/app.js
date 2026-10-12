@@ -1,4 +1,4 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -108,19 +108,20 @@ async function load(name) {const response=await fetch(`/rail-vs-air/data/${name}
 async function init() {
  try {
   const [routeData,stationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
-  stationDataCache=stationData;records=comparisons;shapes=shapeData;networkData=routeData;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
-  const names=[...new Set([...routeData.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
+  const visible=filterDisplayData(routeData,stationData,comparisons);
+  stationDataCache=visible.stations;records=visible.comparisons;shapes=shapeData;networkData=visible.routes;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
+  const names=[...new Set([...visible.routes.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   const colorNames=[...new Set([...(manifest.sourceRouteNames||names),...names])].sort();
   colors=new Map(colorNames.map((name,i)=>[name,manifest.routeColors?.[name]||`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
-  for(const feature of routeData.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
-  networkData=alignLaneFrames(routeData);
+  for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
+  networkData=alignLaneFrames(visible.routes);
   const services=[...new Set(records.map(r=>r.route))].sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
   if(services.includes(params.get('route')))$('route').value=params.get('route');
   const legendNames=[...new Set(names.map(name=>manifest.symbologyGroups?.[name]||name))].sort();
   $('legend-list').innerHTML=legendNames.map(name=>`<div class="legend-row"><span class="swatch" style="background:${color(name)}"></span>${esc(name==='Floridian'?'Floridian / Silver Star':name)}</div>`).join('');
   $('dates').textContent=`Train service: ${manifest.railStart} through ${manifest.railEnd}. Flights: ${manifest.flightPeriod}. Built: ${manifest.generatedDate}.`;
-  $('coverage').textContent=`${manifest.routeCount} NTAD routes · ${manifest.stationCount} filtered train stations · ${manifest.matchedPairs.toLocaleString()} matched comparisons of ${manifest.directRailPairs.toLocaleString()} direct rail service/station/direction pairs. ${manifest.geometryMissing} comparisons have no usable journey geometry. Source snapshots, not live booking information.`;
+  $('coverage').textContent=`${new Set(visible.routes.features.map(f=>f.properties.name)).size} displayed NTAD routes (Auto Train excluded) · ${manifest.stationCount} train stations in the filtered source inventory · ${records.length.toLocaleString()} matched comparisons. Source snapshots, not live booking information.`;
   draw();
   if(!window.maplibregl){$('status').textContent+=' Map library unavailable; the comparison list and CSV still work.';return;}
   map=new maplibregl.Map({container:'map',style:{version:8,sources:{basemap:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}},layers:[{id:'background',type:'background',paint:{'background-color':'#101b2a'}},{id:'basemap',type:'raster',source:'basemap',paint:{'raster-saturation':-1,'raster-brightness-min':.015,'raster-brightness-max':.28,'raster-contrast':.15,'raster-opacity':.8}}]},bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});
