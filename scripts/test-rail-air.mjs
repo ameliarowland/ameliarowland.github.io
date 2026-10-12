@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry,filterDisplayData} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry,filterDisplayData,pinchedNetwork,pinchedStationSymbols} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -348,3 +348,23 @@ for(const zoom of [6,7,7.5,8,10,12]) {
 
 
 console.log(`Verified ${comparisons.length} comparisons against retained GTFS evidence, station filters, geometry bounds, threshold boundaries, and opposite-direction offsets.`);
+
+// Pinching affects all shared tracks, while stop markers come only from GTFS.
+const pinchStops={type:'FeatureCollection',features:[{type:'Feature',properties:{Code:'X',routeNames:['A']},geometry:{type:'Point',coordinates:[0,0]}}]};
+const pinchSource=alignLaneFrames({type:'FeatureCollection',features:['A','B'].map((name,i)=>({type:'Feature',properties:{name,lane:i-.5,color:i?'#00f':'#f00'},geometry:{type:'LineString',coordinates:[[-.02,0],[.02,0]]}}))});
+for(const zoom of [3,7.9,13,16]) {
+ const drawn=pinchedNetwork(pinchSource,zoom,routeDrawingStyle(pinchSource,zoom),pinchStops);
+ for(const f of drawn.features)assert(f.geometry.coordinates.some(p=>Math.hypot(...p)<1e-10),'Stopping and passing routes both meet the station anchor');
+ assert.equal(pinchedStationSymbols(pinchStops,drawn,zoom,'A').features.length,1);
+ assert.equal(pinchedStationSymbols(pinchStops,drawn,zoom,'B').features.length,0,'Passing train must not get a dot');
+ const real=pinchedNetwork(visible.routes,zoom,routeDrawingStyle(visible.routes,zoom),visible.stations);
+ for(const name of new Set(visible.stations.features.flatMap(s=>s.properties.routeNames))) {
+  const dots=pinchedStationSymbols(visible.stations,real,zoom,name).features;
+  assert.equal(dots.length,visible.stations.features.filter(s=>s.properties.routeNames.includes(name)).length,'Never remove selected train stops at any zoom');
+ }
+ const pennDots=pinchedStationSymbols(visible.stations,real,zoom,'Pennsylvanian').features;
+ assert(pennDots.some(s=>s.properties.Code==='LNC'));
+ assert(!pennDots.some(s=>s.properties.Code==='ABE'));
+ for(const f of real.features)for(const stop of f.properties.stationPositions)assert(f.geometry.coordinates.some(p=>Math.hypot(p[0]-stop.coordinates[0],p[1]-stop.coordinates[1])<1e-9),'Stop must be a vertex on its train line');
+}
+console.log('Pinched station layout and selected-route stop eligibility passed at all tested zooms.');
