@@ -1,8 +1,9 @@
-import {stationRouteName} from './model.js?v=station-schematic-15';
+import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-16';
+import {stationRouteName} from './model.js?v=station-schematic-16';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Acela','Vermonter','Northeast Regional'];
-export const chicagoUnionOrder=['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette'];
+export const chicagoUnionOrder=['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Capitol Limited','Floridian','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette'];
 const rank=n=>north.includes(n)?north.indexOf(n):south.includes(n)?1000+south.indexOf(n):100;
 export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6));return {baseWidth:1.1+1.4*t,highlightWidth:1.8+1.7*t,hoverWidth:2.9+1.4*t};}
 export function createSchematicEngine(routes,stations) {
@@ -111,6 +112,13 @@ export function createSchematicEngine(routes,stations) {
   const family=['Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','Missouri River Runner'].filter(name=>node.names.has(name));if(family.length<2)continue;
   const slots=node.order.map((name,i)=>family.includes(name)?i:-1).filter(i=>i>=0);family.forEach((name,i)=>node.order[slots[i]]=name);
  }
+ for(const node of nodes.values())if(node.names.has('Vermonter')&&node.names.has('Acela')){const v=node.order.indexOf('Vermonter'),a=node.order.indexOf('Acela');if(v>a){node.order[v]='Acela';node.order[a]='Vermonter';}}
+ for(const node of nodes.values())if(node.names.has('Maple Leaf')){node.order=node.order.filter(name=>name!=='Maple Leaf');node.order.unshift('Maple Leaf');}
+ for(const [id,node] of nodes)if(id!=='CHI'){
+  for(const [below,above] of [['Capitol Limited','Floridian'],['Borealis','Empire Builder']])if(node.names.has(below)&&node.names.has(above)){
+   const b=node.order.indexOf(below),a=node.order.indexOf(above);if(node.normal[1]>=0?b<a:b>a){node.order[b]=above;node.order[a]=below;}
+  }
+ }
  for(const node of nodes.values()){
   const p=frameProject(node.coordinate);let nearest=Infinity;for(const edge of node.edges){const q=frameProject(nodes.get(edge.other).coordinate),d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d>1e-12)nearest=Math.min(nearest,d);}
   node.maxRowSpacing=nearest*.5/Math.max(1,node.order.length-1);
@@ -139,8 +147,9 @@ export function createSchematicEngine(routes,stations) {
     else screen.set(id+'|'+name,[p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]);
    });
   }
-  for(const [key,p] of screen)positions.set(key,unproject(p));
-  const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
+  const parallel=parallelCorridors(routes,nodes,screen,project,rowSpacing);
+  for(const [key,p] of parallel.positions)positions.set(key,unproject(p));
+  const displayed=collection(parallel.features.map(({feature:f,points,body,normal,laneOffset})=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,parallelBody:body.map(unproject),perpendicularOffset:laneOffset,stationPositions:[f.properties.from,f.properties.to].map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:points.map(unproject)}};}));
   displayed.connectivityAudit={brokenJunctions:[]};
   const colors=new Map(routes.features.map(f=>[stationRouteName(f.properties.symbologyName||f.properties.name),f.properties.color]));
   const dots=collection(stations.features.flatMap(s=>(s.properties.routeNames||[]).map(name=>({type:'Feature',properties:{...s.properties,symbolRoutes:[name],stopStatus:'stop',color:colors.get(name)||'#fff',radius,ringWidth},geometry:{type:'Point',coordinates:positions.get(s.properties.Code+'|'+name)||s.geometry.coordinates}}))));
