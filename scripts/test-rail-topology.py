@@ -13,3 +13,11 @@ assert count==1
 assert main in result['features'] and branch in result['features'] and other_service in result['features']
 assert duplicate not in result['features']
 print('Verified redundant-track generalization preserves distinct branches and services.')
+
+# North Philadelphia: buffered adjoining sections must not erase their bridge.
+west=feature('A',[[-75.17,39.99],[-75.1585532,39.995913]])
+bridge=feature('A',[[-75.1585532,39.995913],[-75.1575273,39.9962988]])
+east=feature('A',[[-75.1575273,39.9962988],[-75.14,40.003]])
+result,count=simplify_display_sections({'type':'FeatureCollection','features':[west,bridge,east]})
+assert count==0 and bridge in result['features']
+print('Verified short connecting track segments are retained between longer sections.')
