@@ -10,7 +10,7 @@ ROUTES_URL='https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NT
 STATIONS_URL='https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Stations/FeatureServer/0'
 GTFS_URL='https://content.amtrak.com/content/gtfs/GTFS.zip'
 AIRPORTS_URL='https://davidmegginson.github.io/ourairports-data/airports.csv'
-DISPLAY_ROUTE_PRIORITY=['Pennsylvanian']
+DISPLAY_ROUTE_PRIORITY=['Pennsylvanian','Keystone Service']
 STATION_SQL="StnType = 'TRAIN' AND StaType <> 'Curbside Bus Stop only (no shelter)'"
 US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
 
@@ -180,12 +180,14 @@ def build(args):
  times=defaultdict(list)
  for t in readzip(z,'stop_times.txt'):
   if t['trip_id'] in trips:times[t['trip_id']].append(t)
- from rail_topology import simplify_display_sections,join_display_tails,restore_north_philadelphia_connector,connect_keystone_philadelphia
+ from rail_topology import simplify_display_sections,join_display_tails,restore_north_philadelphia_connector,connect_keystone_philadelphia,extend_pennsylvanian_to_philadelphia,reorder_display_bundles
  parallel,shared=parallel_routes(route_geo)
  parallel=restore_north_philadelphia_connector(parallel)
  parallel,suppressed=simplify_display_sections(parallel)
  parallel,joined=join_display_tails(parallel,stations)
  parallel=connect_keystone_philadelphia(parallel)
+ parallel=extend_pennsylvanian_to_philadelphia(parallel)
+ parallel=reorder_display_bundles(parallel,DISPLAY_ROUTE_PRIORITY)
  dump('routes.geojson',parallel)
  station_services(stations,routes,trips,times,ntad_names)
  dump('stations.geojson',stations)
