@@ -136,3 +136,10 @@ Outside Chicago Union, adjacent route positions use exactly one circle outer dia
 Chicago's northern/western approach and eastern approach use separate aligned portions of its compact station row to preserve the requested lane orders without crossing the arriving families. Glenview uses a transverse row so Borealis, Empire Builder and Hiawatha remain visible as separate strokes along the Chicago approach.
 
 Northeast Regional is on the south/east edge throughout its shared corridors. Texas Eagle is north of Sunset Limited. On the west coast, the west-to-east priority is Coast Starlight, Amtrak Cascades, Empire Builder. Los Angeles Union uses Coast Starlight, Pacific Surfliner, Southwest Chief, Texas Eagle, Sunset Limited; Coast Starlight's western placement supersedes the earlier eastern placement. These preferences are verified from rendered coordinates.
+
+
+### Perpendicular corridor offsets (station-schematic-16)
+
+`parallel-corridors.js` offsets each shared station-to-station body perpendicular to its own screen-space track. Adjacent lanes have a constant gap equal to the outside station-circle diameter at that zoom. Unchanged bundles meet at their offset-line intersections; branch stations retain short joins to aligned station markers. Chicago approach rows follow their respective tracks and retain the requested west-to-east station order. All 909 scheduled stop/service markers remain attached.
+
+Current shared-track priorities also place Vermonter west of Acela, Maple Leaf north of the other routes, Capitol Limited south of Floridian / Silver Star, and Borealis south of Empire Builder. Regression checks cover all nondegenerate segment bodies, constant perpendicular gaps, route order, marker attachment, and zooms 3 through 16 including 5.8. Coincident inventory station codes have no interstation bearing and are excluded from the perpendicular-gap assertion.
