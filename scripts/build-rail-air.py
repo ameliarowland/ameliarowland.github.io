@@ -10,6 +10,7 @@ ROUTES_URL='https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NT
 STATIONS_URL='https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Stations/FeatureServer/0'
 GTFS_URL='https://content.amtrak.com/content/gtfs/GTFS.zip'
 AIRPORTS_URL='https://davidmegginson.github.io/ourairports-data/airports.csv'
+DISPLAY_ROUTE_PRIORITY=['Pennsylvanian']
 STATION_SQL="StnType = 'TRAIN' AND StaType <> 'Curbside Bus Stop only (no shelter)'"
 US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
 
@@ -83,7 +84,7 @@ def parallel_routes(fc):
   slots=[]
   for members in memberships:
    symbol=lambda name:'Floridian' if name=='Silver Star' else name
-   ordered=sorted({symbol(name) for name in members})
+   ordered=sorted({symbol(name) for name in members},key=lambda name:(DISPLAY_ROUTE_PRIORITY.index(name) if name in DISPLAY_ROUTE_PRIORITY else len(DISPLAY_ROUTE_PRIORITY),name))
    slots.append({name:ordered.index(symbol(name))-(len(ordered)-1)/2 for name in members})
   # Simplify each common section once so every route uses identical bend vertices.
   breaks=[0]+[i for i in range(1,len(memberships)) if memberships[i]!=memberships[i-1] or slots[i]!=slots[i-1]]+[len(memberships)]
@@ -100,7 +101,7 @@ def parallel_routes(fc):
     start=i;lane=slots[i][name]
     while i<len(slots) and slots[i].get(name)==lane:i+=1
     coords=display[display_index[start]:display_index[i]+1]
-    features.append({'type':'Feature','properties':{'name':name,'symbologyName':'Floridian' if name=='Silver Star' else name,'lane':lane,'shared':max(len(m) for m in memberships[start:i])},'geometry':{'type':'LineString','coordinates':coords}})
+    features.append({'type':'Feature','properties':{'name':name,'symbologyName':'Floridian' if name=='Silver Star' else name,'lane':lane,'lanePriority':DISPLAY_ROUTE_PRIORITY.index(name) if name in DISPLAY_ROUTE_PRIORITY else None,'shared':max(len(m) for m in memberships[start:i])},'geometry':{'type':'LineString','coordinates':coords}})
  shared=sum(len(names)>1 for names in edges.values())
  return {'type':'FeatureCollection','features':features},shared
 
@@ -257,7 +258,7 @@ def build(args):
   evidence[filename]=rows
  if 'calendar_dates.txt' in z.namelist():evidence['calendar_dates.txt']=readzip(z,'calendar_dates.txt')
  dump('gtfs-evidence.json',evidence)
- manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':750},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
+ manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'routeLanePriority':DISPLAY_ROUTE_PRIORITY,'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':750},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
  dump('manifest.json',manifest)
  print(json.dumps(manifest,indent=2))
  print('Default qualifying route/station/direction records:',sum(r['railMinutes']<=r['flightMinutes']+240 for r in records))
