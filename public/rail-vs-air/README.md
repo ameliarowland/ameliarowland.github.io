@@ -65,3 +65,7 @@ Stop-circle centers use `#3d3f42`, sampled from the supplied state-background re
 Parallel-route colors are assigned using shared-track conflicts and perceptual color distance rather than sequential hues. Silver Star and Floridian retain their intentional combined color. The display cleanup can join redundant loose tails within 75 m of the same service bundle, with a 750 m tail limit; station-bearing branches are protected. Original source snapshots and timetable evidence remain intact.
 
 Lane ordering is controlled by `DISPLAY_ROUTE_PRIORITY` in the data builder and recorded as `routeLanePriority` in the manifest. Pennsylvanian has first priority, placing it on the north/upper side of predominantly west-to-east shared corridors. Remaining services retain alphabetical order, and shared direction frames preserve the lane order through bends.
+
+Duplicate-track cleanup preserves short sections connecting two retained track sections, including the North Philadelphia connection. Timetable stop membership is independent of this display geometry.
+
+Crescent has a 97 m source geometry gap at North Philadelphia. Its display connector follows the existing shared NEC segment between the exact source section endpoints; `displayRepair` records the correction. This does not add scheduled stops or change journey times.
