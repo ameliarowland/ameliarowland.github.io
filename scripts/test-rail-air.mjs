@@ -174,6 +174,18 @@ for(const f of actualSymbols.dots.features) {
  assert(f.properties.symbolRoutes.length);
  assert(f.properties.symbolRoutes.every(name=>f.properties.routeNames.includes(name)),`${f.properties.Code}: marker on a passing route`);
 }
+// Required behavior: every scheduled station/service pair remains visible at
+// every zoom. No marker thinning, clustering, or overview aggregation.
+const expectedStops=new Set(stationData.features.flatMap(f=>f.properties.routeNames.map(name=>f.properties.Code+'|'+name)));
+for(const zoom of [3,4,6,7.9,10,13,16]) {
+ const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols(stationData,actualNetwork,offsetNetwork(actualNetwork,zoom,style,stationData),zoom,style);
+ const shown=symbols.dots.features.map(f=>f.properties.Code+'|'+f.properties.symbolRoutes[0]);
+ assert.equal(shown.length,expectedStops.size);
+ assert.deepEqual(new Set(shown),expectedStops,`Scheduled station markers omitted at zoom ${zoom}`);
+ assert(symbols.dots.features.every(f=>f.properties.radius>=2));
+}
+assert.equal(manifest.routeColors['Silver Star'],manifest.routeColors.Floridian);
+for(const name of new Set(actualNetwork.features.map(f=>f.properties.name)))assert(/^#[0-9a-f]{6}$/.test(manifest.routeColors[name]));
 const lancaster=stationData.features.find(f=>f.properties.Code==='LNC');
 assert.deepEqual(lancaster.properties.routeNames,['Keystone Service','Pennsylvanian']);
 for(const zoom of [6,7,8,10,12,15]) {
