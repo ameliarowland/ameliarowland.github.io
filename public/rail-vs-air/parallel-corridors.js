@@ -10,6 +10,7 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
   if(west?normal[0]<0:(names.includes('Texas Eagle')&&names.includes('Sunset Limited')?normal[1]<0:normal[0]+normal[1]<0))normal=normal.map(v=>-v);
   const order=nodes.get(from).order.filter(n=>bundle.names.has(n));
   if(order.includes('Vermonter')&&order.includes('Acela')){const v=order.indexOf('Vermonter'),a=order.indexOf('Acela');if(normal[0]>=0?v>a:v<a){order[v]='Acela';order[a]='Vermonter';}}
+  for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(order.includes(west)&&order.includes(east)){const w=order.indexOf(west),e=order.indexOf(east);if(normal[0]>=0?w>e:w<e){order[w]=east;order[e]=west;}}
   if(order.includes('Maple Leaf')){const index=order.indexOf('Maple Leaf');order.splice(index,1);if(normal[1]>=0)order.unshift('Maple Leaf');else order.push('Maple Leaf');}
   for(const [below,above] of [['Capitol Limited','Floridian'],['Borealis','Empire Builder']])if(order.includes(below)&&order.includes(above)){
    const b=order.indexOf(below),a=order.indexOf(above);if(normal[1]>=0?b<a:b>a){order[b]=above;order[a]=below;}
@@ -20,16 +21,20 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
  }
  const positions=new Map(preferred),joins=new Set();
  // Spread each Chicago approach across its own track direction. Preserve the
- // requested west/east group order and carry each group's origin along the
- // unchanged bundle so its strokes remain parallel all the way to the hub.
+ // requested west/east group order. Keep singleton hub displacement local
+ // to the approach edge; shared bundles retain their common lane origin.
  const assigned=new Set();let right=-Infinity;
  const chicago=nodes.get('CHI');
  if(chicago){const origin=project(chicago.coordinate),edges=[...(incident.get('CHI')||[])].sort((a,b)=>Math.min(...[...a.names].map(n=>chicago.order.indexOf(n)))-Math.min(...[...b.names].map(n=>chicago.order.indexOf(n))));
   for(const edge of edges){const names=chicago.order.filter(n=>edge.names.has(n)).sort((a,b)=>edge.lanes.get(a)-edge.lanes.get(b)),points=names.map(n=>preferred.get('CHI|'+n)),center=[points.reduce((s,p)=>s+p[0],0)/points.length,points.reduce((s,p)=>s+p[1],0)/points.length],half=(names.length-1)*spacing/2;
    const minimum=center[0]-Math.abs(edge.normal[0])*half;if(minimum<right+spacing*.12)center[0]+=right+spacing*.12-minimum;
    right=center[0]+Math.abs(edge.normal[0])*half;
-   const base=(center[0]-origin[0])*edge.normal[0]+(center[1]-origin[1])*edge.normal[1],signature=[...edge.names].sort().join(';'),queue=[edge];
-   while(queue.length){const b=queue.pop();if(assigned.has(b))continue;assigned.add(b);for(const [name,d] of b.lanes)b.lanes.set(name,d+base);for(const id of [b.from,b.to])for(const other of incident.get(id)||[])if([...other.names].sort().join(';')===signature)queue.push(other);}
+   const base=(center[0]-origin[0])*edge.normal[0]+(center[1]-origin[1])*edge.normal[1];
+   const signature=[...edge.names].sort().join(';'),queue=[edge];
+   while(queue.length){const b=queue.pop();if(assigned.has(b))continue;assigned.add(b);for(const [name,d] of b.lanes)b.lanes.set(name,d+base);
+    // A singleton has no parallel companion requiring a common corridor origin.
+    if(edge.names.size>1)for(const id of [b.from,b.to])for(const other of incident.get(id)||[])if([...other.names].sort().join(';')===signature)queue.push(other);
+   }
    names.forEach((name,i)=>{const d=(i-(names.length-1)/2)*spacing;positions.set('CHI|'+name,[center[0]+edge.normal[0]*d,center[1]+edge.normal[1]*d]);joins.add('CHI|'+name);});
   }
  }
