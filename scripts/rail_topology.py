@@ -177,6 +177,8 @@ def connect_keystone_philadelphia(fc):
  result=[]
  for f in features:
   if f is west:
+   # Bundle members share coordinate arrays; isolate this service's edit.
+   f['geometry']=deepcopy(f['geometry'])
    f['geometry']['coordinates'][-1]=target;f['properties']['displayRepair']='Keystone west approach snapped to shared NEC';result.append(f)
   elif f['geometry']['coordinates']==path:
    for coordinates in [path[:best+1]+[target],[target]+path[best+1:]]:
