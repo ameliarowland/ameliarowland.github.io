@@ -504,3 +504,24 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
   }
   return {dots:{type:'FeatureCollection',features:dots},passes:{type:'FeatureCollection',features:passes}};
 }
+
+// Country overview: one small, high-contrast marker per scheduled station.
+// Keep markers on an actual stopping lane and space crowded markers on screen.
+export function overviewStations(stops,zoom) {
+  const groups=new Map(),world=512*2**zoom;
+  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+  for(const f of stops.features){const code=f.properties.Code;if(!groups.has(code))groups.set(code,[]);groups.get(code).push(f);}
+  const candidates=[...groups.values()].map(group=>{
+    const ordered=[...group].sort((a,b)=>a.properties.symbolRoutes[0].localeCompare(b.properties.symbolRoutes[0]));
+    const center=ordered[Math.floor(ordered.length/2)],routes=[...new Set(group.flatMap(f=>f.properties.symbolRoutes))].sort();
+    return {...center,properties:{...center.properties,symbolRoutes:routes,overview:true}};
+  }).sort((a,b)=>b.properties.symbolRoutes.length-a.properties.symbolRoutes.length||a.properties.Code.localeCompare(b.properties.Code));
+  const gap=zoom<5.5?8:6,grid=new Map(),features=[];
+  for(const f of candidates){
+    const p=project(f.geometry.coordinates),gx=Math.floor(p[0]/gap),gy=Math.floor(p[1]/gap);let crowded=false;
+    for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const q of grid.get(x+','+y)||[])if(Math.hypot(p[0]-q[0],p[1]-q[1])<gap)crowded=true;
+    if(crowded)continue;
+    features.push(f);const key=gx+','+gy;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(p);
+  }
+  return {type:'FeatureCollection',features};
+}
