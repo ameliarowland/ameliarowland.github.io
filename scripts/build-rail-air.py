@@ -77,6 +77,7 @@ def corridor_chains(edges):
 def parallel_routes(fc):
  from rail_topology import noded_route_edges
  edges=noded_route_edges(fc)
+ degree=Counter(p for edge in edges for p in edge)
  features=[]
  for points in corridor_chains(edges):
   memberships=[edges[tuple(sorted((a,b)))] for a,b in zip(points,points[1:])]
@@ -88,7 +89,7 @@ def parallel_routes(fc):
    ordered=sorted({symbol(name) for name in members},key=lambda name:(2,DISPLAY_ROUTE_SOUTHERN.index(name)) if name in DISPLAY_ROUTE_SOUTHERN else (0,DISPLAY_ROUTE_PRIORITY.index(name)) if name in DISPLAY_ROUTE_PRIORITY else (1,name))
    slots.append({name:ordered.index(symbol(name))-(len(ordered)-1)/2 for name in members})
   # Simplify each common section once so every route uses identical bend vertices.
-  breaks=[0]+[i for i in range(1,len(memberships)) if memberships[i]!=memberships[i-1] or slots[i]!=slots[i-1]]+[len(memberships)]
+  breaks=[0]+[i for i in range(1,len(memberships)) if memberships[i]!=memberships[i-1] or slots[i]!=slots[i-1] or degree[points[i]]!=2]+[len(memberships)]
   display=[];display_index={}
   for lo,hi in zip(breaks,breaks[1:]):
    part=simplify(points[lo:hi+1]);display_index[lo]=len(display)
@@ -144,7 +145,9 @@ def route_colors(fc):
 def station_services(stations,routes,trips,times,ntad_names):
  memberships=defaultdict(set)
  for tid,rows in times.items():
-  name=routes[trips[tid]['route_id']]['route_long_name']
+  route=routes[trips[tid]['route_id']]
+  if route['route_long_name']=='Commuter Rail':continue
+  name=route['display_name']
   name=ntad_names.get(name.casefold(),name)
   for row in rows:
    if row.get('pickup_type')=='1' and row.get('drop_off_type')=='1':continue
@@ -161,7 +164,9 @@ def build(args):
  route_geo=json.loads((root/'routes.geojson').read_text())
  ntad_names={f['properties']['name'].casefold():f['properties']['name'] for f in route_geo['features']}
  z=zipfile.ZipFile(root/'amtrak.zip');info=readzip(z,'feed_info.txt')[0]
- routes={r['route_id']:r for r in readzip(z,'routes.txt') if r['route_type']=='2' and r['route_long_name']!='Commuter Rail'}
+ routes={r['route_id']:r for r in readzip(z,'routes.txt') if r['route_type']=='2'}
+ agencies={a['agency_id']:a for a in readzip(z,'agency.txt')}
+ for route in routes.values():route['display_name']=agencies[route['agency_id']]['agency_name'] if route['route_long_name']=='Commuter Rail' else route['route_long_name']
  stops={s['stop_id']:s for s in readzip(z,'stops.txt')}
  valid={f['properties']['Code']:f for f in stations['features'] if f['properties']['State'] in US_STATES}
  start=datetime.datetime.strptime(info['feed_start_date'],'%Y%m%d').date();end=datetime.datetime.strptime(info['feed_end_date'],'%Y%m%d').date()
@@ -181,15 +186,32 @@ def build(args):
  times=defaultdict(list)
  for t in readzip(z,'stop_times.txt'):
   if t['trip_id'] in trips:times[t['trip_id']].append(t)
- from rail_topology import simplify_display_sections,join_display_tails,restore_north_philadelphia_connector,connect_keystone_philadelphia,extend_pennsylvanian_to_philadelphia,reorder_display_bundles,trim_philadelphia_station_branches
+ # Supplement comparison endpoints from actual commuter stop coordinates.
+ # The filtered NTAD station inventory and its map symbols stay separate.
+ commuter_ids={tid for tid,t in trips.items() if routes[t['route_id']]['route_long_name']=='Commuter Rail'}
+ commuter_codes={row['stop_id'] for tid in commuter_ids for row in times[tid]}
+ for code in sorted(commuter_codes):
+  if code in valid:continue
+  stop=stops[code];lat,lon=float(stop['stop_lat']),float(stop['stop_lon'])
+  # The two commuter agencies in this retained feed are MARC and Shore Line
+  # East; their GTFS stop coordinates are in Maryland/DC/Connecticut/New York.
+  valid[code]={'type':'Feature','properties':{'Code':code,'StationName':stop['stop_name'],'source':'GTFS commuter stop','comparisonOnly':True},'geometry':{'type':'Point','coordinates':[lon,lat]}}
+ comparison_memberships=defaultdict(set)
+ for tid,rows in times.items():
+  label=routes[trips[tid]['route_id']]['display_name']
+  for row in rows:
+   if row.get('pickup_type')=='1' and row.get('drop_off_type')=='1':continue
+   comparison_memberships[row['stop_id']].add(label)
+ for code,station in valid.items():station['properties']['comparisonRouteNames']=sorted(comparison_memberships[code])
+ dump('comparison-stations.json',{'type':'FeatureCollection','features':list(valid.values())})
+ from rail_topology import restore_north_philadelphia_connector,add_pennsylvanian_station_approach,reorder_display_bundles
  parallel,shared=parallel_routes(route_geo)
  parallel=restore_north_philadelphia_connector(parallel)
- parallel,suppressed=simplify_display_sections(parallel)
- parallel,joined=join_display_tails(parallel,stations)
- parallel=connect_keystone_philadelphia(parallel)
- parallel=extend_pennsylvanian_to_philadelphia(parallel)
+ # Do not suppress, trim or move source sections: those operations severed
+ # connections and removed original route geometry in the former pipeline.
+ suppressed=joined=0
+ parallel=add_pennsylvanian_station_approach(parallel)
  parallel=reorder_display_bundles(parallel,DISPLAY_ROUTE_PRIORITY)
- parallel=trim_philadelphia_station_branches(parallel)
  dump('routes.geojson',parallel)
  station_services(stations,routes,trips,times,ntad_names)
  dump('stations.geojson',stations)
@@ -213,9 +235,9 @@ def build(args):
  for code,station in valid.items():
   ds=[(a,round(distance(station['geometry']['coordinates'],v['coordinates']),2)) for a,v in airports.items()]
   nearby[code]=[(a,d) for a,d in ds if d<=args.airport_radius]
- best={};direct_pairs=set()
+ best={};direct_pairs=set();commuter_best={}
  for tid,ts in times.items():
-  trip=trips[tid];route=routes[trip['route_id']]['route_long_name'];ts.sort(key=lambda s:int(s['stop_sequence']))
+  trip=trips[tid];route=routes[trip['route_id']]['display_name'];ts.sort(key=lambda s:int(s['stop_sequence']))
   for i,a in enumerate(ts):
    if a['stop_id'] not in valid or a.get('pickup_type')=='1' or not a['departure_time']:continue
    for b in ts[i+1:]:
@@ -223,6 +245,10 @@ def build(args):
     origin,dest=a['stop_id'],b['stop_id'];direct_pairs.add((route,origin,dest))
     duration=minutes(b['arrival_time'])-minutes(a['departure_time'])
     if duration<=0:continue
+    if tid in commuter_ids:
+     key=(route,origin,dest)
+     if key not in commuter_best or commuter_best[key]['railMinutes']>duration:
+      commuter_best[key]={'route':route,'origin':origin,'destination':dest,'railMinutes':duration,'tripId':tid,'trainNumber':trip.get('trip_short_name',''),'departure':a['departure_time'],'arrival':b['arrival_time'],'serviceDates':services[trip['service_id']]}
     candidates=[(medians[(aa,bb)],aa,bb,da,db) for aa,da in nearby[origin] for bb,db in nearby[dest] if aa!=bb and (aa,bb) in medians]
     if not candidates:continue
     flight,aa,bb,da,db=min(candidates);key=(route,origin,dest)
@@ -256,15 +282,16 @@ def build(args):
   r['shapeRange']=[a,b] if a is not None and b is not None and b>a else None
   if r['shapeRange'] is None:geometry_missing+=1
   records.append(r)
+ dump('commuter-journeys.json',list(commuter_best.values()))
  dump('comparisons.json',records);dump('shapes.json',shapes);dump('airports.json',airports)
- evidence={};selected_ids={r['tripId'] for r in records}
+ evidence={};selected_ids={r['tripId'] for r in records}|commuter_ids
  for filename in ['feed_info.txt','agency.txt','routes.txt','calendar.txt','trips.txt','stop_times.txt','stops.txt']:
   rows=readzip(z,filename)
   if filename in ['trips.txt','stop_times.txt']:rows=[r for r in rows if r['trip_id'] in selected_ids]
   evidence[filename]=rows
  if 'calendar_dates.txt' in z.namelist():evidence['calendar_dates.txt']=readzip(z,'calendar_dates.txt')
  dump('gtfs-evidence.json',evidence)
- manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'routeLanePriority':DISPLAY_ROUTE_PRIORITY,'routeSouthernPriority':DISPLAY_ROUTE_SOUTHERN,'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':750,'preserveConnectingSections':True,'sourceGapDisplayRepairs':['Crescent at North Philadelphia; existing shared NEC track','Palmetto at Philadelphia; existing shared NEC track','Vermonter at New Haven; existing shared track','Keystone Philadelphia approach display snap']},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
+ manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'comparisonStationCount':len(valid),'railServices':sorted({r['display_name'] for r in routes.values()}),'commuterServices':sorted({r['display_name'] for r in routes.values() if r['route_long_name']=='Commuter Rail'}),'commuterDirectPairs':sum(route in {r['display_name'] for r in routes.values() if r['route_long_name']=='Commuter Rail'} for route,origin,destination in direct_pairs),'routeLanePriority':DISPLAY_ROUTE_PRIORITY,'routeSouthernPriority':DISPLAY_ROUTE_SOUTHERN,'routeColors':route_colors(parallel),'sourceRouteNames':sorted(ntad_names.values()),'symbologyGroups':{'Silver Star':'Floridian'},'serviceChangeSource':'https://www.amtrak.com/routes/silver-service-palmetto-train.html','stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'sourceSectionsPreserved':True,'junctionVerticesProtected':True,'redundantSectionToleranceMeters':0,'suppressedSections':suppressed,'joinedDisplayBundles':joined,'maximumTailLengthMeters':0,'preserveConnectingSections':True,'sourceGapDisplayRepairs':['Crescent at North Philadelphia; existing shared NEC track','Palmetto at Philadelphia; existing shared NEC track','Vermonter at New Haven; existing shared track','Pennsylvanian Philadelphia stop approach added without removing original source sections']},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
  dump('manifest.json',manifest)
  print(json.dumps(manifest,indent=2))
  print('Default qualifying route/station/direction records:',sum(r['railMinutes']<=r['flightMinutes']+240 for r in records))
