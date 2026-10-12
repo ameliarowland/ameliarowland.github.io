@@ -55,7 +55,7 @@ function renderRouteGeometry() {
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
  const symbols=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle);
  map.getSource('stations').setData(symbols.dots);
- const selectedStops={type:'FeatureCollection',features:symbols.dots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName))).map(f=>({...f,properties:{...f.properties,focusRadius:f.properties.radius+.8}}))};
+ const selectedStops={type:'FeatureCollection',features:symbols.dots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName))).map(f=>({...f,properties:{...f.properties,focusRadius:f.properties.radius}}))};
  map.getSource('station-focus').setData(selectedStops);
 }
 // Selection is a transient map state, never restored from URL filters.
@@ -138,7 +138,7 @@ async function init() {
    map.addSource('stations',{type:'geojson',data:empty()});
    map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#3d3f42','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
    map.addSource('station-focus',{type:'geojson',data:empty()});
-   map.addLayer({id:'station-focus-halo',type:'circle',source:'station-focus',paint:{'circle-radius':['+',['get','focusRadius'],1.2],'circle-color':'#3d3f42','circle-stroke-color':'#ffffff','circle-stroke-width':1}});
+   map.addLayer({id:'station-focus-halo',type:'circle',source:'station-focus',paint:{'circle-radius':['+',['get','focusRadius'],['/',['get','ringWidth'],2],.5],'circle-color':'#3d3f42','circle-stroke-color':'#ffffff','circle-stroke-width':.5}});
    map.addLayer({id:'station-focus',type:'circle',source:'station-focus',paint:{'circle-radius':['get','focusRadius'],'circle-color':'#3d3f42','circle-stroke-color':['get','color'],'circle-stroke-width':['get','ringWidth']}});
    const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`Stops on: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
    const stationLayers=['station-focus','stations'];
