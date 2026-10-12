@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-7';
+import {stationRouteName} from './model.js?v=station-schematic-8';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -69,14 +69,15 @@ export function createSchematicEngine(routes,stations) {
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
+  const radius=Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth=Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05);
   for(const [id,node] of nodes){
-   const p=project(node.coordinate);
-   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*spacing;positions.set(id+'|'+name,unproject([p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]));});
+   const p=project(node.coordinate),stationSpacing=["CHI","NYP"].includes(id)?Math.min(spacing,2*(radius+ringWidth)*.88):spacing;
+   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;positions.set(id+'|'+name,unproject([p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]));});
   }
   const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
   displayed.connectivityAudit={brokenJunctions:[]};
   const colors=new Map(routes.features.map(f=>[stationRouteName(f.properties.symbologyName||f.properties.name),f.properties.color]));
-  const dots=collection(stations.features.flatMap(s=>(s.properties.routeNames||[]).map(name=>({type:'Feature',properties:{...s.properties,symbolRoutes:[name],stopStatus:'stop',color:colors.get(name)||'#fff',radius:Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth:Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05)},geometry:{type:'Point',coordinates:positions.get(s.properties.Code+'|'+name)||s.geometry.coordinates}}))));
+  const dots=collection(stations.features.flatMap(s=>(s.properties.routeNames||[]).map(name=>({type:'Feature',properties:{...s.properties,symbolRoutes:[name],stopStatus:'stop',color:colors.get(name)||'#fff',radius,ringWidth},geometry:{type:'Point',coordinates:positions.get(s.properties.Code+'|'+name)||s.geometry.coordinates}}))));
   const ids=new Set((job.records||[]).flatMap(journey)),qualifying=collection(displayed.features.filter(f=>ids.has(f.properties.edgeId)));
   return {id:job.id,key:'schematic|'+job.zoom,zoom:job.zoom,style:{spacing,...schematicDrawingStyle(job.zoom)},displayed,dots,qualifying,layoutMilliseconds:Math.round(performance.now()-started)};
  }};
