@@ -153,3 +153,11 @@ Chicago's approach displacement is not propagated into single-route corridors. T
 ### Ribbon route symbols (station-schematic-17)
 
 Colored bands scale from 3.2 to 7 screen pixels wide; adjacent lanes have a 0.7 pixel light separator. Scheduled stops use small filled white dots without an outer ring. Dot diameters stay smaller than their own bands. Hover still widens the route and displays its name. The existing station graph, pass-through nodes, route ordering, and travel-time comparisons are unchanged by this symbol treatment.
+
+
+### Trim joins at displayed stops (station-schematic-20)
+
+Parallel bodies are trimmed at the displayed station marker's longitudinal position. A perpendicular join connects the body to the marker when needed. Bodies no longer continue to the original station's longitudinal position and double back to the shifted marker. The rule applies to every route and station, including pass-through vertices and terminals, and is checked for every nondegenerate segment across zooms 3–16.
+
+
+Pacific Surfliner uses the northeast side of the shared Coast Starlight corridor. Station rows on that coastal section follow a northeast frame; Los Angeles retains the requested west-to-east hub order. Screen-space perpendicular offsets choose the northeast-facing normal as the track turns.
