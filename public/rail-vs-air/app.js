@@ -1,4 +1,4 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle} from './model.js';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -40,8 +40,11 @@ function draw() {
 function renderRouteGeometry() {
  if(!available)return;
  const zoom=map.getZoom();lastRenderZoom=zoom;
- map.getSource('network').setData(offsetNetwork(networkData,zoom));
- map.getSource('qualifying').setData(offsetNetwork(qualifiedData,zoom));
+ const drawingStyle=routeDrawingStyle(networkData,zoom);
+ map.getSource('network').setData(offsetNetwork(networkData,zoom,drawingStyle));
+ map.getSource('qualifying').setData(offsetNetwork(qualifiedData,zoom,drawingStyle));
+ map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
+ map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
 }
 function renderResults() {
  $('results').innerHTML=filtered.slice(0,shown).map(r=>`<button class="journey" data-id="${r.id}" aria-pressed="${selected?.id===r.id}"><strong>${esc(stationName(r.origin))} → ${esc(stationName(r.destination))}</strong><small>${esc(r.route)} · ${esc(r.origin)} → ${esc(r.destination)}</small><span class="duration"><span>Rail <b>${duration(r.railMinutes)}</b></span><span>Air + 3h <b>${duration(r.flightMinutes+AIRPORT_OVERHEAD)}</b></span></span><span class="badge ${qualifies(r,tolerance())?'':'slower'}">${badge(r)}</span></button>`).join('') || '<p class="help">Try another city, show all matched journeys, or expand the time tolerance.</p>';
@@ -85,6 +88,7 @@ async function init() {
   const names=[...new Set([...routeData.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   colors=new Map(names.map((name,i)=>[name,`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of routeData.features)feature.properties.color=color(feature.properties.name);
+  networkData=alignLaneFrames(routeData);
   const services=[...new Set(records.map(r=>r.route))].sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
   if(services.includes(params.get('route')))$('route').value=params.get('route');
