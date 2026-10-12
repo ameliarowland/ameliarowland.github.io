@@ -41,8 +41,8 @@
       <section class="map-section" aria-label="Interactive United States rail map">
         <div id="map"></div>
         <div class="map-actions"><button id="reset">U.S. network ↗</button><button id="layers" aria-expanded="false" aria-controls="legend">Route colors</button></div>
-        <div class="map-key"><span class="key-line"></span>Qualifying train journey <span class="key-dot"></span>Train station<br /><small>Station bars: multiple train services · thin lines: NTAD network</small></div>
-        <div id="legend" hidden><h2>Route colors</h2><p>Colors follow the NTAD NAME field. Timetable-only services are labeled separately.</p><div id="legend-list"></div></div>
+        <div class="map-key"><div id="route-focus-label" hidden aria-live="polite"></div><span class="key-line"></span>Qualifying train journey <span class="key-dot"></span>Train station<br /><small>Station bars: multiple train services · thin lines: NTAD network</small></div>
+        <div id="legend" hidden><h2>Route colors</h2><p>Colors follow the NTAD NAME field. Silver Star and Floridian share a color and lane where their tracks overlap; both source routes are retained.</p><div id="legend-list"></div></div>
         <div id="selection" hidden aria-live="polite"></div>
       </section>
     </div>
