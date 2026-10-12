@@ -38,6 +38,17 @@ for(const zoom of [4,8,12,16]) {
   assert(Math.min(...source.map(q=>Math.hypot(p[0]-q[0],p[1]-q[1])))<=42.00001);
  }
 }
+// Adjacent source sections of the same service must remain connected after a lane change.
+const sections={type:'FeatureCollection',features:[
+ {type:'Feature',properties:{name:'A',lane:-1},geometry:{type:'LineString',coordinates:[[-.01,0],[0,0]]}},
+ {type:'Feature',properties:{name:'A',lane:1},geometry:{type:'LineString',coordinates:[[0,0],[.01,0]]}},
+ {type:'Feature',properties:{name:'B',lane:2},geometry:{type:'LineString',coordinates:[[0,0],[0,.01]]}}
+]};
+const joined=offsetNetwork(sections,12),connectors=joined.features.filter(f=>f.properties.displayJoin);
+assert.equal(connectors.length,1);assert.equal(connectors[0].properties.name,'A');
+const near=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-10;
+assert(near(connectors[0].geometry.coordinates[0],joined.features[0].geometry.coordinates.at(-1)));
+assert(near(connectors[0].geometry.coordinates.at(-1),joined.features[1].geometry.coordinates[0]));
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
