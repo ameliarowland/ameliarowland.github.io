@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-1';
+import {stationRouteName} from './model.js?v=station-schematic-2';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -17,6 +17,10 @@ export function createSchematicEngine(routes,stations) {
   for(const [a,b] of [[from,to],[to,from]]){if(!graph.has(a))graph.set(a,[]);graph.get(a).push({node:b,id:i,cost:f.properties.distanceKm});}
  });
  for(const node of nodes.values())node.order=[...node.names].sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
+ // Station rows use one diagonal screen direction throughout the schematic.
+ // Their route order therefore cannot reverse as a corridor bends. A fixed
+ // frame also avoids enlarging low-zoom rows into crossed local tangent planes.
+ for(const node of nodes.values())node.normal=[Math.SQRT1_2,Math.SQRT1_2];
  function journey(record){
   const name=stationRouteName(record.ntadName||record.route),key=name+'|'+record.origin+'|'+record.destination;
   if(pathCache.has(key))return pathCache.get(key);
@@ -33,10 +37,8 @@ export function createSchematicEngine(routes,stations) {
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
   for(const [id,node] of nodes){
-   const p=project(node.coordinate),best=[...node.edges].sort((a,b)=>groups.get(b.key).size-groups.get(a.key).size||a.key.localeCompare(b.key))[0];
-   const q=project(nodes.get(best.other).coordinate);let dx=q[0]-p[0],dy=q[1]-p[1];if(dx<0||(dx===0&&dy>0)){dx=-dx;dy=-dy;}
-   const length=Math.hypot(dx,dy)||1;
-   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*spacing;positions.set(id+'|'+name,unproject([p[0]-dy/length*offset,p[1]+dx/length*offset]));});
+   const p=project(node.coordinate);
+   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*spacing;positions.set(id+'|'+name,unproject([p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]));});
   }
   const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
   displayed.connectivityAudit={brokenJunctions:[]};
