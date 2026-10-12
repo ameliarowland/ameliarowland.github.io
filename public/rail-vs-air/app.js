@@ -57,6 +57,17 @@ function renderRouteGeometry() {
  map.getSource('stations').setData(symbols.dots);
  map.getSource('station-bars').setData(symbols.bars);
 }
+// Selection is a transient map state, never restored from URL filters.
+const deselectionClicks=new WeakSet();
+document.addEventListener('click',event=>{
+ if(!activeRouteName&&!selected)return;
+ // These controls explicitly choose a new route or journey.
+ if(event.target.closest('.route-choice,.journey,#route'))return;
+ activeRouteName=null;
+ if(selected)closeSelection();
+ if(available)renderRouteGeometry();
+ deselectionClicks.add(event);
+},true);
 function renderResults() {
  $('results').innerHTML=filtered.slice(0,shown).map(r=>`<button class="journey" data-id="${r.id}" aria-pressed="${selected?.id===r.id}"><strong>${esc(stationName(r.origin))} → ${esc(stationName(r.destination))}</strong><small>${esc(r.route)} · ${esc(r.origin)} → ${esc(r.destination)}</small><span class="duration"><span>Rail <b>${duration(r.railMinutes)}</b></span><span>Air + 3h <b>${duration(r.flightMinutes+AIRPORT_OVERHEAD)}</b></span></span><span class="badge ${qualifies(r,tolerance())?'':'slower'}">${badge(r)}</span></button>`).join('') || '<p class="help">Try another city, show all matched journeys, or expand the time tolerance.</p>';
  $('more').hidden=shown>=filtered.length;
@@ -104,7 +115,7 @@ async function init() {
   networkData=alignLaneFrames(routeData);
   const services=[...new Set(records.map(r=>r.route))].sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
-  if(services.includes(params.get('route'))){$('route').value=params.get('route');activeRouteName=records.find(r=>r.route===$('route').value)?.ntadName||$('route').value;}
+  if(services.includes(params.get('route')))$('route').value=params.get('route');
   const legendNames=[...new Set(names.map(name=>manifest.symbologyGroups?.[name]||name))].sort();
   $('legend-list').innerHTML=legendNames.map(name=>`<div class="legend-row"><span class="swatch" style="background:${color(name)}"></span>${esc(name==='Floridian'?'Floridian / Silver Star':name)}</div>`).join('');
   $('dates').textContent=`Train service: ${manifest.railStart} through ${manifest.railEnd}. Flights: ${manifest.flightPeriod}. Built: ${manifest.generatedDate}.`;
@@ -140,6 +151,8 @@ async function init() {
    // hit on a thin stroke. Ambiguous hits offer explicit route choices.
    const nearbyRoutes=point=>[...new Set(map.queryRenderedFeatures([[point.x-9,point.y-9],[point.x+9,point.y+9]],{layers:['network']}).map(f=>f.properties.symbologyName||f.properties.name))].sort();
    map.on('click',e=>{
+    // A click that clears a selection must not immediately select a nearby line.
+    if(deselectionClicks.has(e.originalEvent))return;
     if(map.queryRenderedFeatures(e.point,{layers:['stations','station-bars']}).length)return;
     const names=nearbyRoutes(e.point);if(!names.length)return;
     if(names.length===1){chooseRoute(names[0]);return;}
