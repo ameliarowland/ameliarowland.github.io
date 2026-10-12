@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-11';
+import {stationRouteName} from './model.js?v=station-schematic-12';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -50,10 +50,15 @@ export function createSchematicEngine(routes,stations) {
  const chicagoQueue=['CHI'];while(chicagoQueue.length){const id=chicagoQueue.shift(),step=chicagoSteps.get(id);if(step>=2)continue;for(const other of stationLinks.get(id)||[]){if(chicagoSteps.has(other))continue;chicagoSteps.set(other,step+1);chicagoQueue.push(other);}}
  for(const id of chicagoSteps.keys()){const node=nodes.get(id);if(!node)continue;node.order=[...node.names].sort((a,b)=>{const ai=chicagoUnionOrder.indexOf(a),bi=chicagoUnionOrder.indexOf(b);return (ai<0?100:ai)-(bi<0?100:bi)||defaultOrder(a,b);});}
 
- // Station rows use one diagonal screen direction throughout the schematic.
- // Their route order therefore cannot reverse as a corridor bends. A fixed
- // frame also avoids enlarging low-zoom rows into crossed local tangent planes.
- for(const node of nodes.values())node.normal=[Math.SQRT1_2,-Math.SQRT1_2];
+ // Align a station row across the dominant local bundle, rather than giving
+ // east/west tracks a diagonal row that staggers their stop circles.
+ const frameProject=p=>[(p[0]+180)/360,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2];
+ for(const [id,node] of nodes){
+  const p=frameProject(node.coordinate);let xx=0,xy=0,yy=0;const seen=new Set();
+  for(const edge of node.edges){if(seen.has(edge.key))continue;seen.add(edge.key);const q=frameProject(nodes.get(edge.other).coordinate),dx=q[0]-p[0],dy=q[1]-p[1],length=Math.hypot(dx,dy);if(!length)continue;const weight=groups.get(edge.key).size**2;xx+=weight*dx*dx/(length*length);xy+=weight*dx*dy/(length*length);yy+=weight*dy*dy/(length*length);}
+  const angle=.5*Math.atan2(2*xy,xx-yy);let normal=[-Math.sin(angle),Math.cos(angle)];if(normal[1]>0||(Math.abs(normal[1])<1e-8&&normal[0]<0))normal=normal.map(v=>-v);
+  node.normal=chicagoSteps.has(id)?[Math.SQRT1_2,-Math.SQRT1_2]:normal;
+ }
  function journey(record){
   const name=stationRouteName(record.ntadName||record.route),key=name+'|'+record.origin+'|'+record.destination;
   if(pathCache.has(key))return pathCache.get(key);
@@ -70,10 +75,20 @@ export function createSchematicEngine(routes,stations) {
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
   const radius=Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth=Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05);
-  for(const [id,node] of nodes){
-   const p=project(node.coordinate),stationSpacing=Math.min(spacing,2*(radius+ringWidth)*.88);
-   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;positions.set(id+'|'+name,unproject([p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]));});
+  const rowSpacing=Math.min(spacing,2*(radius+ringWidth)*.88),screen=new Map(),safeFrames=new Set();
+  const place=()=>{for(const [id,node] of nodes){const p=project(node.coordinate),normal=safeFrames.has(id)?[Math.SQRT1_2,-Math.SQRT1_2]:node.normal;node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*rowSpacing;screen.set(id+'|'+name,[p[0]+normal[0]*offset,p[1]+normal[1]*offset]);});}};
+  const side=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+  // At tight bends/branch hubs a perpendicular row may flip a bundle. Retain
+  // the common diagonal frame only where needed to avoid those crossings.
+  for(let iteration=0;iteration<=nodes.size;iteration++){
+   place();const bad=new Set();
+   for(const [key,names] of groups){const [from,to]=key.split('|'),ordered=[...names];for(let i=0;i<ordered.length;i++)for(let j=i+1;j<ordered.length;j++){
+    const a=screen.get(from+'|'+ordered[i]),b=screen.get(to+'|'+ordered[i]),c=screen.get(from+'|'+ordered[j]),d=screen.get(to+'|'+ordered[j]);
+    if(side(a,b,c)*side(a,b,d)<-1e-8&&side(c,d,a)*side(c,d,b)<-1e-8){if(!safeFrames.has(from))bad.add(from);if(!safeFrames.has(to))bad.add(to);}
+   }}
+   if(!bad.size)break;for(const id of bad)safeFrames.add(id);
   }
+  for(const [key,p] of screen)positions.set(key,unproject(p));
   const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
   displayed.connectivityAudit={brokenJunctions:[]};
   const colors=new Map(routes.features.map(f=>[stationRouteName(f.properties.symbologyName||f.properties.name),f.properties.color]));
