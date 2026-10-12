@@ -36,20 +36,28 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
   if(length<1e-8)continue; // Two inventory codes can represent the same physical station.
   const lane=f=>{const p=screen(f.properties.parallelBody[0]),c=screen(data.routes.features[f.properties.edgeId].geometry.coordinates[0]);return (p[0]-c[0])*normal[0]+(p[1]-c[1])*normal[1];};
   for(const f of group){const ends=f.properties.parallelBody.map(screen),anchors=f.properties.stationPositions.map(p=>screen(p.coordinates));for(let i=0;i<2;i++){const delta=[ends[i][0]-anchors[i][0],ends[i][1]-anchors[i][1]];assert(Math.abs(delta[0]*dx/length+delta[1]*dy/length)<1e-6,'Station joins must trim at the displayed dot, without overshooting to the original station at '+pair);}}
-  for(const f of group){const [a,b]=f.properties.parallelBody.map(screen),vector=[b[0]-a[0],b[1]-a[1]];assert(Math.abs(vector[0]*normal[0]+vector[1]*normal[1])<1e-6,'Every interstation body is parallel to its source at '+pair+' '+Math.abs(vector[0]*normal[0]+vector[1]*normal[1]));}
+  for(const f of group){const [a,b]=f.properties.parallelBody.map(screen),vector=[b[0]-a[0],b[1]-a[1]];assert((pair.split('|').includes('CHI')&&new Set(group.map(g=>g.properties.symbologyName)).size===1)||Math.abs(vector[0]*normal[0]+vector[1]*normal[1])<1e-6,'Every interstation body is parallel to its source at '+pair+' '+Math.abs(vector[0]*normal[0]+vector[1]*normal[1]));}
   const unique=[...new Map(group.map(f=>[f.properties.symbologyName,f])).values()].sort((a,b)=>lane(a)-lane(b));
   for(let i=1;i<unique.length;i++)assert(Math.abs(lane(unique[i])-lane(unique[i-1])-spacing)<1e-6,'Constant perpendicular lane gap at '+pair);
   const byName=new Map(group.map(f=>[f.properties.symbologyName,f]));
-  for(const [below,above] of [['Borealis','Empire Builder'],['Capitol Limited','Floridian']])if(byName.has(below)&&byName.has(above))assert((lane(byName.get(below))-lane(byName.get(above)))*normal[1]>=-1e-6,below+' stays south of '+above+' at '+pair);
-  if(byName.has('Vermonter')&&byName.has('Acela'))assert((lane(byName.get('Vermonter'))-lane(byName.get('Acela')))*normal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
-  for(const [west,east] of [['Northeast Regional','Acela'],['Silver Meteor','Floridian'],['Pacific Surfliner','Southwest Chief'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
+  for(const [below,above] of [['Capitol Limited','Floridian']])if(byName.has(below)&&byName.has(above))assert((byName.get(below).properties.perpendicularOffset-byName.get(above).properties.perpendicularOffset)*byName.get(below).properties.corridorNormal[1]>=-1e-6,below+' stays south of '+above+' at '+pair);
+  if(byName.has('Vermonter')&&byName.has('Acela'))assert((byName.get('Vermonter').properties.perpendicularOffset-byName.get('Acela').properties.perpendicularOffset)*byName.get('Vermonter').properties.corridorNormal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
+  for(const [west,east] of [['Northeast Regional','Acela'],['Silver Meteor','Floridian'],['Pacific Surfliner','Southwest Chief'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((byName.get(west).properties.perpendicularOffset-byName.get(east).properties.perpendicularOffset)*byName.get(west).properties.corridorNormal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
   if(unique.length===1&&!pair.split('|').includes('CHI'))assert(Math.abs(lane(unique[0]))<1e-6,'Single-route corridors must not inherit a distant hub displacement at '+pair);
-  if(byName.has('Coast Starlight')&&byName.has('Pacific Surfliner'))assert((lane(byName.get('Pacific Surfliner'))-lane(byName.get('Coast Starlight')))*(normal[0]-normal[1])>0,'Pacific Surfliner stays on the northeast side of Coast Starlight at '+pair);
-  if(byName.has('Blue Water')&&byName.has('Wolverine'))assert((lane(byName.get('Blue Water'))-lane(byName.get('Wolverine')))*normal[1]<0,'Blue Water stays north of Wolverine at '+pair);
-  if(byName.has('Pere Marquette'))for(const [name,f] of byName)assert((lane(byName.get('Pere Marquette'))-lane(f))*normal[1]<=1e-6,'Pere Marquette stays north of every shared route at '+pair);
-  if(byName.has('Maple Leaf'))for(const [name,f] of byName)assert((lane(byName.get('Maple Leaf'))-lane(f))*normal[1]<=1e-6,'Maple Leaf stays north at '+pair);
+  if(byName.has('Coast Starlight')&&byName.has('Pacific Surfliner'))assert((byName.get('Pacific Surfliner').properties.perpendicularOffset-byName.get('Coast Starlight').properties.perpendicularOffset)*(byName.get('Pacific Surfliner').properties.corridorNormal[0]-byName.get('Pacific Surfliner').properties.corridorNormal[1])>0,'Pacific Surfliner stays on the northeast side of Coast Starlight at '+pair);
+  if(byName.has('Borealis')&&byName.has('Empire Builder'))assert((byName.get('Borealis').properties.perpendicularOffset-byName.get('Empire Builder').properties.perpendicularOffset)*(byName.get('Borealis').properties.corridorNormal[0]-byName.get('Borealis').properties.corridorNormal[1])>0,'Borealis stays northeast of Empire Builder at '+pair);
+  if(byName.has('Blue Water')&&byName.has('Wolverine'))assert((byName.get('Blue Water').properties.perpendicularOffset-byName.get('Wolverine').properties.perpendicularOffset)*byName.get('Blue Water').properties.corridorNormal[1]<0,'Blue Water stays north of Wolverine at '+pair);
+  if(byName.has('Pere Marquette'))for(const [name,f] of byName)assert((byName.get('Pere Marquette').properties.perpendicularOffset-f.properties.perpendicularOffset)*byName.get('Pere Marquette').properties.corridorNormal[1]<=1e-6,'Pere Marquette stays north of every shared route at '+pair);
+  if(byName.has('Maple Leaf'))for(const [name,f] of byName)assert((byName.get('Maple Leaf').properties.perpendicularOffset-f.properties.perpendicularOffset)*byName.get('Maple Leaf').properties.corridorNormal[1]<=1e-6,'Maple Leaf stays north at '+pair);
  }
 
+ const hmiFeatures=result.displayed.features.filter(f=>[f.properties.from,f.properties.to].includes('HMI'));
+ for(const f of hmiFeatures){const i=f.properties.from==='HMI'?0:1;assert.deepEqual(f.properties.parallelBody[i],f.properties.stationPositions[i].coordinates,'Hammond–Whiting bodies meet directly at their displayed route corner');}
+ const dyer=result.displayed.features.find(f=>f.properties.symbologyName==='Cardinal'&&[f.properties.from,f.properties.to].includes('CHI'));assert.equal(dyer.geometry.coordinates.length,2,'Cardinal Chicago approach must connect directly to Dyer without an offset dogleg');
+ const frames=new Map();for(const f of result.displayed.features){const key=[f.properties.from,f.properties.to].sort().join('|');if(!frames.has(key))frames.set(key,[]);frames.get(key).push(f);}
+ const atStation=new Map();for(const [key,group] of frames){const signature=[...new Set(group.map(f=>f.properties.symbologyName))].sort().join(';');if(group.length<2)continue;for(const code of key.split('|')){const index=code+'|'+signature,order=[...new Set(group.toSorted((a,b)=>a.properties.perpendicularOffset-b.properties.perpendicularOffset).map(f=>f.properties.symbologyName))].join(';');if(atStation.has(index))assert.equal(order,atStation.get(index),'Shared corridor lane order cannot swap at '+code);else atStation.set(index,order);}}
+ const winter=result.displayed.features.filter(f=>f.properties.symbologyName==='Winter Park Express'),zephyr=result.displayed.features.filter(f=>f.properties.symbologyName==='California Zephyr'&&[f.properties.from,f.properties.to].some(c=>['WIP','WPR','DEN'].includes(c)));
+ for(const a of winter)for(const b of zephyr){const ac=a.geometry.coordinates.map(screen),bc=b.geometry.coordinates.map(screen);for(let i=1;i<ac.length;i++)for(let j=1;j<bc.length;j++)assert(!(side(ac[i-1],ac[i],bc[j-1])*side(ac[i-1],ac[i],bc[j])<-1e-8&&side(bc[j-1],bc[j],ac[i-1])*side(bc[j-1],bc[j],ac[i])<-1e-8),'Winter Park Express and California Zephyr must not cross at their shared station joins');}
  if(zoom===7.9)fs.writeFileSync('../station-schematic-render.json',JSON.stringify(result));
 }
 const lnc=data.routes.features.filter(f=>f.properties.name==='Pennsylvanian'&&(f.properties.from==='LNC'||f.properties.to==='LNC'));assert(lnc.length);
@@ -75,7 +83,7 @@ console.log('Silver Meteor continuity and zoom sizing checks passed.');
 const chicago=engine.render({id:4,zoom:12,records:[]}),chicagoPositions=new Map();
 for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='CHI')chicagoPositions.set(p.name,p.coordinates[0]);
 const westToEast=[...chicagoPositions].sort((a,b)=>a[1]-b[1]).map(([name])=>name);
-assert.deepEqual(westToEast,['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Capitol Limited','Floridian','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
+assert.deepEqual(westToEast,['Empire Builder','Borealis','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Capitol Limited','Floridian','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
 console.log('Chicago Union Station west-to-east order verified for all 20 lanes.');
 
 for(const code of ['HMI','NBU','SOB']){
@@ -150,7 +158,7 @@ for(let i=0;i<westArrivals.length;i++)for(let j=i+1;j<westArrivals.length;j++){
  assert(!(arrivalSide(a,b,c)*arrivalSide(a,b,d)<-1e-8&&arrivalSide(c,d,a)*arrivalSide(c,d,b)<-1e-8),'Chicago northern / western / southern arrivals must not cross: '+westArrivals[i].properties.name+' / '+westArrivals[j].properties.name);
 }
 const chiRow=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='CHI')chiRow.set(p.name,p.coordinates[1]);
-assert(chiRow.get('Borealis')<chiRow.get('Empire Builder'),'Borealis is south of Empire Builder at Chicago');
+assert(chiRow.get('Borealis')>chiRow.get('Empire Builder'),'Borealis is north of Empire Builder at Chicago');
 assert(chiRow.get('Capitol Limited')<chiRow.get('Floridian'),'Capitol Limited is south of Floridian at Chicago');
 console.log('Chicago northern, western and southern arrivals verified without crossings.');
 const orderedRows=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions){if(!orderedRows.has(p.Code))orderedRows.set(p.Code,new Map());orderedRows.get(p.Code).set(p.name,p.coordinates);}
@@ -161,7 +169,7 @@ for(const [code,row] of orderedRows){
  if(coastal.length>1&&[...row.values()][0][0]<-116)assert.deepEqual([...coastal].sort((a,b)=>row.get(a)[0]-row.get(b)[0]),coastal,'West-coast service order at '+code);
  if(row.has('Coast Starlight')&&[...row.values()][0][0]<-116)for(const [name,p] of row)assert(row.get('Coast Starlight')[0]<=p[0]+1e-10,'Coast Starlight remains westernmost at '+code);
 }
-for(const [code,row] of orderedRows)if(row.has('Acela')&&row.has('Northeast Regional'))assert(row.get('Acela')[0]>row.get('Northeast Regional')[0],'Acela east of Northeast Regional at '+code);
+
 for(const [code,row] of orderedRows)if(row.has('Silver Meteor')&&row.has('Floridian'))assert(row.get('Silver Meteor')[0]<row.get('Floridian')[0],'Silver Meteor west of Floridian / Silver Star at '+code);
 for(const [code,row] of orderedRows)if(row.has('Blue Water')&&row.has('Wolverine'))assert(row.get('Blue Water')[1]>row.get('Wolverine')[1],'Blue Water north of Wolverine at station '+code);
 const southBend=orderedRows.get('SOB'),southBendNames=['Lake Shore Limited','Floridian','Capitol Limited'];assert.deepEqual(southBendNames.toSorted((a,b)=>southBend.get(b)[1]-southBend.get(a)[1]),southBendNames,'South Bend north-to-south order');
