@@ -21,3 +21,9 @@ east=feature('A',[[-75.1575273,39.9962988],[-75.14,40.003]])
 result,count=simplify_display_sections({'type':'FeatureCollection','features':[west,bridge,east]})
 assert count==0 and bridge in result['features']
 print('Verified short connecting track segments are retained between longer sections.')
+
+# A tiny branch connector must survive even inside another track's buffer.
+protected=feature('A',[[-74.001,40],[-74,40.0001]])
+protected['properties']['preserveConnector']=True
+result,count=simplify_display_sections({'type':'FeatureCollection','features':[main,protected]})
+assert protected in result['features'] and count==0
