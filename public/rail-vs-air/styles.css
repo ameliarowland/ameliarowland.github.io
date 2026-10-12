@@ -4,3 +4,5 @@
 .map-key{background:#142131ef;color:#edf4ff;border-color:#40536d}.map-key small{color:#bac8db}.key-line{background:#ffc086}.key-dot{background:#fff;box-shadow:0 0 5px 2px #ffffff80,0 0 12px 4px #ffffff35}
 
 .route-choice{display:block;width:100%;margin:6px 0;padding:9px 10px;text-align:left;background:#f7f5ef;color:#183d33;border:1px solid #dcded3;cursor:pointer}.route-choice:hover,.route-choice:focus-visible{background:#e5eee7}#route-focus-label{font-weight:700;margin-bottom:5px}
+
+.key-stop{display:inline-block;width:9px;height:9px;border:2px solid #2d6a4f;border-radius:50%;background:#fffdf8;vertical-align:middle;margin:0 4px 0 9px}.key-nostop{display:inline-block;position:relative;width:18px;height:4px;background:#2d6a4f;vertical-align:middle;margin:0 4px 0 9px}.key-nostop:after{content:"";position:absolute;left:8px;top:-2px;height:8px;width:1px;background:#737d83;box-shadow:-1px 0 #fffdf8,1px 0 #fffdf8}
