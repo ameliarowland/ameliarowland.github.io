@@ -62,6 +62,20 @@ for(const [name,edges] of routeGroups){
   }
  }
 }
+// Prefer the path through intervening stations over a nearly equivalent source
+// bypass. Parallel physical track/junctions can otherwise become triangles.
+for(const name of routeGroups.keys()){
+ const edges=stationEdges.filter(f=>f.properties.name===name).sort((a,b)=>b.properties.distanceKm-a.properties.distanceKm);
+ for(const edge of edges){
+  if(!stationEdges.includes(edge))continue;
+  const graph=new Map();for(const f of stationEdges){if(f===edge||f.properties.name!==name)continue;for(const [a,b] of [[f.properties.from,f.properties.to],[f.properties.to,f.properties.from]]){if(!graph.has(a))graph.set(a,[]);graph.get(a).push({node:b,cost:f.properties.distanceKm});}}
+  const start=edge.properties.from,end=edge.properties.to,queue=new Set([start]),cost=new Map([[start,0]]),limit=edge.properties.distanceKm*1.2;
+  while(queue.size){let a;for(const id of queue)if(a===undefined||cost.get(id)<cost.get(a))a=id;queue.delete(a);if(a===end)break;
+   for(const e of graph.get(a)||[]){const d=cost.get(a)+e.cost;if(d<=limit&&d<(cost.get(e.node)??Infinity)){cost.set(e.node,d);queue.add(e.node);}}
+  }
+  if(cost.has(end))stationEdges.splice(stationEdges.indexOf(edge),1);
+ }
+}
 // If a source component ends before a scheduled terminal, connect station
 // nodes only when an actual retained GTFS trip establishes their adjacency.
 const evidence=load('gtfs-evidence.json'),routeById=new Map(evidence['routes.txt'].map(r=>[r.route_id,r.route_long_name])),tripById=new Map(evidence['trips.txt'].map(t=>[t.trip_id,t])),times=Map.groupBy(evidence['stop_times.txt'],t=>t.trip_id);
@@ -72,7 +86,15 @@ for(const [name,sourceEdges] of routeGroups){
   const trip=tripById.get(tripId);if((routeById.get(trip?.route_id)||'').toLowerCase()!==name.toLowerCase())continue;
   const sequence=[...stops].sort((a,b)=>Number(a.stop_sequence)-Number(b.stop_sequence)).filter(s=>inventory.has(s.stop_id));
   for(let i=1;i<sequence.length;i++){const a=sequence[i-1].stop_id,b=sequence[i].stop_id;if(a===b||find(a)===find(b))continue;
-   stationEdges.push({type:'Feature',properties:{name,symbologyName:sourceEdges[0].properties.symbologyName,from:a,to:b,distanceKm:km(inventory.get(a).geometry.coordinates,inventory.get(b).geometry.coordinates),connectionEvidence:'GTFS trip '+tripId},geometry:{type:'LineString',coordinates:[inventory.get(a).geometry.coordinates,inventory.get(b).geometry.coordinates]}});join(a,b);
+   let from=a,to=b;
+   const routeEdges=stationEdges.filter(f=>f.properties.name===name),degree=new Map();for(const f of routeEdges)for(const id of [f.properties.from,f.properties.to])degree.set(id,(degree.get(id)||0)+1);
+   // A timetable stop-to-stop link must not bypass the pass-through stations
+   // already represented on either side of a source gap.
+   if(degree.has(a)&&degree.has(b)){
+    const left=[...degree.keys()].filter(id=>find(id)===find(a)),right=[...degree.keys()].filter(id=>find(id)===find(b));
+    let best=Infinity;for(const x of left)for(const y of right){const distance=km(inventory.get(x).geometry.coordinates,inventory.get(y).geometry.coordinates);if(distance<best){best=distance;from=x;to=y;}}
+   }
+   stationEdges.push({type:'Feature',properties:{name,symbologyName:sourceEdges[0].properties.symbologyName,from,to,distanceKm:km(inventory.get(from).geometry.coordinates,inventory.get(to).geometry.coordinates),connectionEvidence:'GTFS trip '+tripId},geometry:{type:'LineString',coordinates:[inventory.get(from).geometry.coordinates,inventory.get(to).geometry.coordinates]}});join(a,b);
   }
  }
 }
