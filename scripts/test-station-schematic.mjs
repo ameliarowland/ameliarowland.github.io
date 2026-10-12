@@ -98,3 +98,11 @@ for(const zoom of [4,8,12,16]){
  }}
 }
 console.log('Slight overlap verified for adjacent route positions at every station.');
+const aligned=engine.render({id:7,zoom:12,records:[]}),dotGroups=Map.groupBy(aligned.dots.features,f=>f.properties.Code);
+const screenPoint=p=>[(p[0]+180)/360*512*2**12,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**12];
+for(const [code,dots] of dotGroups){if(dots.length<3)continue;const [a,b,...rest]=dots.map(f=>screenPoint(f.geometry.coordinates)),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);for(const p of rest)assert(Math.abs(dx*(p[1]-a[1])-dy*(p[0]-a[0]))/length<.001,'All dots share one row at '+code);}
+for(const code of ['POS','ONA']){
+ const points=dotGroups.get(code).map(f=>screenPoint(f.geometry.coordinates));
+ assert(Math.abs(points[1][0]-points[0][0])<Math.abs(points[1][1]-points[0][1])*.15,'Dots align across the east-west route bundle at '+code);
+}
+console.log('Station dot rows verified, including Pomona and Ontario transverse alignment.');
