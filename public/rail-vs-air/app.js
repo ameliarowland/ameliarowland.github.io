@@ -41,7 +41,7 @@ function renderRouteGeometry() {
  if(!available)return;
  const zoom=map.getZoom();lastRenderZoom=zoom;
  const drawingStyle=routeDrawingStyle(networkData,zoom);
- const displayed=offsetNetwork(networkData,zoom,drawingStyle);
+ const displayed=offsetNetwork(networkData,zoom,drawingStyle,stationDataCache);
  map.getSource('network').setData(displayed);
  const focus={type:'FeatureCollection',features:displayed.features.filter(f=>(f.properties.symbologyName||f.properties.name)===activeRouteName)};
  map.getSource('route-focus').setData(focus);
@@ -55,7 +55,7 @@ function renderRouteGeometry() {
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
  const symbols=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle);
  map.getSource('stations').setData(symbols.dots);
- map.getSource('station-bars').setData(symbols.bars);
+ map.getSource('station-passes').setData(symbols.passes);
 }
 // Selection is a transient map state, never restored from URL filters.
 const deselectionClicks=new WeakSet();
@@ -134,14 +134,13 @@ async function init() {
    map.addLayer({id:'route-focus',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':6.3}});
    map.addSource('selected',{type:'geojson',data:empty()});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
-   map.addSource('stations',{type:'geojson',data:stationData});
-   // Match the bars' crisp white fill and thin grey outline at every zoom.
-   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,.4,7,.75,12,1.25,16,1.5],'circle-color':'#ffffff','circle-stroke-width':['interpolate',['linear'],['zoom'],3,.3,7,.35,12,.3,16,.3],'circle-stroke-color':'#9ba5aa'}});
-   map.addSource('station-bars',{type:'geojson',data:empty()});
-   map.addLayer({id:'station-bar-outline',type:'line',source:'station-bars',layout:{'line-cap':'butt'},paint:{'line-color':'#9ba5aa','line-width':['interpolate',['linear'],['zoom'],3,1.4,7,2.2,12,3.1,16,3.6]}});
-   map.addLayer({id:'station-bars',type:'line',source:'station-bars',layout:{'line-cap':'butt'},paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],3,.8,7,1.5,12,2.5,16,3]}});
-   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`Stops on: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
-   for(const id of ['stations','station-bars'])map.on('click',id,stationPopup);
+   map.addSource('stations',{type:'geojson',data:empty()});
+   map.addSource('station-passes',{type:'geojson',data:empty()});
+   map.addLayer({id:'station-pass-gap',type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#252a2e','line-width':['interpolate',['linear'],['zoom'],3,1.8,12,3,16,3.4]}});
+   map.addLayer({id:'station-passes',type:'line',source:'station-passes',layout:{'line-cap':'butt'},paint:{'line-color':'#c7cdd0','line-width':['interpolate',['linear'],['zoom'],3,.6,12,1,16,1.2]}});
+   map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['get','radius'],'circle-color':'#252a2e','circle-stroke-width':['get','ringWidth'],'circle-stroke-color':['get','color']}});
+   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const served=document.createElement('small');const routes=typeof p.symbolRoutes==='string'?JSON.parse(p.symbolRoutes):p.symbolRoutes||[];served.textContent=`${p.stopStatus==='no-stop'?'Passes without stopping':'Stops on'}: ${routes.join(', ')}`;div.append(served,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
+   for(const id of ['stations','station-passes'])map.on('click',id,stationPopup);
    function chooseRoute(name) {
     activeRouteName=name;
     const service=records.find(r=>(r.ntadName||r.route)===name)?.route;
@@ -153,7 +152,7 @@ async function init() {
    map.on('click',e=>{
     // A click that clears a selection must not immediately select a nearby line.
     if(deselectionClicks.has(e.originalEvent))return;
-    if(map.queryRenderedFeatures(e.point,{layers:['stations','station-bars']}).length)return;
+    if(map.queryRenderedFeatures(e.point,{layers:['stations','station-passes']}).length)return;
     const names=nearbyRoutes(e.point);if(!names.length)return;
     if(names.length===1){chooseRoute(names[0]);return;}
     const div=document.createElement('div'),title=document.createElement('strong');title.textContent='Choose a route';div.append(title);
@@ -161,8 +160,8 @@ async function init() {
     for(const name of names){const button=document.createElement('button');button.className='route-choice';button.textContent=name==='Floridian'?'Floridian / Silver Star':name;button.style.borderLeft=`5px solid ${color(name)}`;button.onclick=()=>{chooseRoute(name);popup.remove();};div.append(button);}
     popup.setDOMContent(div).addTo(map);
    });
-   map.on('mousemove',e=>{map.getCanvas().style.cursor=nearbyRoutes(e.point).length||map.queryRenderedFeatures(e.point,{layers:['stations','station-bars']}).length?'pointer':'';});
-   for(const id of ['stations','station-bars','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
+   map.on('mousemove',e=>{map.getCanvas().style.cursor=nearbyRoutes(e.point).length||map.queryRenderedFeatures(e.point,{layers:['stations','station-passes']}).length?'pointer':'';});
+   for(const id of ['stations','station-passes','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
    available=true;draw();
    // Offsets remain pixel-sized while zooming; the final frame always refreshes.
    let geometryFrame=null;
