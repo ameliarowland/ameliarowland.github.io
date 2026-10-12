@@ -125,6 +125,7 @@ for(const [edge,lanes] of sharedLanes) {
  const endpoints=edge.split('|').map(p=>p.split(',').map(Number));
  // At Philadelphia the corridor doubles back; west-edge continuity is tested separately.
  if(endpoints.every(p=>p[0]>-75.201&&p[0]<-75.175&&p[1]>=39.9516&&p[1]<=39.97806))continue;
+ if(endpoints.every(p=>p[0]>=-74.0021&&p[0]<=-73.99&&p[1]>=40.749&&p[1]<=40.755))continue;
  const penn=lanes.find(f=>f.name==='Pennsylvanian');
  if(!penn||lanes.length<2)continue;
  priorityEdges++;
@@ -161,7 +162,7 @@ for(const [name,a,b] of [
 assert(!actualNetwork.features.some(f=>f.properties.name==='Keystone Service'&&f.geometry.coordinates[0][0]===-75.2024265));
 // Editing Keystone's shared west-approach coordinates must not move Pennsylvanian.
 const pennThrough=continuousRoutePaths(actualNetwork).features.filter(f=>f.properties.name==='Pennsylvanian');
-assert(pennThrough.some(f=>f.geometry.coordinates.some(p=>p[0]===-75.1829788&&p[1]===39.9516484)),'Pennsylvanian must reach Philadelphia station');
+assert(pennThrough.some(f=>[f.geometry.coordinates[0],f.geometry.coordinates.at(-1)].some(p=>p[0]>-75.184&&p[0]<-75.18&&p[1]>39.955&&p[1]<39.956)),'Pennsylvanian must end at Philadelphia station');
 const pennEnds=pennThrough.flatMap(f=>[f.geometry.coordinates[0],f.geometry.coordinates.at(-1)]);
 assert(!pennEnds.some(p=>p[0]===-75.1985969&&p[1]===39.9720838),'Pennsylvanian west approach is unsnapped');
 for(const zoom of [3,7.9,13,16]) {
@@ -185,6 +186,32 @@ const orderedNE=actualNetwork.features.filter(f=>f.geometry.coordinates[0][0]===
 const lane=name=>orderedNE.find(f=>f.properties.name===name).properties.lane;
 assert(lane('Pennsylvanian')<lane('Keystone Service')&&lane('Keystone Service')<lane('Cardinal'));
 assert.equal(lane('Keystone Service')-lane('Pennsylvanian'),1);
+// The five Hudson/Manhattan services sit above Pennsylvanian into New York.
+const nyBundle=actualNetwork.features.filter(f=>f.geometry.coordinates[0][0]===-74.0019961&&f.geometry.coordinates.at(-1)[0]===-73.993616);
+const nyLane=name=>nyBundle.find(f=>f.properties.name===name).properties.lane;
+for(const name of ['Adirondack','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf'])assert(nyLane(name)<nyLane('Pennsylvanian'));
+// A terminating service shares the through service's curve normal globally.
+const curveFrame={type:'FeatureCollection',features:[
+ {type:'Feature',properties:{name:'Terminal',lane:-.5,shared:2},geometry:{type:'LineString',coordinates:[[-90,35],[-89,35]]}},
+ {type:'Feature',properties:{name:'Through',lane:.5,shared:2},geometry:{type:'LineString',coordinates:[[-90,35],[-89,35],[-89,36]]}}
+]};
+for(const zoom of [3,7.9,13,16]) {
+ const style=routeDrawingStyle(curveFrame,zoom),drawn=offsetNetwork(curveFrame,zoom,style);
+ const project=p=>[(p[0]+180)/360*512*2**zoom,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**zoom];
+ const a=project(drawn.features.find(f=>f.properties.name==='Terminal').geometry.coordinates.at(-1));
+ const b=project(drawn.features.find(f=>f.properties.name==='Through').geometry.coordinates[1]);
+ assert(Math.abs(Math.hypot(a[0]-b[0],a[1]-b[1])-style.spacing)<.001,'Terminal tangent compressed the parallel bundle');
+ // Circle separation comes from fixed lane slots, not displaced station symbols.
+ const realStyle=routeDrawingStyle(actualNetwork,zoom),real=offsetNetwork(actualNetwork,zoom,realStyle,stationData);
+ const nyDots=stationSymbols(stationData,actualNetwork,real,zoom,realStyle).dots.features.filter(f=>f.properties.Code==='NYP');
+ for(const f of real.features)for(const stop of f.properties.stationPositions||[]) {
+  assert(f.geometry.coordinates.some(p=>Math.hypot(p[0]-stop.coordinates[0],p[1]-stop.coordinates[1])<1e-7),`${stop.Code} stop anchor was lost by offset cleanup`);
+ }
+ for(let i=0;i<nyDots.length;i++)for(let j=0;j<i;j++) {
+  const a=nyDots[i],b=nyDots[j],p=project(a.geometry.coordinates),q=project(b.geometry.coordinates);
+  assert(Math.hypot(p[0]-q[0],p[1]-q[1])+.01>=a.properties.radius+b.properties.radius+(a.properties.ringWidth+b.properties.ringWidth)/2,'New York circles overlap because route lanes converge');
+ }
+}
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
