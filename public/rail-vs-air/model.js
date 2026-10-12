@@ -337,3 +337,64 @@ export function alignLaneFrames(collection) {
     const [root,s]=find(i);return {...f,properties:{...f.properties,lane:(f.properties.lane||0)*s*anchor.get(root)}};
   })};
 }
+
+// Timetable service membership determines eligibility; geometry only positions
+// the symbol. Passing routes do not create a multi-service station.
+export function stationSymbols(stations, network, displayed, zoom, style) {
+  const world=512*2**zoom;
+  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+  const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
+  const maxOffset=style.spacing*Math.max(1,...network.features.map(f=>Math.abs(f.properties.lane||0)));
+  function index(collection,screen=false) {
+    const cell=screen?2*maxOffset+16:.025;
+    const grid=new Map();
+    for(const f of collection.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
+      const u=f.geometry.coordinates[i-1],v=f.geometry.coordinates[i],a=project(u),b=project(v),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);
+      if(!length)continue;
+      const entry={a,b,dx,dy,length,name:f.properties.name};
+      const first=screen?a:u,last=screen?b:v;
+      for(let x=Math.floor(Math.min(first[0],last[0])/cell);x<=Math.floor(Math.max(first[0],last[0])/cell);x++)for(let y=Math.floor(Math.min(first[1],last[1])/cell);y<=Math.floor(Math.max(first[1],last[1])/cell);y++) {
+        const key=x+','+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(entry);
+      }
+    }
+    return p=>{
+      const q=screen?project(p):p,result=new Set(),gx=Math.floor(q[0]/cell),gy=Math.floor(q[1]/cell);
+      for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const e of grid.get(x+','+y)||[])result.add(e);
+      return result;
+    };
+  }
+  const sourceNear=index(network),displayNear=index(displayed,zoom<9),dots=[],bars=[];
+  for(const station of stations.features) {
+    const names=new Set(station.properties.routeNames||[]);
+    if(names.size<2){dots.push(station);continue;}
+    const coordinate=station.geometry.coordinates,p=project(coordinate);
+    // NTAD stations and tracks can differ slightly. Keep the association within
+    // 750 m and require an actual stopping service's named route.
+    const metersPerPixel=40075016.686*Math.cos(coordinate[1]*Math.PI/180)/world;
+    let best=null,distance=750/metersPerPixel;
+    for(const e of sourceNear(coordinate)) {
+      if(!names.has(e.name))continue;
+      const t=Math.max(0,Math.min(1,((p[0]-e.a[0])*e.dx+(p[1]-e.a[1])*e.dy)/(e.length*e.length)));
+      const q=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(q[0]-p[0],q[1]-p[1]);
+      if(d<distance){distance=d;best={q,tangent:[e.dx/e.length,e.dy/e.length]};}
+    }
+    if(!best){dots.push(station);continue;}
+    const {q,tangent}=best,normal=[-tangent[1],tangent[0]],crossings=new Map();
+    for(const e of displayNear(unproject(q))) {
+      // Span all parallel visible lanes in this bundle, including passing lines.
+      if(Math.abs((e.dx*tangent[0]+e.dy*tangent[1])/e.length)<.7)continue;
+      const alongA=(e.a[0]-q[0])*tangent[0]+(e.a[1]-q[1])*tangent[1];
+      const alongB=(e.b[0]-q[0])*tangent[0]+(e.b[1]-q[1])*tangent[1];
+      if(alongA*alongB>0||Math.abs(alongB-alongA)<1e-7)continue;
+      const t=-alongA/(alongB-alongA),x=e.a[0]+t*e.dx,y=e.a[1]+t*e.dy;
+      const across=(x-q[0])*normal[0]+(y-q[1])*normal[1];
+      if(Math.abs(across)>maxOffset+style.spacing*2)continue;
+      if(!crossings.has(e.name)||Math.abs(across)<Math.abs(crossings.get(e.name)))crossings.set(e.name,across);
+    }
+    if([...names].filter(name=>crossings.has(name)).length<2){dots.push(station);continue;}
+    const values=[...crossings.values()],padding=style.highlightWidth/2+3;
+    const lo=Math.min(...values)-padding,hi=Math.max(...values)+padding;
+    bars.push({type:'Feature',properties:{...station.properties},geometry:{type:'LineString',coordinates:[unproject([q[0]+normal[0]*lo,q[1]+normal[1]*lo]),unproject([q[0]+normal[0]*hi,q[1]+normal[1]*hi])]}});
+  }
+  return {dots:{type:'FeatureCollection',features:dots},bars:{type:'FeatureCollection',features:bars}};
+}
