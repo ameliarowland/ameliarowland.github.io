@@ -131,3 +131,52 @@ export function mergedHighlights(records, shapes, color, lanes=new Map()) {
   }
   return {type:'FeatureCollection',features};
 }
+
+// Render qualifying coverage on the base network's exact path and lane. Timetable
+// shapes identify covered sections; they do not add a second competing centerline.
+export function networkHighlights(records, shapes, network, color) {
+  if(!network)return {type:'FeatureCollection',features:[]};
+  const nameByService=new Map(records.map(r=>[r.route,r.ntadName||r.route]));
+  const coverage=mergedHighlights(records,shapes,color),grid=new Map(),cell=.025;
+  for(const f of coverage.features) {
+    const name=nameByService.get(f.properties.route),points=f.geometry.coordinates;
+    for(let i=0;i<points.length-1;i++) {
+      const a=points[i],b=points[i+1];
+      for(let x=Math.floor(Math.min(a[0],b[0])/cell);x<=Math.floor(Math.max(a[0],b[0])/cell);x++)
+      for(let y=Math.floor(Math.min(a[1],b[1])/cell);y<=Math.floor(Math.max(a[1],b[1])/cell);y++) {
+        const key=name+'|'+x+'|'+y;
+        if(!grid.has(key))grid.set(key,[]);grid.get(key).push([a,b]);
+      }
+    }
+  }
+  function covered(name,a,b) {
+    const p=[(a[0]+b[0])/2,(a[1]+b[1])/2],cos=Math.cos(p[1]*Math.PI/180),gx=Math.floor(p[0]/cell),gy=Math.floor(p[1]/cell);
+    for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const [u,v] of grid.get(name+'|'+x+'|'+y)||[]) {
+      const dx=(v[0]-u[0])*cos,dy=v[1]-u[1],den=dx*dx+dy*dy;
+      if(!den)continue;
+      const t=Math.max(0,Math.min(1,((p[0]-u[0])*cos*dx+(p[1]-u[1])*dy)/den));
+      if(Math.hypot((p[0]-u[0])*cos-t*dx,p[1]-u[1]-t*dy)*111.32<=.75)return true;
+    }
+    return false;
+  }
+  const features=[];
+  for(const f of network.features) {
+    // Bound coverage classification to short sections without changing the path.
+    const original=f.geometry.coordinates,points=[original[0]],name=f.properties.name;let start=null;
+    for(let j=0;j<original.length-1;j++) {
+      const a=original[j],b=original[j+1],cos=Math.cos((a[1]+b[1])*Math.PI/360);
+      const steps=Math.max(1,Math.ceil(Math.hypot((b[0]-a[0])*cos,b[1]-a[1])*111.32/.5));
+      for(let k=1;k<=steps;k++)points.push(k===steps?b:[a[0]+(b[0]-a[0])*k/steps,a[1]+(b[1]-a[1])*k/steps]);
+    }
+    for(let i=0;i<points.length-1;i++) {
+      const yes=covered(name,points[i],points[i+1]);
+      if(yes&&start===null)start=i;
+      if(start!==null&&(!yes||i===points.length-2)) {
+        const end=yes?i+1:i;
+        features.push({type:'Feature',properties:{...f.properties,route:name,color:color(name)},geometry:{type:'LineString',coordinates:points.slice(start,end+1)}});
+        start=null;
+      }
+    }
+  }
+  return {type:'FeatureCollection',features};
+}
