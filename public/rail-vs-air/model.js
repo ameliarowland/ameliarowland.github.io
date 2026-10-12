@@ -2,7 +2,7 @@ export const AIRPORT_OVERHEAD = 180;
 export function delta(record) { return record.railMinutes - record.flightMinutes - AIRPORT_OVERHEAD; }
 export function qualifies(record, tolerance) { return delta(record) <= tolerance; }
 export function duration(minutes) { const n = Math.round(minutes); return `${Math.floor(n / 60)}h ${String(n % 60).padStart(2, '0')}m`; }
-const coordinateKey = point => point.map(v => v.toFixed(6)).join(',');
+const coordinateKey = point => point.map(v => v.toFixed(7)).join(',');
 function edgeKey(a,b) { const x=coordinateKey(a),y=coordinateKey(b); return x<y ? [x+'|'+y,1] : [y+'|'+x,-1]; }
 function corridorDirections(edges, pointsByKey) {
   const adjacency=new Map(), continuation=new Map(), unused=new Set(edges.keys()), result=new Map();
@@ -181,22 +181,26 @@ export function networkHighlights(records, shapes, network, color) {
   return {type:'FeatureCollection',features};
 }
 
-// Compute perpendicular offsets explicitly instead of using the renderer's
-// unbounded line-offset corner intersections. Acute joins are beveled at 2x offset.
-function simplifyScreen(points,tolerance=2) {
+// Compute perpendicular offsets on continuous paths using smoothed tangents.
+function smoothLaneTransitions(points,radius=24) {
   if(points.length<3)return points;
-  const keep=new Set([0,points.length-1]),stack=[[0,points.length-1]];
-  while(stack.length) {
-    const [lo,hi]=stack.pop(),a=points[lo],b=points[hi],dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;
-    let distance=-1,index=lo;
-    for(let j=lo+1;j<hi;j++) {
-      const p=points[j],t=den?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/den)):0;
-      const d=(p[0]-a[0]-t*dx)**2+(p[1]-a[1]-t*dy)**2;
-      if(d>distance){distance=d;index=j;}
-    }
-    if(distance>tolerance*tolerance){keep.add(index);stack.push([lo,index],[index,hi]);}
+  const distance=[0],integral=[0];
+  for(let i=1;i<points.length;i++) {
+    const span=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);
+    distance.push(distance.at(-1)+span);integral.push(integral.at(-1)+span*(points[i][2]+points[i-1][2])/2);
   }
-  return [...keep].sort((a,b)=>a-b).map(i=>points[i]);
+  const total=distance.at(-1);
+  function area(t) {
+    if(t<=0)return 0;if(t>=total)return integral.at(-1);
+    let lo=0,hi=distance.length-1;
+    while(hi-lo>1){const mid=(lo+hi)>>1;if(distance[mid]<=t)lo=mid;else hi=mid;}
+    const span=distance[hi]-distance[lo],x=t-distance[lo],a=points[lo][2],b=points[hi][2];
+    return integral[lo]+a*x+(span?(b-a)*x*x/(2*span):0);
+  }
+  return points.map((p,i)=>{
+    const lo=Math.max(0,distance[i]-radius),hi=Math.min(total,distance[i]+radius);
+    return [p[0],p[1],hi>lo?(area(hi)-area(lo))/(hi-lo):p[2]];
+  });
 }
 export function routeDrawingStyle(collection,zoom) {
   const nominal=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7;
@@ -205,63 +209,83 @@ export function routeDrawingStyle(collection,zoom) {
   const spacing=1.5*Math.min(nominal,cap/maxLane);
   return {spacing,baseWidth:Math.min(zoom<7?3.75:4.8,spacing*.78),highlightWidth:Math.min(zoom<7?5.25:6.3,spacing*.95)};
 }
+export function continuousRoutePaths(collection) {
+  const endpoints=new Map(),links=new Map(),used=new Set(),features=[];
+  collection.features.forEach((f,index)=>{
+    const p=f.geometry.coordinates;
+    for(const side of [0,1]) {
+      const a=p[side?p.length-1:0],b=p[side?p.length-2:1],key=(f.properties.name||f.properties.route)+'|'+a.map(v=>v.toFixed(7)).join(',');
+      const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;
+      if(!endpoints.has(key))endpoints.set(key,[]);
+      endpoints.get(key).push({index,side,out:[dx/len,dy/len],shared:f.properties.shared||1});
+    }
+  });
+  for(const ends of endpoints.values()) {
+    const pairs=[];
+    for(let i=0;i<ends.length;i++)for(let j=i+1;j<ends.length;j++) {
+      const a=ends[i],b=ends[j];if(a.index!==b.index)pairs.push({a,b,bundle:Math.min(a.shared,b.shared),dot:a.out[0]*b.out[0]+a.out[1]*b.out[1]});
+    }
+    pairs.sort((a,b)=>b.bundle-a.bundle||a.dot-b.dot);
+    for(const {a,b} of pairs) {
+      const ak=a.index+':'+a.side,bk=b.index+':'+b.side;
+      if(links.has(ak)||links.has(bk))continue;links.set(ak,b);links.set(bk,a);
+    }
+  }
+  function walk(index,side) {
+    const first=collection.features[index],coordinates=[],edgeLanes=[];
+    while(!used.has(index)) {
+      const f=collection.features[index],p=side?[...f.geometry.coordinates].reverse():f.geometry.coordinates,lane=(f.properties.lane||0)*(side?-1:1);
+      if(!coordinates.length)coordinates.push(p[0]);coordinates.push(...p.slice(1));
+      edgeLanes.push(...Array(p.length-1).fill(lane));used.add(index);
+      const next=links.get(index+':'+(1-side));if(!next||used.has(next.index))break;index=next.index;side=next.side;
+    }
+    features.push({type:'Feature',properties:{...first.properties,edgeLanes},geometry:{type:'LineString',coordinates}});
+  }
+  collection.features.forEach((f,index)=>{
+    for(const side of [0,1])if(!used.has(index)&&!links.has(index+':'+side))walk(index,side);
+  });
+  collection.features.forEach((f,index)=>{if(!used.has(index))walk(index,0);});
+  return {type:'FeatureCollection',features};
+}
 export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom)) {
   const world=512*2**zoom;
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=drawingStyle.spacing;
-  const features=collection.features.map(f=>{
-    const d=(f.properties.lane||0)*spacing;
-    const points=simplifyScreen(f.geometry.coordinates.map(project).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7)).filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7);
+  const tangentRadius=Math.max(4,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0))));
+  const features=continuousRoutePaths(collection).features.map(f=>{
+    const lanes=f.properties.edgeLanes;
+    const projected=f.geometry.coordinates.map((p,i)=>{
+      const xy=project(p),lane=i===0?lanes[0]:i===lanes.length?lanes.at(-1):(lanes[i-1]+lanes[i])/2;
+      return [...xy,lane];
+    });
+    // Shared centerlines were simplified together by the data builder. Do not
+    // independently simplify each service: different retained bend vertices
+    // would give neighboring lanes different normals and make them weave.
+    const points=projected.filter((p,i,all)=>i===0||Math.hypot(p[0]-all[i-1][0],p[1]-all[i-1][1])>1e-7);
     if(points.length<2)return f;
-    const path=points,normals=[];
-    for(let i=0;i<path.length-1;i++) {
-      const dx=path[i+1][0]-path[i][0],dy=path[i+1][1]-path[i][1],len=Math.hypot(dx,dy);
-      normals.push([-dy/len,dx/len]);
+    const path=smoothLaneTransitions(points);
+    // Estimate one tangent over a bundle-sized window. Sharp source vertices
+    // otherwise create inside-out offset corners when the bundle is wider than
+    // the local bend radius. Keep every lane at its full perpendicular distance.
+    const distances=[0];
+    for(let i=1;i<path.length;i++)distances.push(distances.at(-1)+Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]));
+    function at(t) {
+      if(t<=0)return path[0];if(t>=distances.at(-1))return path.at(-1);
+      let lo=0,hi=distances.length-1;
+      while(hi-lo>1){const mid=(lo+hi)>>1;if(distances[mid]<=t)lo=mid;else hi=mid;}
+      const f=(t-distances[lo])/(distances[hi]-distances[lo]);
+      return [path[lo][0]+(path[hi][0]-path[lo][0])*f,path[lo][1]+(path[hi][1]-path[lo][1])*f];
     }
-    const shifted=[];
-    const add=(p,n,amount=d)=>shifted.push([p[0]+n[0]*amount,p[1]+n[1]*amount]);
-    add(path[0],normals[0],d);
-    for(let i=1;i<path.length-1;i++) {
-      const localOffset=d;
-      const a=normals[i-1],b=normals[i],sx=a[0]+b[0],sy=a[1]+b[1],length=Math.hypot(sx,sy);
-      if(length<1e-6){add(path[i],a,localOffset);add(path[i],b,localOffset);continue;}
-      const bisector=[sx/length,sy/length],den=bisector[0]*b[0]+bisector[1]*b[1],miter=localOffset/den;
-      if(!Number.isFinite(miter)||Math.abs(miter)>Math.abs(localOffset)*2){add(path[i],a,localOffset);add(path[i],b,localOffset);}
-      else add(path[i],bisector,miter);
-    }
-    add(path.at(-1),normals.at(-1),d);
+    const radius=tangentRadius;
+    const shifted=path.map((p,i)=>{
+      const a=at(distances[i]-radius),b=at(distances[i]+radius);
+      let dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
+      if(len<1e-7){const q=path[Math.min(i+1,path.length-1)],r=path[Math.max(0,i-1)];dx=q[0]-r[0];dy=q[1]-r[1];len=Math.hypot(dx,dy)||1;}
+      const amount=p[2]*spacing;return [p[0]-dy/len*amount,p[1]+dx/len*amount];
+    });
     return {...f,geometry:{type:'LineString',coordinates:shifted.map(unproject)}};
   });
-  // Maintain the full lane offset at endpoints. Join only same-service sections
-  // whose original endpoints coincide; never pull the bundle into its center.
-  const endpoints=new Map();
-  collection.features.forEach((source,index)=>{
-    const original=source.geometry.coordinates,rendered=features[index].geometry.coordinates;
-    for(const side of [0,1]) {
-      const anchor=original[side?original.length-1:0],end=rendered[side?rendered.length-1:0];
-      const key=(source.properties.name||source.properties.route)+'|'+anchor.map(v=>v.toFixed(6)).join(',');
-      if(!endpoints.has(key))endpoints.set(key,[]);
-      endpoints.get(key).push({index,end,properties:source.properties});
-    }
-  });
-  for(const ends of endpoints.values()) {
-    if(ends.length<2)continue;
-    // A small spanning tree connects branch junctions without duplicate strokes.
-    const connected=[ends[0]],pending=ends.slice(1);
-    while(pending.length) {
-      let best=null;
-      for(let i=0;i<pending.length;i++)for(const a of connected) {
-        const b=pending[i];if(a.index===b.index)continue;
-        const x=project(a.end),y=project(b.end),distance=Math.hypot(x[0]-y[0],x[1]-y[1]);
-        if(!best||distance<best.distance)best={a,b,i,distance};
-      }
-      if(!best)break;
-      const {a,b,i,distance}=best;pending.splice(i,1);connected.push(b);
-      if(distance<.1)continue;
-      features.push({type:'Feature',properties:{...a.properties,displayJoin:true},geometry:{type:'LineString',coordinates:[a.end,b.end]}});
-    }
-  }
   return {type:'FeatureCollection',features};
 }
 
@@ -276,7 +300,7 @@ export function alignLaneFrames(collection) {
     if(rank[ra]<rank[rb]){parent[ra]=rb;sign[ra]=parity;}
     else{parent[rb]=ra;sign[rb]=parity;if(rank[ra]===rank[rb])rank[ra]++;}
   }
-  const point=p=>p.map(v=>v.toFixed(6)).join(','),edges=new Map(),ends=new Map();
+  const point=p=>p.map(v=>v.toFixed(7)).join(','),edges=new Map(),ends=new Map();
   collection.features.forEach((f,index)=>{
     const p=f.geometry.coordinates;
     for(let j=0;j<p.length-1;j++) {
@@ -289,16 +313,22 @@ export function alignLaneFrames(collection) {
       const a=p[side?p.length-1:0],b=p[side?p.length-2:1];
       const key=(f.properties.name||f.properties.route)+'|'+point(a),dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
       if(!len)continue;
-      if(!ends.has(key))ends.set(key,[]);ends.get(key).push({index,side,out:[dx/len,dy/len]});
+      if(!ends.has(key))ends.set(key,[]);ends.get(key).push({index,side,out:[dx/len,dy/len],shared:f.properties.shared||1});
     }
   });
   for(const group of ends.values()) {
+    // Pair a through continuation at branches without imposing contradictory
+    // all-pairs parity constraints on the diverging arms.
     const pairs=[];
     for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++) {
-      const a=group[i],b=group[j];if(a.index!==b.index)pairs.push({a,b,dot:a.out[0]*b.out[0]+a.out[1]*b.out[1]});
+      const a=group[i],b=group[j];if(a.index!==b.index)pairs.push({a,b,bundle:Math.min(a.shared,b.shared),dot:a.out[0]*b.out[0]+a.out[1]*b.out[1]});
     }
-    pairs.sort((a,b)=>a.dot-b.dot);
-    for(const {a,b} of pairs)link(a.index,b.index,a.side===b.side?-1:1);
+    pairs.sort((a,b)=>b.bundle-a.bundle||a.dot-b.dot);
+    const paired=new Set();
+    for(const {a,b} of pairs){
+      if(paired.has(a)||paired.has(b))continue;
+      link(a.index,b.index,a.side===b.side?-1:1);paired.add(a);paired.add(b);
+    }
   }
   // Anchor each component to its first stored frame for stable redraws.
   const anchor=new Map();
