@@ -128,3 +128,11 @@ Station circles align across the dominant local route bundle using a weighted pr
 Station-row directions are now resolved once from route topology and remain fixed across zooms. A row's full width cannot exceed half the screen distance to its closest connected station. Dense overview rows therefore overlap more, keeping geometry local; normal separation returns when the station distances grow on screen. Every circle keeps its normal zoom-dependent size and remains attached to the line. Fractional-zoom checks cover 5.7, 5.8 and 5.9, assert stable directions and verify that offset segments retain forward progress along each station pair.
 
 Chicago Union's row runs northwest to southeast while preserving the requested west-to-east lane order. Its northern, western and southern shared approaches carry that frame; the eastern Hammond–Whiting family retains its requested north-to-south arrangement. A regression check compares arrivals from different approach corridors, not only routes sharing the same station pair.
+
+## Current spacing and route-side preferences
+
+Outside Chicago Union, adjacent route positions use exactly one circle outer diameter, so circles touch without overlapping and spacing is the same at every station for a given zoom. The prior per-station crowding cap is retained only at Chicago Union, as requested. This replaces the overview compression described above. Row directions remain fixed across zoom levels; circles are never culled.
+
+Chicago's northern/western approach and eastern approach use separate aligned portions of its compact station row to preserve the requested lane orders without crossing the arriving families. Glenview uses a transverse row so Borealis, Empire Builder and Hiawatha remain visible as separate strokes along the Chicago approach.
+
+Northeast Regional is on the south/east edge throughout its shared corridors. Texas Eagle is north of Sunset Limited. On the west coast, the west-to-east priority is Coast Starlight, Amtrak Cascades, Empire Builder. Los Angeles Union uses Coast Starlight, Pacific Surfliner, Southwest Chief, Texas Eagle, Sunset Limited; Coast Starlight's western placement supersedes the earlier eastern placement. These preferences are verified from rendered coordinates.
