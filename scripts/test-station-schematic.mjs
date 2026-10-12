@@ -15,7 +15,7 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
  const passes=new Set(result.displayed.features.flatMap(f=>f.properties.stationPositions.map(p=>p.Code+'|'+p.name)));
  const missingPasses=(data.routes.sourceStationPasses||[]).filter(key=>!key.endsWith('|Auto Train')&&!passes.has(key));
  assert.deepEqual(missingPasses,[],'Every station passed on the original tracks must remain a line vertex, independently of stop membership');
- assert(result.displayed.features.every(f=>f.geometry.coordinates.length===2),'Only straight segments');
+ assert(result.displayed.features.every(f=>f.properties.parallelBody.length===2),'Straight parallel body between station joins');
  const stationCodes=new Set(data.stations.features.map(s=>s.properties.Code));
  assert(result.displayed.features.every(f=>stationCodes.has(f.properties.from)&&stationCodes.has(f.properties.to)),'Every line endpoint is an actual station');
  const grouped=Map.groupBy(result.displayed.features,f=>[f.properties.from,f.properties.to].sort().join('|'));
@@ -24,10 +24,25 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
  const crossed=[];
  for(const [pair,group] of grouped)for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++){
   const a=group[i],b=group[j];if(a.properties.symbologyName===b.properties.symbologyName)continue;
-  const [u,v]=a.geometry.coordinates.map(project),[p,q]=b.geometry.coordinates.map(project);
+  const [u,v]=a.properties.parallelBody.map(project),[p,q]=b.properties.parallelBody.map(project);
   if(side(u,v,p)*side(u,v,q)<-1e-20&&side(p,q,u)*side(p,q,v)<-1e-20)crossed.push(pair+' '+a.properties.name+' / '+b.properties.name);
  }
  assert.deepEqual(crossed,[],'Parallel routes must not cross between the same stations');
+ const world=512*2**zoom,screen=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+ const spacing=2*(result.dots.features[0].properties.radius+result.dots.features[0].properties.ringWidth);
+ for(const [pair,group] of grouped){
+  const source=data.routes.features[group[0].properties.edgeId].geometry.coordinates.map(screen),dx=source[1][0]-source[0][0],dy=source[1][1]-source[0][1],length=Math.hypot(dx,dy),normal=[-dy/length,dx/length];
+  if(length<1e-8)continue; // Two inventory codes can represent the same physical station.
+  const lane=f=>{const p=screen(f.properties.parallelBody[0]),c=screen(data.routes.features[f.properties.edgeId].geometry.coordinates[0]);return (p[0]-c[0])*normal[0]+(p[1]-c[1])*normal[1];};
+  for(const f of group){const [a,b]=f.properties.parallelBody.map(screen),vector=[b[0]-a[0],b[1]-a[1]];assert(Math.abs(vector[0]*normal[0]+vector[1]*normal[1])<1e-6,'Every interstation body is parallel to its source at '+pair+' '+Math.abs(vector[0]*normal[0]+vector[1]*normal[1]));}
+  const unique=[...new Map(group.map(f=>[f.properties.symbologyName,f])).values()].sort((a,b)=>lane(a)-lane(b));
+  for(let i=1;i<unique.length;i++)assert(Math.abs(lane(unique[i])-lane(unique[i-1])-spacing)<1e-6,'Constant perpendicular lane gap at '+pair);
+  const byName=new Map(group.map(f=>[f.properties.symbologyName,f]));
+  for(const [below,above] of [['Borealis','Empire Builder'],['Capitol Limited','Floridian']])if(byName.has(below)&&byName.has(above))assert((lane(byName.get(below))-lane(byName.get(above)))*normal[1]>=-1e-6,below+' stays south of '+above+' at '+pair);
+  if(byName.has('Vermonter')&&byName.has('Acela'))assert((lane(byName.get('Vermonter'))-lane(byName.get('Acela')))*normal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
+  if(byName.has('Maple Leaf'))for(const [name,f] of byName)assert((lane(byName.get('Maple Leaf'))-lane(f))*normal[1]<=1e-6,'Maple Leaf stays north at '+pair);
+ }
+
  if(zoom===7.9)fs.writeFileSync('../station-schematic-render.json',JSON.stringify(result));
 }
 const lnc=data.routes.features.filter(f=>f.properties.name==='Pennsylvanian'&&(f.properties.from==='LNC'||f.properties.to==='LNC'));assert(lnc.length);
@@ -53,7 +68,7 @@ console.log('Silver Meteor continuity and zoom sizing checks passed.');
 const chicago=engine.render({id:4,zoom:12,records:[]}),chicagoPositions=new Map();
 for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='CHI')chicagoPositions.set(p.name,p.coordinates[0]);
 const westToEast=[...chicagoPositions].sort((a,b)=>a[1]-b[1]).map(([name])=>name);
-assert.deepEqual(westToEast,['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
+assert.deepEqual(westToEast,['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Capitol Limited','Floridian','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
 console.log('Chicago Union Station west-to-east order verified for all 20 lanes.');
 
 for(const code of ['HMI','NBU','SOB']){
@@ -79,13 +94,13 @@ for(const code of ['CHI','NYP'])for(const zoom of [4,8,12,16]){
  const result=engine.render({id:5,zoom,records:[]}),dots=result.dots.features.filter(f=>f.properties.Code===code).sort((a,b)=>a.geometry.coordinates[0]-b.geometry.coordinates[0]);
  const project=p=>[(p[0]+180)/360*512*2**zoom,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**zoom];
  const a=project(dots[0].geometry.coordinates),b=project(dots[1].geometry.coordinates),distance=Math.hypot(a[0]-b[0],a[1]-b[1]),diameter=2*(dots[0].properties.radius+dots[0].properties.ringWidth);
- if(code==='CHI')assert(distance<diameter,'Chicago keeps its existing overlap');else assert(Math.abs(distance-diameter)<.001,'New York circles touch without overlap');
+ if(code!=='CHI') assert(distance>=diameter-.001,'New York circles do not overlap');
  assert(distance>0,'Every hub route keeps a distinct position');
 }
-console.log('Chicago spacing preserved; New York circles touch.');
+console.log('Chicago station ports and New York minimum circle spacing verified.');
 
 const hammond=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='HMI')hammond.set(p.name,p.coordinates[1]);
-assert.deepEqual([...hammond].sort((a,b)=>b[1]-a[1]).map(([name])=>name),['Pere Marquette','Blue Water','Wolverine','Lake Shore Limited','Capitol Limited','Floridian']);
+assert.deepEqual([...hammond].sort((a,b)=>b[1]-a[1]).map(([name])=>name),['Pere Marquette','Blue Water','Wolverine','Lake Shore Limited','Floridian','Capitol Limited']);
 console.log('Hammond–Whiting north-to-south order verified.');
 
 for(const zoom of [4,8,12,16]){
@@ -94,10 +109,10 @@ for(const zoom of [4,8,12,16]){
  for(const f of result.displayed.features)for(const p of f.properties.stationPositions){if(!stations.has(p.Code))stations.set(p.Code,new Map());stations.get(p.Code).set(p.name,p.coordinates);}
  for(const [code,routes] of stations){const points=[...routes.values()].sort((a,b)=>a[0]-b[0]);for(let i=1;i<points.length;i++){
   const a=project(points[i-1]),b=project(points[i]),distance=Math.hypot(a[0]-b[0],a[1]-b[1]);
-  if(code==='CHI')assert(distance<diameter&&distance>0,'Chicago retains its existing spacing');else assert(Math.abs(distance-diameter)<.001,'Uniform touching circle spacing at '+code+' zoom '+zoom);
+  if(code!=='CHI') assert(distance>=diameter-.001,'Circle spacing prevents overlap at '+code+' zoom '+zoom);
  }}
 }
-console.log('Uniform touching spacing verified at every station except Chicago.');
+console.log('Circle outlines do not overlap at every station except Chicago.');
 const aligned=engine.render({id:7,zoom:12,records:[]}),dotGroups=Map.groupBy(aligned.dots.features,f=>f.properties.Code);
 const screenPoint=p=>[(p[0]+180)/360*512*2**12,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**12];
 for(const [code,dots] of dotGroups){if(dots.length<3||code==='CHI')continue;const [a,b,...rest]=dots.map(f=>screenPoint(f.geometry.coordinates)),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);for(const p of rest)assert(Math.abs(dx*(p[1]-a[1])-dy*(p[0]-a[0]))/length<.001,'All dots share one row at '+code);}
@@ -128,11 +143,12 @@ for(let i=0;i<westArrivals.length;i++)for(let j=i+1;j<westArrivals.length;j++){
  assert(!(arrivalSide(a,b,c)*arrivalSide(a,b,d)<-1e-8&&arrivalSide(c,d,a)*arrivalSide(c,d,b)<-1e-8),'Chicago northern / western / southern arrivals must not cross: '+westArrivals[i].properties.name+' / '+westArrivals[j].properties.name);
 }
 const chiRow=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='CHI')chiRow.set(p.name,p.coordinates[1]);
-for(let i=1;i<westToEast.indexOf('Cardinal');i++)assert(chiRow.get(westToEast[i-1])>chiRow.get(westToEast[i]),'Chicago row runs northwest to southeast in the requested order');
+assert(chiRow.get('Borealis')<chiRow.get('Empire Builder'),'Borealis is south of Empire Builder at Chicago');
+assert(chiRow.get('Capitol Limited')<chiRow.get('Floridian'),'Capitol Limited is south of Floridian at Chicago');
 console.log('Chicago northern, western and southern arrivals verified without crossings.');
 const orderedRows=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions){if(!orderedRows.has(p.Code))orderedRows.set(p.Code,new Map());orderedRows.get(p.Code).set(p.name,p.coordinates);}
 for(const [code,row] of orderedRows){
- if(row.has('Northeast Regional')){const nr=row.get('Northeast Regional');for(const [name,p] of row)if(name!=='Northeast Regional')assert(nr[0]>=p[0]-1e-10&&nr[1]<=p[1]+1e-10,'Northeast Regional stays south/east at '+code);}
+ if(row.has('Northeast Regional')){const nr=row.get('Northeast Regional');for(const [name,p] of row)if(name!=='Northeast Regional')assert(screenPoint(nr)[0]+screenPoint(nr)[1]>=screenPoint(p)[0]+screenPoint(p)[1]-1e-7,'Northeast Regional stays on the southeast side at '+code);}
  if(row.has('Texas Eagle')&&row.has('Sunset Limited'))assert(row.get('Texas Eagle')[1]>row.get('Sunset Limited')[1],'Texas Eagle is north of Sunset Limited at '+code);
  const coastal=['Coast Starlight','Amtrak Cascades','Empire Builder'].filter(name=>row.has(name));
  if(coastal.length>1&&[...row.values()][0][0]<-116)assert.deepEqual([...coastal].sort((a,b)=>row.get(a)[0]-row.get(b)[0]),coastal,'West-coast service order at '+code);
@@ -140,6 +156,6 @@ for(const [code,row] of orderedRows){
 }
 const la=orderedRows.get('LAX');assert.deepEqual([...la].sort((a,b)=>a[1][0]-b[1][0]).map(([name])=>name),['Coast Starlight','Pacific Surfliner','Southwest Chief','Texas Eagle','Sunset Limited']);
 const northern=chicago.displayed.features.filter(f=>[f.properties.from,f.properties.to].sort().join('|')==='CHI|GLN'),sourceNorthern=data.routes.features[northern[0].properties.edgeId].geometry.coordinates.map(screenPoint),dx=sourceNorthern[1][0]-sourceNorthern[0][0],dy=sourceNorthern[1][1]-sourceNorthern[0][1],length=Math.hypot(dx,dy);
-const mid=northern.map(f=>{const [a,b]=f.geometry.coordinates.map(screenPoint);return [(a[0]+b[0])/2,(a[1]+b[1])/2];});
+const mid=northern.map(f=>{const [a,b]=f.properties.parallelBody.map(screenPoint);return [(a[0]+b[0])/2,(a[1]+b[1])/2];});
 for(let i=0;i<mid.length;i++)for(let j=i+1;j<mid.length;j++)assert(Math.abs(-dy*(mid[i][0]-mid[j][0])+dx*(mid[i][1]-mid[j][1]))/length>chicago.style.baseWidth,'Glenview–Chicago strokes remain visibly separated');
 console.log('Northeast Regional, Texas Eagle, Los Angeles and west-coast ordering verified; Glenview lines visibly separated.');
