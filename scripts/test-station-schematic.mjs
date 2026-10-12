@@ -11,6 +11,7 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
  const points=new Set(result.displayed.features.flatMap(f=>f.geometry.coordinates.map(p=>(f.properties.symbologyName||f.properties.name)+'|'+p.join(','))));
  const missing=result.dots.features.filter(f=>!points.has(f.properties.symbolRoutes[0]+'|'+f.geometry.coordinates.join(',')));
  console.log(JSON.stringify({zoom,ms:result.layoutMilliseconds,segments:result.displayed.features.length,dots:result.dots.features.length,missing:missing.map(f=>f.properties.Code+'|'+f.properties.symbolRoutes[0])}));
+ assert(result.dots.features.every(f=>2*f.properties.radius<result.style.baseWidth),'White stop dots fit inside their route bands');
  assert.equal(result.dots.features.length,909);assert.equal(missing.length,0,'All station circles must lie on their route');
  const passes=new Set(result.displayed.features.flatMap(f=>f.properties.stationPositions.map(p=>p.Code+'|'+p.name)));
  const missingPasses=(data.routes.sourceStationPasses||[]).filter(key=>!key.endsWith('|Auto Train')&&!passes.has(key));
@@ -29,7 +30,7 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
  }
  assert.deepEqual(crossed,[],'Parallel routes must not cross between the same stations');
  const world=512*2**zoom,screen=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
- const spacing=2*(result.dots.features[0].properties.radius+result.dots.features[0].properties.ringWidth);
+ const spacing=result.style.laneSpacing;
  for(const [pair,group] of grouped){
   const source=data.routes.features[group[0].properties.edgeId].geometry.coordinates.map(screen),dx=source[1][0]-source[0][0],dy=source[1][1]-source[0][1],length=Math.hypot(dx,dy),normal=[-dy/length,dx/length];
   if(length<1e-8)continue; // Two inventory codes can represent the same physical station.
@@ -40,6 +41,8 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
   const byName=new Map(group.map(f=>[f.properties.symbologyName,f]));
   for(const [below,above] of [['Borealis','Empire Builder'],['Capitol Limited','Floridian']])if(byName.has(below)&&byName.has(above))assert((lane(byName.get(below))-lane(byName.get(above)))*normal[1]>=-1e-6,below+' stays south of '+above+' at '+pair);
   if(byName.has('Vermonter')&&byName.has('Acela'))assert((lane(byName.get('Vermonter'))-lane(byName.get('Acela')))*normal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
+  for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
+  if(unique.length===1&&!pair.split('|').includes('CHI'))assert(Math.abs(lane(unique[0]))<1e-6,'Single-route corridors must not inherit a distant hub displacement at '+pair);
   if(byName.has('Maple Leaf'))for(const [name,f] of byName)assert((lane(byName.get('Maple Leaf'))-lane(f))*normal[1]<=1e-6,'Maple Leaf stays north at '+pair);
  }
 
