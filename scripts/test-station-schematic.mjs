@@ -158,6 +158,8 @@ for(const [code,row] of orderedRows){
  if(coastal.length>1&&[...row.values()][0][0]<-116)assert.deepEqual([...coastal].sort((a,b)=>row.get(a)[0]-row.get(b)[0]),coastal,'West-coast service order at '+code);
  if(row.has('Coast Starlight')&&[...row.values()][0][0]<-116)for(const [name,p] of row)assert(row.get('Coast Starlight')[0]<=p[0]+1e-10,'Coast Starlight remains westernmost at '+code);
 }
+const southBend=orderedRows.get('SOB'),southBendNames=['Lake Shore Limited','Floridian','Capitol Limited'];assert.deepEqual(southBendNames.toSorted((a,b)=>southBend.get(b)[1]-southBend.get(a)[1]),southBendNames,'South Bend north-to-south order');
+const pittsburgh=orderedRows.get('PGH');assert(pittsburgh.get('Pennsylvanian')[1]>pittsburgh.get('Floridian')[1],'Pennsylvanian north of Floridian / Silver Star at Pittsburgh');
 const la=orderedRows.get('LAX');assert.deepEqual([...la].sort((a,b)=>a[1][0]-b[1][0]).map(([name])=>name),['Coast Starlight','Pacific Surfliner','Southwest Chief','Texas Eagle','Sunset Limited']);
 const northern=chicago.displayed.features.filter(f=>[f.properties.from,f.properties.to].sort().join('|')==='CHI|GLN'),sourceNorthern=data.routes.features[northern[0].properties.edgeId].geometry.coordinates.map(screenPoint),dx=sourceNorthern[1][0]-sourceNorthern[0][0],dy=sourceNorthern[1][1]-sourceNorthern[0][1],length=Math.hypot(dx,dy);
 const mid=northern.map(f=>{const [a,b]=f.properties.parallelBody.map(screenPoint);return [(a[0]+b[0])/2,(a[1]+b[1])/2];});
