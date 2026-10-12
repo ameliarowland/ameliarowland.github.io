@@ -137,6 +137,16 @@ for(const name of ['Pennsylvanian','Acela','Cardinal','Carolinian','Crescent','K
  assert(through,`${name} is disconnected at North Philadelphia`);
  assert(![through.geometry.coordinates[0],through.geometry.coordinates.at(-1)].some(p=>[phnA,phnB].some(q=>p[0]===q[0]&&p[1]===q[1])),`${name} ends at the connection`);
 }
+// The NEC must not reverse its lane frame through 30th Street Station.
+for(const name of ['Acela','Cardinal','Carolinian','Crescent','Northeast Regional','Palmetto','Silver Meteor','Silver Star','Vermonter']) {
+ const lanes=[];
+ for(const f of continuousRoutePaths(actualNetwork).features.filter(f=>f.properties.name===name)) {
+  const p=f.geometry.coordinates;
+  for(let i=1;i<p.length;i++)if(p[i][0]>-75.2&&p[i][0]<-75.175&&p[i][1]>39.949&&p[i][1]<39.968)lanes.push(f.properties.edgeLanes[i-1]);
+ }
+ assert(lanes.length>=3,`${name} station approach is missing`);
+ assert(lanes.every(l=>l===0||Math.sign(l)===Math.sign(lanes.find(x=>x!==0))),`${name} reverses order at Philadelphia`);
+}
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
