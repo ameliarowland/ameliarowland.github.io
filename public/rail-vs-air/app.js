@@ -1,4 +1,4 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,pinchedNetwork,pinchedStationSymbols,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=pinched-stations-1';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -41,7 +41,7 @@ function renderRouteGeometry() {
  if(!available)return;
  const zoom=map.getZoom();lastRenderZoom=zoom;
  const drawingStyle=routeDrawingStyle(networkData,zoom);
- const displayed=offsetNetwork(networkData,zoom,drawingStyle,stationDataCache);
+ const displayed=pinchedNetwork(networkData,zoom,drawingStyle,stationDataCache);
  map.getSource('network').setData(displayed);
  const focus={type:'FeatureCollection',features:displayed.features.filter(f=>(f.properties.symbologyName||f.properties.name)===activeRouteName)};
  map.getSource('route-focus').setData(focus);
@@ -53,10 +53,9 @@ function renderRouteGeometry() {
  map.getSource('qualifying').setData(networkHighlights(qualifiedRecords,shapes,displayed,color));
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
- const symbols=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle);
- map.getSource('stations').setData(symbols.dots);
- const selectedStops={type:'FeatureCollection',features:symbols.dots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName))).map(f=>({...f,properties:{...f.properties,focusRadius:f.properties.radius}}))};
- map.getSource('station-focus').setData(selectedStops);
+ const dots=pinchedStationSymbols(stationDataCache,displayed,zoom,activeRouteName);
+ map.getSource('stations').setData(dots);
+ map.getSource('station-focus').setData(activeRouteName?dots:empty());
 }
 // Selection is a transient map state, never restored from URL filters.
 const deselectionClicks=new WeakSet();
