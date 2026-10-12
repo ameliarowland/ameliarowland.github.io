@@ -122,7 +122,7 @@ async function init() {
    map.addLayer({id:'station-bars',type:'line',source:'station-bars',layout:{'line-cap':'round'},paint:{'line-color':'#ffffff','line-width':4}});
    const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
    for(const id of ['stations','station-bars'])map.on('click',id,stationPopup);
-   map.on('click','network',e=>{const name=e.features[0].properties.name;const service=records.find(r=>r.ntadName===name)?.route;if(service){$('route').value=service;draw();}else{new maplibregl.Popup().setLngLat(e.lngLat).setText(`${name}: no matched travel-time comparisons in this snapshot.`).addTo(map);}});
+   map.on('click','network',e=>{if(map.queryRenderedFeatures(e.point,{layers:['stations','station-bars']}).length)return;const name=e.features[0].properties.name;const service=records.find(r=>r.ntadName===name)?.route;if(service){$('route').value=service;draw();}else{new maplibregl.Popup().setLngLat(e.lngLat).setText(`${name}: no matched travel-time comparisons in this snapshot.`).addTo(map);}});
    for(const id of ['stations','station-bars','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
    available=true;draw();
    // Offsets remain pixel-sized while zooming; the final frame always refreshes.
