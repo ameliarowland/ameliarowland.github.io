@@ -122,3 +122,5 @@ All stations allow modest stop-circle overlap: local lane spacing is capped at 8
 Hammond–Whiting uses the requested north-to-south sequence: Pere Marquette, Blue Water, Wolverine, Lake Shore Limited, Capitol Limited, Floridian / Silver Star. Diagonal station rows now point northeast; scalar ordering compensates to preserve existing north-to-south preferences elsewhere and Chicago's west-to-east order.
 
 Chicago's western group places Southwest Chief immediately after California Zephyr and before Carl Sandburg, with Illinois Zephyr following Carl Sandburg. This order continues through shared station segments.
+
+Station circles align across the dominant local route bundle using a weighted principal track direction. All markers at one station share one row. Tight bends and branch hubs retain a common diagonal frame only where a transverse row would introduce crossings; Chicago's explicitly ordered approach also retains its established frame. Pomona and Ontario have nearly vertical rows across their east-west tracks, avoiding the previous diagonal staggering. Station markers stay attached to the straight route segments.
