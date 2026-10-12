@@ -226,3 +226,22 @@ def reorder_display_bundles(fc,priorities):
    f['properties']['lanePriority']=priorities.index(name) if name in priorities else None
    f['properties']['shared']=len(group)
  return fc
+
+
+def trim_philadelphia_station_branches(fc):
+ from copy import deepcopy
+ features=deepcopy(fc['features'])
+ # Both services reverse at Philadelphia: end their station branches at the
+ # station projection, rather than extending to the source track section end.
+ import math
+ station=(-75.1810427766141,39.9556230655432)
+ project=lambda p:(p[0],math.log(math.tan(math.pi/4+math.radians(p[1])/2))*180/math.pi)
+ q=project(station)
+ for f in features:
+  p=f['geometry']['coordinates']
+  if f['properties']['name'] not in ['Pennsylvanian','Keystone Service'] or p[0]!=[-75.1829788,39.9516484]:continue
+  a,b=project(p[0]),project(p[1]);dx,dy=b[0]-a[0],b[1]-a[1]
+  t=max(0,min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dy)/(dx*dx+dy*dy)))
+  target=[a[0]+t*dx,math.degrees(2*math.atan(math.exp(math.radians(a[1]+t*dy)))-math.pi/2)]
+  f['geometry']={'type':'LineString','coordinates':[target]+[list(point) for point in p[1:]]}
+ return {'type':'FeatureCollection','features':features}
