@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -20,6 +20,12 @@ for(const values of bent.values())assert(values.every(v=>v===values[0]));
 const reference={type:'FeatureCollection',features:[{type:'Feature',properties:{name:'A',lane:1.5},geometry:{type:'LineString',coordinates:bend}}]};
 const aligned=prepareLanes([{shapeId:'a',route:'A'}],bendShapes,reference);
 assert.deepEqual(aligned.get('a|A'),[1.5,1.5,1.5]);
+// Qualifying strokes must reuse exact base-network vertices and lane offsets.
+const canonical={type:'FeatureCollection',features:[{type:'Feature',properties:{name:'A',lane:-1.5},geometry:{type:'LineString',coordinates:[[0,0],[.001,.001],[.002,.001]]}}]};
+const overlay=networkHighlights([{route:'A',ntadName:'A',shapeId:'x',shapeRange:[0,2]}],{x:[[0,.0001],[.001,.0011],[.002,.0011]]},canonical,()=> '#fff');
+assert.equal(overlay.features.length,1);
+assert.deepEqual(overlay.features[0].geometry.coordinates,canonical.features[0].geometry.coordinates);
+assert.equal(overlay.features[0].properties.lane,-1.5);
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
