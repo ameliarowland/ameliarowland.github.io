@@ -1,9 +1,11 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=raw-geometry-4';
+import {createSchematicEngine} from './schematic.js?v=station-schematic-1';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-1';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
 let colors=new Map(),networkData=null,stationDataCache=null,comparisonStationCache=null,qualifiedRecords=[],activeRouteName=null,lastRenderZoom=null,available=false;
+let schematicEngine=null,lastDisplayed=null;
 let layoutWorker=null,layoutRequest=0,displayedKey=null;
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
@@ -47,6 +49,8 @@ function renderRouteGeometry() {
 function applyRouteLayout(result) {
  if(result.id!==layoutRequest)return;
  const {displayed,dots:allDots,style:drawingStyle}=result;
+ lastDisplayed=displayed;
+ if(selected){const ids=new Set(schematicEngine.journey(selected));map.getSource("selected").setData({type:"FeatureCollection",features:displayed.features.filter(f=>ids.has(f.properties.edgeId))});}
  lastRenderZoom=result.zoom;
  if(displayedKey!==result.key){map.getSource('network').setData(displayed);displayedKey=result.key;}
  const focus={type:'FeatureCollection',features:displayed.features.filter(f=>(f.properties.symbologyName||f.properties.name)===activeRouteName)};
@@ -86,11 +90,13 @@ function closeSelection() {selected=null;$('selection').hidden=true;if(available
 function select(r) {
  selected=r;
  const rail=r.railMinutes,air=r.flightMinutes+AIRPORT_OVERHEAD,max=Math.max(rail,air);
- $('selection').innerHTML=`<button class="close" aria-label="Close journey details">×</button><p class="eyebrow">${esc(r.route)}</p><h2>${esc(stationName(r.origin))} → ${esc(stationName(r.destination))}</h2><span class="badge ${qualifies(r,tolerance())?'':'slower'}">${badge(r)}</span><div class="bars">Rail · ${duration(rail)}<div class="bar" style="width:${rail/max*100}%"></div>Flight + airport · ${duration(air)}<div class="bar air" style="width:${air/max*100}%"></div></div><p>Flight: ${esc(r.airports[0])} → ${esc(r.airports[1])}<br />${duration(r.flightMinutes)} median scheduled gate-to-gate<br />+ 2 hours before departure + 1 hour after arrival.</p><p>Airports are ${r.airportDistanceKm[0]} km and ${r.airportDistanceKm[1]} km from the train stations (straight-line). Ground access is excluded.</p><details><summary>Inspect source evidence</summary><p>Train ${esc(r.trainNumber||r.tripId)} · GTFS trip ${esc(r.tripId)}<br />Departure ${esc(r.departure)} / arrival ${esc(r.arrival)} in the GTFS agency time zone, with hours above 24 for overnight service.<br />Runs on: ${esc(r.serviceDates.join(', '))}<br />Flight sample: ${r.flightSamples.toLocaleString()} scheduled flights · ${esc(manifest.flightPeriod)}.</p><small>${r.shapeRange?'Highlight follows this train’s GTFS shape.':'This timetable trip has no usable shape. No journey line is drawn; endpoints are shown.'}</small></details><p><a href="https://www.amtrak.com/stations/${encodeURIComponent(r.origin.toLowerCase())}" target="_blank" rel="noopener">Origin station ↗</a> · <a href="/maps/rail-vs-air/" target="_blank" rel="noopener">Methods ↗</a></p>`;
+ $('selection').innerHTML=`<button class="close" aria-label="Close journey details">×</button><p class="eyebrow">${esc(r.route)}</p><h2>${esc(stationName(r.origin))} → ${esc(stationName(r.destination))}</h2><span class="badge ${qualifies(r,tolerance())?'':'slower'}">${badge(r)}</span><div class="bars">Rail · ${duration(rail)}<div class="bar" style="width:${rail/max*100}%"></div>Flight + airport · ${duration(air)}<div class="bar air" style="width:${air/max*100}%"></div></div><p>Flight: ${esc(r.airports[0])} → ${esc(r.airports[1])}<br />${duration(r.flightMinutes)} median scheduled gate-to-gate<br />+ 2 hours before departure + 1 hour after arrival.</p><p>Airports are ${r.airportDistanceKm[0]} km and ${r.airportDistanceKm[1]} km from the train stations (straight-line). Ground access is excluded.</p><details><summary>Inspect source evidence</summary><p>Train ${esc(r.trainNumber||r.tripId)} · GTFS trip ${esc(r.tripId)}<br />Departure ${esc(r.departure)} / arrival ${esc(r.arrival)} in the GTFS agency time zone, with hours above 24 for overnight service.<br />Runs on: ${esc(r.serviceDates.join(', '))}<br />Flight sample: ${r.flightSamples.toLocaleString()} scheduled flights · ${esc(manifest.flightPeriod)}.</p><small>${schematicEngine.journey(r).length?'Highlight connects stations with straight schematic segments.':'No complete schematic path is available; endpoints are shown.'}</small></details><p><a href="https://www.amtrak.com/stations/${encodeURIComponent(r.origin.toLowerCase())}" target="_blank" rel="noopener">Origin station ↗</a> · <a href="/maps/rail-vs-air/" target="_blank" rel="noopener">Methods ↗</a></p>`;
  $('selection').hidden=false;$('selection').querySelector('.close').onclick=closeSelection;
  if(available) {
-  const points=r.shapeRange?shapes[r.shapeId]?.slice(r.shapeRange[0],r.shapeRange[1]+1):null;
-  map.getSource('selected').setData(points?.length>1?{type:'FeatureCollection',features:[{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:points}}]}:empty());
+  const journeyIds=new Set(schematicEngine.journey(r));
+  const journeyFeatures=(lastDisplayed||networkData).features.filter(f=>journeyIds.has(f.properties.edgeId));
+  const points=journeyFeatures.flatMap(f=>f.geometry.coordinates);
+  map.getSource('selected').setData({type:'FeatureCollection',features:journeyFeatures});
   const bounds=new maplibregl.LngLatBounds();
   for(const p of points||[coords(r.origin),coords(r.destination)])if(p)bounds.extend(p);
   if(!bounds.isEmpty())map.fitBounds(bounds,{padding:{top:90,bottom:90,left:40,right:window.innerWidth>850?350:40},maxZoom:10,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:700});
@@ -116,18 +122,19 @@ $('download').onclick=()=>{
 async function load(name) {const response=await fetch(`/rail-vs-air/data/${name}`,{cache:"no-cache"});if(!response.ok)throw Error(`${name}: HTTP ${response.status}`);return response.json();}
 async function init() {
  try {
-  const [routeData,stationData,comparisonStationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparison-stations.json','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
+  const [routeData,stationData,comparisonStationData,comparisons,airportData,metadata]=await Promise.all(['station-schematic.geojson','stations.geojson','comparison-stations.json','comparisons.json','airports.json','manifest.json'].map(load));
   const visible=filterDisplayData(routeData,stationData,comparisons);
-  stationDataCache=visible.stations;comparisonStationCache=comparisonStationData;records=visible.comparisons;shapes=shapeData;networkData=visible.routes;airports=airportData;manifest=metadata;stations=Object.fromEntries([...stationData.features,...comparisonStationData.features].map(f=>[f.properties.Code,f]));
+  stationDataCache=visible.stations;comparisonStationCache=comparisonStationData;records=visible.comparisons;networkData=visible.routes;airports=airportData;manifest=metadata;stations=Object.fromEntries([...stationData.features,...comparisonStationData.features].map(f=>[f.properties.Code,f]));
   const names=[...new Set([...visible.routes.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   const colorNames=[...new Set([...(manifest.sourceRouteNames||names),...names])].sort();
   colors=new Map(colorNames.map((name,i)=>[name,manifest.routeColors?.[name]||`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=visible.routes;
-  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=raw-geometry-4",{type:"module"});
+  schematicEngine=createSchematicEngine(networkData,stationDataCache);
+  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-1",{type:"module"});
   layoutWorker.onmessage=({data})=>{if(data.type==="layout")applyRouteLayout(data);else if(data.type==="error")$("status").textContent=`Map layout failed: ${data.message}`;};
   layoutWorker.onerror=event=>{$("status").textContent=`Map layout worker failed: ${event.message}`;};
-  layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache,shapes});
+  layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache});
   const services=[...new Set([...(manifest.railServices||[]),...records.map(r=>r.route)])].filter(name=>name!=="Auto Train").sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
   if(services.includes(params.get('route')))$('route').value=params.get('route');
