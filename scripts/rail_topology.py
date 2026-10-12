@@ -69,7 +69,7 @@ def simplify_display_sections(fc,tolerance_meters=75):
     start_refs={j for j,reference in enumerate(nearby) if reference.distance(start)<=exact}
     end_refs={j for j,reference in enumerate(nearby) if reference.distance(end)<=exact}
     bridge=bool(start_refs and end_refs and not start_refs.intersection(end_refs))
-    redundant=not bridge
+    redundant=not bridge and not fc['features'][i]['properties'].get('preserveConnector')
    if redundant:removed.add(i)
    else:kept.append((i,line))
  return {'type':'FeatureCollection','features':[f for i,f in enumerate(fc['features']) if i not in removed]},len(removed)
@@ -122,26 +122,64 @@ def join_display_tails(fc,stations=None,tolerance_meters=75):
 
 
 def restore_north_philadelphia_connector(fc):
- """Draw the source Crescent gap on the existing shared NEC track segment.
- This 97 m cartographic repair changes no timetable or stop membership.
- Both ends must coincide with existing Crescent section endpoints.
+ """Repair documented source gaps using existing shared track, display only.
+ No timetable, scheduled stop, or journey duration is inferred or changed.
  """
  from copy import deepcopy
- a=(-75.1585532,39.995913);b=(-75.1575273,39.9962988)
  features=deepcopy(fc['features'])
- crescent=[f for f in features if f['properties']['name']=='Crescent']
- endpoints={tuple(p) for f in crescent for p in [f['geometry']['coordinates'][0],f['geometry']['coordinates'][-1]]}
- section=[f for f in features if f['geometry']['coordinates']==[list(a),list(b)]]
- if not section or not {a,b}.issubset(endpoints):raise ValueError('North Philadelphia source connector changed; review repair')
- if any(f['properties']['name']=='Crescent' for f in section):return fc
- template=next(f for f in crescent if tuple(f['geometry']['coordinates'][-1])==a)
- connector=deepcopy(template);connector['geometry']['coordinates']=[list(a),list(b)]
- connector['properties']['displayRepair']='North Philadelphia source gap; existing shared track'
- section.append(connector);features.append(connector)
- symbols={f['properties'].get('symbologyName',f['properties']['name']) for f in section}
- priority={f['properties'].get('symbologyName',f['properties']['name']):f['properties'].get('lanePriority') for f in section}
- ordered=sorted(symbols,key=lambda name:(priority[name] if priority[name] is not None else 999,name))
- for f in section:
-  f['properties']['lane']=ordered.index(f['properties'].get('symbologyName',f['properties']['name']))-(len(ordered)-1)/2
-  f['properties']['shared']=len(section)
+ repairs=[
+  ('Crescent',(-75.1585532,39.995913),(-75.1575273,39.9962988),'North Philadelphia'),
+  ('Palmetto',(-75.1818291,39.9599444),(-75.18414,39.96235),'Philadelphia 30th Street'),
+  ('Vermonter',(-72.8977453,41.3192796),(-72.8976368,41.3194073),'New Haven')]
+ for name,a,b,location in repairs:
+  route=[f for f in features if f['properties']['name']==name]
+  endpoints={tuple(p) for f in route for p in [f['geometry']['coordinates'][0],f['geometry']['coordinates'][-1]]}
+  section=[f for f in features if f['geometry']['coordinates']==[list(a),list(b)]]
+  if not section or not {a,b}.issubset(endpoints):raise ValueError(f'{location} source connector changed; review repair')
+  if any(f['properties']['name']==name for f in section):continue
+  template=next(f for f in route if tuple(f['geometry']['coordinates'][-1])==a)
+  connector=deepcopy(template);connector['geometry']['coordinates']=[list(a),list(b)]
+  connector['properties']['displayRepair']=f'{location} source gap; existing shared track'
+  section.append(connector);features.append(connector)
+  symbols={f['properties'].get('symbologyName',f['properties']['name']) for f in section}
+  priority={f['properties'].get('symbologyName',f['properties']['name']):f['properties'].get('lanePriority') for f in section}
+  ordered=sorted(symbols,key=lambda name:(priority[name] if priority[name] is not None else 999,name))
+  for f in section:
+   f['properties']['preserveConnector']=True
+   f['properties']['lane']=ordered.index(f['properties'].get('symbologyName',f['properties']['name']))-(len(ordered)-1)/2
+   f['properties']['shared']=len(section)
+ # Preserve the NE Regional branch approach preceding the tiny shared bridge.
+ for f in features:
+  if f['properties']['name']=='Northeast Regional' and f['geometry']['coordinates']==[[-72.904287,41.3146575],[-72.8977453,41.3192796]]:
+   f['properties']['preserveConnector']=True
  return {'type':'FeatureCollection','features':features}
+
+
+def connect_keystone_philadelphia(fc):
+ """Snap the west approach to the existing NEC within 50 m for display.
+ Omit a disconnected source spur with no station; source snapshots stay intact.
+ """
+ import math
+ from copy import deepcopy
+ from shapely.ops import nearest_points
+ features=deepcopy(fc['features'])
+ spur=[[-75.2024265,39.9703628],[-75.1935289,39.9679935]]
+ features=[f for f in features if not(f['properties']['name']=='Keystone Service' and f['geometry']['coordinates']==spur)]
+ west=next(f for f in features if f['properties']['name']=='Keystone Service' and f['geometry']['coordinates'][-1]==[-75.1985969,39.9720838])
+ center=next(f for f in features if f['properties']['name']=='Keystone Service' and f['geometry']['coordinates'][0]==[-75.1907425,39.9669957] and len(f['geometry']['coordinates'])==8)
+ # Local metric projection avoids longitude/latitude distance distortion.
+ cos=math.cos(math.radians(39.972));xy=lambda p:(p[0]*cos*111320,p[1]*111320)
+ path=center['geometry']['coordinates'];line=LineString([xy(p) for p in path]);point=Point(xy(west['geometry']['coordinates'][-1]));snap=nearest_points(point,line)[1]
+ if point.distance(snap)>50:raise ValueError('Keystone approach moved; review display snap')
+ target=[round(snap.x/(cos*111320),7),round(snap.y/111320,7)]
+ best=min(range(len(path)-1),key=lambda i:LineString([xy(path[i]),xy(path[i+1])]).distance(snap))
+ # Split all coincident service sections at the same centerline join.
+ result=[]
+ for f in features:
+  if f is west:
+   f['geometry']['coordinates'][-1]=target;f['properties']['displayRepair']='Keystone west approach snapped to shared NEC';result.append(f)
+  elif f['geometry']['coordinates']==path:
+   for coordinates in [path[:best+1]+[target],[target]+path[best+1:]]:
+    part=deepcopy(f);part['geometry']['coordinates']=coordinates;result.append(part)
+  else:result.append(f)
+ return {'type':'FeatureCollection','features':result}
