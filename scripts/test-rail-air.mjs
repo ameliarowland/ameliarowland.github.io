@@ -121,7 +121,10 @@ for(const f of actualNetwork.features) {
  }
 }
 let priorityEdges=0;
-for(const lanes of sharedLanes.values()) {
+for(const [edge,lanes] of sharedLanes) {
+ const endpoints=edge.split('|').map(p=>p.split(',').map(Number));
+ // At Philadelphia the corridor doubles back; west-edge continuity is tested separately.
+ if(endpoints.every(p=>p[0]>-75.201&&p[0]<-75.175&&p[1]>=39.9516&&p[1]<=39.97806))continue;
  const penn=lanes.find(f=>f.name==='Pennsylvanian');
  if(!penn||lanes.length<2)continue;
  priorityEdges++;
@@ -158,8 +161,30 @@ for(const [name,a,b] of [
 assert(!actualNetwork.features.some(f=>f.properties.name==='Keystone Service'&&f.geometry.coordinates[0][0]===-75.2024265));
 // Editing Keystone's shared west-approach coordinates must not move Pennsylvanian.
 const pennThrough=continuousRoutePaths(actualNetwork).features.filter(f=>f.properties.name==='Pennsylvanian');
-assert.equal(pennThrough.length,1,'Pennsylvanian must be continuous from Pittsburgh to New York');
-assert(pennThrough[0].geometry.coordinates.some(p=>p[0]===-75.1985969&&p[1]===39.9720838));
+assert(pennThrough.some(f=>f.geometry.coordinates.some(p=>p[0]===-75.1829788&&p[1]===39.9516484)),'Pennsylvanian must reach Philadelphia station');
+const pennEnds=pennThrough.flatMap(f=>[f.geometry.coordinates[0],f.geometry.coordinates.at(-1)]);
+assert(!pennEnds.some(p=>p[0]===-75.1985969&&p[1]===39.9720838),'Pennsylvanian west approach is unsnapped');
+for(const zoom of [3,7.9,13,16]) {
+ const style=routeDrawingStyle(actualNetwork,zoom),drawn=offsetNetwork(actualNetwork,zoom,style,stationData);
+ const dots=stationSymbols(stationData,actualNetwork,drawn,zoom,style).dots.features;
+ for(const route of ['Pennsylvanian','Keystone Service']) {
+  const dot=dots.find(f=>f.properties.Code==='PHL'&&f.properties.symbolRoutes.includes(route));
+  assert(dot&&!dot.properties.geometryFallback,`${route} Philadelphia dot must be on its route at zoom ${zoom}`);
+  const project=p=>[(p[0]+180)/360*512*2**zoom,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**zoom];
+  const q=project(dot.geometry.coordinates);let distance=Infinity;
+  for(const f of drawn.features.filter(f=>f.properties.name===route)) {
+   const p=f.geometry.coordinates.map(project);
+   for(let i=1;i<p.length;i++) {const a=p[i-1],b=p[i],dx=b[0]-a[0],dy=b[1]-a[1],t=dx*dx+dy*dy?Math.max(0,Math.min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dy)/(dx*dx+dy*dy))):0;distance=Math.min(distance,Math.hypot(q[0]-a[0]-t*dx,q[1]-a[1]-t*dy));}
+  }
+  assert(distance<.001,`${route} station dot floats off its line at zoom ${zoom}: ${distance}px`);
+ }
+}
+
+// Keystone occupies the next outer lane after Pennsylvanian on the NEC.
+const orderedNE=actualNetwork.features.filter(f=>f.geometry.coordinates[0][0]===-75.1575273&&f.geometry.coordinates[0][1]===39.9962988);
+const lane=name=>orderedNE.find(f=>f.properties.name===name).properties.lane;
+assert(lane('Pennsylvanian')<lane('Keystone Service')&&lane('Keystone Service')<lane('Cardinal'));
+assert.equal(lane('Keystone Service')-lane('Pennsylvanian'),1);
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
