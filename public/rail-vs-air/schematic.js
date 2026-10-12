@@ -1,7 +1,8 @@
-import {stationRouteName} from './model.js?v=station-schematic-3';
+import {stationRouteName} from './model.js?v=station-schematic-4';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
+export const chicagoUnionOrder=['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Carl Sandburg','Illinois Zephyr','Southwest Chief','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette'];
 const rank=n=>north.includes(n)?north.indexOf(n):south.includes(n)?1000+south.indexOf(n):100;
 export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6));return {baseWidth:1.1+1.4*t,highlightWidth:1.8+1.7*t,hoverWidth:2.9+1.4*t};}
 export function createSchematicEngine(routes,stations) {
@@ -17,7 +18,27 @@ export function createSchematicEngine(routes,stations) {
   if(!graphs.has(name))graphs.set(name,new Map());const graph=graphs.get(name);
   for(const [a,b] of [[from,to],[to,from]]){if(!graph.has(a))graph.set(a,[]);graph.get(a).push({node:b,id:i,cost:f.properties.distanceKm});}
  });
- for(const node of nodes.values())node.order=[...node.names].sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
+ // Carry Chicago's pairwise order along shared station segments until the
+ // routes split, keeping incoming lanes consistent without changing distant
+ // corridors where the same services approach from separate directions.
+ const preferences=new Map();
+ for(let i=0;i<chicagoUnionOrder.length;i++)for(let j=i+1;j<chicagoUnionOrder.length;j++){
+  const a=chicagoUnionOrder[i],b=chicagoUnionOrder[j],shared=new Map();
+  for(const [key,names] of groups){if(!names.has(a)||!names.has(b))continue;const [u,v]=key.split('|');for(const [from,to] of [[u,v],[v,u]]){if(!shared.has(from))shared.set(from,new Set());shared.get(from).add(to);}}
+  const queue=['CHI'],visited=new Set();while(queue.length){const id=queue.pop();if(visited.has(id))continue;visited.add(id);
+   if(nodes.get(id)?.names.has(a)&&nodes.get(id)?.names.has(b)){if(!preferences.has(id))preferences.set(id,[]);preferences.get(id).push([a,b]);}
+   for(const other of shared.get(id)||[])queue.push(other);
+  }
+ }
+ const defaultOrder=(a,b)=>rank(a)-rank(b)||a.localeCompare(b);
+ for(const [id,node] of nodes){
+  const incoming=new Map([...node.names].map(n=>[n,0])),outgoing=new Map([...node.names].map(n=>[n,new Set()]));
+  for(const [a,b] of preferences.get(id)||[]){if(outgoing.get(a).has(b))continue;outgoing.get(a).add(b);incoming.set(b,incoming.get(b)+1);}
+  const available=[...node.names].filter(n=>incoming.get(n)===0),order=[];
+  while(available.length){available.sort(defaultOrder);const name=available.shift();order.push(name);for(const next of outgoing.get(name)){incoming.set(next,incoming.get(next)-1);if(incoming.get(next)===0)available.push(next);}}
+  node.order=order;
+ }
+
  // Station rows use one diagonal screen direction throughout the schematic.
  // Their route order therefore cannot reverse as a corridor bends. A fixed
  // frame also avoids enlarging low-zoom rows into crossed local tangent planes.
