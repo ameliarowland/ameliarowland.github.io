@@ -16,7 +16,7 @@
   <main>
     <section class="intro">
       <div><p class="eyebrow">A different way to count the journey</p><h1>Rail vs. <em>air.</em></h1></div>
-      <p>A short flight isn’t always a short trip. Compare direct Amtrak journeys and nonstop flights. Three hours are added for flight travel time - two hours for pre-flight security and boarding, one hour after landing for deplaning.</p>
+      <p>A short flight isn’t always a short trip. Compare direct Amtrak journeys and nonstop flights. Note: three hours are added for flight travel time, including 2 hours for pre-flight security and boarding, and 1 hour after landing for deplaning.</p>
     </section>
     <div class="workspace">
       <aside aria-label="Journey comparison controls">
@@ -42,8 +42,8 @@
         <div id="map"></div>
         <div id="map-zoom" class="map-zoom" hidden></div>
         <div class="map-actions"><button id="reset">U.S. network ↗</button><button id="layers" aria-expanded="false" aria-controls="legend">Legend</button></div>
-        <div class="map-key"><div id="route-focus-label" hidden aria-live="polite"></div><span class="key-line"></span>Qualifying train journey <span class="key-stop"></span>Stop <span class="key-nostop"></span>No stop<br /><small>Overview: station circles · zoom in for route-level stops</small></div>
-        <div id="legend" hidden><h2>Map legend</h2><p>Colors follow the NTAD NAME field. Silver Star and Floridian share a color and lane where their tracks overlap; both source routes are retained.</p><p><span class="key-stop"></span> Scheduled stop · <span class="key-nostop"></span> Passes without stopping. Each symbol belongs to one route; no partial-service category is used. At country scale, route-colored circles show stations; crowded markers are spaced out. Zoom in for all route-level symbols.</p><div id="legend-list"></div></div>
+        <div class="map-key"><div id="route-focus-label" hidden aria-live="polite"></div><span class="key-line"></span>Qualifying train journey <span class="key-stop"></span>Stop<br /><small>Station circles show scheduled stops at every zoom</small></div>
+        <div id="legend" hidden><h2>Map legend</h2><p>Colors follow the NTAD NAME field. Silver Star and Floridian share a color and lane where their tracks overlap; both source routes are retained.</p><p><span class="key-stop"></span> Scheduled stop. No circle = no scheduled stop for that route.</p><div id="legend-list"></div></div>
         <div id="selection" hidden aria-live="polite"></div>
       </section>
     </div>
