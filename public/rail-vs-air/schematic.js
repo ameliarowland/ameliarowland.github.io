@@ -1,5 +1,5 @@
-import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-19';
-import {stationRouteName} from './model.js?v=station-schematic-19';
+import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-21';
+import {stationRouteName} from './model.js?v=station-schematic-21';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Acela','Vermonter','Northeast Regional'];
@@ -123,6 +123,7 @@ export function createSchematicEngine(routes,stations) {
  }
  for(const [id,node] of nodes){const pairs=[...(id==='PGH'?[['Pennsylvanian','Floridian']]:[]),...(id==='SOB'?[['Lake Shore Limited','Floridian']]:[])];for(const [north,south] of pairs)if(node.names.has(north)&&node.names.has(south)){const n=node.order.indexOf(north),s=node.order.indexOf(south);if(node.normal[1]>=0?n>s:n<s){node.order[n]=south;node.order[s]=north;}}}
  if(nodes.has('SOB')){const node=nodes.get('SOB'),family=['Lake Shore Limited','Floridian','Capitol Limited'].filter(n=>node.order.includes(n)),slots=node.order.map((n,i)=>family.includes(n)?i:-1).filter(i=>i>=0);if(node.normal[1]<0)family.reverse();family.forEach((n,i)=>node.order[slots[i]]=n);}
+ for(const [id,node] of nodes)if(id!=='LAX'&&node.names.has('Coast Starlight')&&node.names.has('Pacific Surfliner')){node.normal=[Math.SQRT1_2,-Math.SQRT1_2];const c=node.order.indexOf('Coast Starlight'),p=node.order.indexOf('Pacific Surfliner');if(c>p){node.order[c]='Pacific Surfliner';node.order[p]='Coast Starlight';}}
  for(const node of nodes.values()){
   const p=frameProject(node.coordinate);let nearest=Infinity;for(const edge of node.edges){const q=frameProject(nodes.get(edge.other).coordinate),d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d>1e-12)nearest=Math.min(nearest,d);}
   node.maxRowSpacing=nearest*.5/Math.max(1,node.order.length-1);
