@@ -161,3 +161,12 @@ Parallel bodies are trimmed at the displayed station marker's longitudinal posit
 
 
 Pacific Surfliner uses the northeast side of the shared Coast Starlight corridor. Station rows on that coastal section follow a northeast frame; Los Angeles retains the requested west-to-east hub order. Screen-space perpendicular offsets choose the northeast-facing normal as the track turns.
+
+
+### Consistent corridors and station interaction (station-schematic-27)
+
+Unchanged shared bundles use one corridor frame and lane order. Compass priorities are interpreted in that frame, avoiding side swaps when a nearly vertical segment changes bearing slightly. Station rows follow the local shared track where the complete bundle is present; unchanged bends use offset-line intersections. Hammond–Whiting's two branches use separated origins and individual offset intersections. Singleton Chicago approaches connect directly to the next displayed station rather than carrying an offset dogleg into Dyer. Borealis is now northeast of Empire Builder.
+
+Stop dots are slightly larger, remain inside their route bands, and have invisible eight-pixel hit targets. Hover shows the source Name (with StationName fallback). The selected route has a stronger white outline and wider stroke; other routes dim. Clicking the nearest route switches directly, while an empty map click clears selection. Neighboring greens and blues now use more distinct colors. Colored bands have a 0.6 pixel background gap.
+
+Checks cover every unchanged bundle's lane-order continuity, parallel bodies, displayed-stop joins, every scheduled marker's attachment, and the actual Winter Park Express / California Zephyr station joins across zooms 3–16.
