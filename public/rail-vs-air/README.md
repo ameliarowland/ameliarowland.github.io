@@ -143,3 +143,13 @@ Northeast Regional is on the south/east edge throughout its shared corridors. Te
 `parallel-corridors.js` offsets each shared station-to-station body perpendicular to its own screen-space track. Adjacent lanes have a constant gap equal to the outside station-circle diameter at that zoom. Unchanged bundles meet at their offset-line intersections; branch stations retain short joins to aligned station markers. Chicago approach rows follow their respective tracks and retain the requested west-to-east station order. All 909 scheduled stop/service markers remain attached.
 
 Current shared-track priorities also place Vermonter west of Acela, Maple Leaf north of the other routes, Capitol Limited south of Floridian / Silver Star, and Borealis south of Empire Builder. Regression checks cover all nondegenerate segment bodies, constant perpendicular gaps, route order, marker attachment, and zooms 3 through 16 including 5.8. Coincident inventory station codes have no interstation bearing and are excluded from the perpendicular-gap assertion.
+
+
+### Local hub displacement (station-schematic-17)
+
+Chicago's approach displacement is not propagated into single-route corridors. This prevents distant Cardinal station positions from inheriting the hub's screen-space offset and creating large detours at bends. Shared approaches still retain a common origin for parallel lanes. Every non-hub single-route interstation body is checked for zero centerline displacement across zooms 3–16. Pacific Surfliner stays west of Southwest Chief, and Coast Starlight stays west of Pacific Surfliner on their shared sections.
+
+
+### Ribbon route symbols (station-schematic-17)
+
+Colored bands scale from 3.2 to 7 screen pixels wide; adjacent lanes have a 0.7 pixel light separator. Scheduled stops use small filled white dots without an outer ring. Dot diameters stay smaller than their own bands. Hover still widens the route and displays its name. The existing station graph, pass-through nodes, route ordering, and travel-time comparisons are unchanged by this symbol treatment.
