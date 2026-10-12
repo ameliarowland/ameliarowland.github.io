@@ -387,6 +387,18 @@ export function alignLaneFrames(collection) {
       if(!ends.has(key))ends.set(key,[]);ends.get(key).push({index,side,out:[dx/len,dy/len],shared:f.properties.shared||1});
     }
   });
+  // Explicit lane priorities take precedence over ambiguous branch pairings.
+  // Orient their frames west to east so negative offsets stay on the north side.
+  const priorities=collection.features.map((f,index)=>({f,index}))
+    .filter(({f})=>Number.isFinite(f.properties.lanePriority))
+    .sort((a,b)=>a.f.properties.lanePriority-b.f.properties.lanePriority);
+  const preferred=new Map();
+  for(const {f,index} of priorities) {
+    const p=f.geometry.coordinates,direction=p.at(-1)[0]>=p[0][0]?1:-1;
+    const priority=f.properties.lanePriority;
+    if(preferred.has(priority)){const prior=preferred.get(priority);link(prior.index,index,prior.direction*direction);}
+    else preferred.set(priority,{index,direction});
+  }
   for(const group of ends.values()) {
     // Pair a through continuation at branches without imposing contradictory
     // all-pairs parity constraints on the diverging arms.
@@ -401,8 +413,12 @@ export function alignLaneFrames(collection) {
       link(a.index,b.index,a.side===b.side?-1:1);paired.add(a);paired.add(b);
     }
   }
-  // Anchor each component to its first stored frame for stable redraws.
+  // Anchor priority corridors first; other components retain their stored frame.
   const anchor=new Map();
+  for(const {f,index} of priorities) {
+    const [root,s]=find(index),p=f.geometry.coordinates;
+    if(!anchor.has(root))anchor.set(root,s*(p.at(-1)[0]>=p[0][0]?1:-1));
+  }
   for(let i=0;i<n;i++){const [root,s]=find(i);if(!anchor.has(root))anchor.set(root,s);}
   return {type:'FeatureCollection',features:collection.features.map((f,i)=>{
     const [root,s]=find(i);return {...f,properties:{...f.properties,lane:(f.properties.lane||0)*s*anchor.get(root)}};
