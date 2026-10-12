@@ -91,6 +91,17 @@ for(const zoom of [4,10,15]) {
  const routeMin=Math.min(...latitudes.map(y))-style.highlightWidth/2,routeMax=Math.max(...latitudes.map(y))+style.highlightWidth/2;
  assert(Math.abs(symbolMin-routeMin)<1e-5);assert(Math.abs(symbolMax-routeMax)<1e-5);
 }
+// A passing lane between stopping lanes splits the symbols rather than
+// implying that the middle route also stops. Stations with no train stops hide.
+const interleaved={type:'FeatureCollection',features:['A','B','C'].map((name,i)=>({type:'Feature',properties:{name,lane:i-1},geometry:{type:'LineString',coordinates:[[-.01,0],[.01,0]]}}))};
+const stopsOnly={type:'FeatureCollection',features:[
+ {type:'Feature',properties:{Code:'SPLIT',routeNames:['A','C']},geometry:{type:'Point',coordinates:[0,0]}},
+ {type:'Feature',properties:{Code:'NONE',routeNames:[]},geometry:{type:'Point',coordinates:[.005,0]}}
+]};
+const splitStyle=routeDrawingStyle(interleaved,12),split=stationSymbols(stopsOnly,interleaved,offsetNetwork(interleaved,12,splitStyle),12,splitStyle);
+assert.equal(split.bars.features.length,0);assert.equal(split.dots.features.length,2);
+assert.deepEqual(split.dots.features.flatMap(f=>f.properties.symbolRoutes).sort(),['A','C']);
+assert(split.dots.features.every(f=>f.properties.Code==='SPLIT'));
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
@@ -129,7 +140,16 @@ const actualStyle=routeDrawingStyle(actualNetwork,12);
 const actualSymbols=stationSymbols(stationData,actualNetwork,offsetNetwork(actualNetwork,12,actualStyle),12,actualStyle);
 for(const code of ['PHL','NYP','RVR'])assert(actualSymbols.bars.features.some(f=>f.properties.Code===code));
 assert(actualSymbols.dots.features.some(f=>f.properties.Code==='DOW'));
-assert.equal(actualSymbols.dots.features.length+actualSymbols.bars.features.length,stationData.features.length);
+for(const f of [...actualSymbols.dots.features,...actualSymbols.bars.features]) {
+ assert(f.properties.symbolRoutes.length);
+ assert(f.properties.symbolRoutes.every(name=>f.properties.routeNames.includes(name)),`${f.properties.Code}: marker on a passing route`);
+}
+const lancaster=stationData.features.find(f=>f.properties.Code==='LNC');
+assert.deepEqual(lancaster.properties.routeNames,['Keystone Service','Pennsylvanian']);
+for(const zoom of [6,7,8,10,12,15]) {
+ const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols({type:'FeatureCollection',features:[lancaster]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
+ assert(symbols.bars.features.some(f=>f.properties.Code==='LNC'&&f.properties.symbolRoutes.length===2),`Lancaster bar missing at zoom ${zoom}`);
+}
 // Curved displayed lanes may cross the station's perpendicular at a different
 // heading than the source tangent; they must still contribute to the bar.
 for(const zoom of [6,7,7.5,8,10,12]) {
