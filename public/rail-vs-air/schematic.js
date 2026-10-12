@@ -1,5 +1,5 @@
-import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-17';
-import {stationRouteName} from './model.js?v=station-schematic-17';
+import {parallelCorridors} from './parallel-corridors.js?v=station-schematic-18';
+import {stationRouteName} from './model.js?v=station-schematic-18';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Acela','Vermonter','Northeast Regional'];
@@ -115,6 +115,7 @@ export function createSchematicEngine(routes,stations) {
  for(const node of nodes.values())if(node.names.has('Vermonter')&&node.names.has('Acela')){const v=node.order.indexOf('Vermonter'),a=node.order.indexOf('Acela');if(v>a){node.order[v]='Acela';node.order[a]='Vermonter';}}
  for(const node of nodes.values())for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(node.names.has(west)&&node.names.has(east)){const w=node.order.indexOf(west),e=node.order.indexOf(east);if(node.normal[0]>=0?w>e:w<e){node.order[w]=east;node.order[e]=west;}}
  for(const node of nodes.values())if(node.names.has('Maple Leaf')){node.order=node.order.filter(name=>name!=='Maple Leaf');node.order.unshift('Maple Leaf');}
+ for(const [id,node] of nodes)if(id!=='CHI'&&node.names.has('Pere Marquette')){node.order=node.order.filter(name=>name!=='Pere Marquette');if(node.normal[1]>=0)node.order.unshift('Pere Marquette');else node.order.push('Pere Marquette');}
  for(const [id,node] of nodes)if(id!=='CHI'){
   for(const [below,above] of [['Capitol Limited','Floridian'],['Borealis','Empire Builder']])if(node.names.has(below)&&node.names.has(above)){
    const b=node.order.indexOf(below),a=node.order.indexOf(above);if(node.normal[1]>=0?b<a:b>a){node.order[b]=above;node.order[a]=below;}
