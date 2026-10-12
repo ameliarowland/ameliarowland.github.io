@@ -8,6 +8,7 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
   let normal=[-dy/length,dx/length];
   const names=[...bundle.names],west=names.some(n=>['Coast Starlight','Amtrak Cascades','Empire Builder'].includes(n))&&nodes.get(from).coordinate[0]<-116;
   if(west?normal[0]<0:(names.includes('Texas Eagle')&&names.includes('Sunset Limited')?normal[1]<0:normal[0]+normal[1]<0))normal=normal.map(v=>-v);
+  if(names.includes('Coast Starlight')&&names.includes('Pacific Surfliner')&&normal[0]-normal[1]<0)normal=normal.map(v=>-v);
   const order=nodes.get(from).order.filter(n=>bundle.names.has(n));
   if(order.includes('Vermonter')&&order.includes('Acela')){const v=order.indexOf('Vermonter'),a=order.indexOf('Acela');if(normal[0]>=0?v>a:v<a){order[v]='Acela';order[a]='Vermonter';}}
   for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(order.includes(west)&&order.includes(east)){const w=order.indexOf(west),e=order.indexOf(east);if(normal[0]>=0?w>e:w<e){order[w]=east;order[e]=west;}}
@@ -19,6 +20,7 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
   const northPairs=[['Pennsylvanian','Floridian'],...([from,to].includes('SOB')?[['Lake Shore Limited','Floridian']]:[])];
   for(const [north,south] of northPairs)if(order.includes(north)&&order.includes(south)){const n=order.indexOf(north),s=order.indexOf(south);if(normal[1]>=0?n>s:n<s){order[n]=south;order[s]=north;}}
   if([from,to].includes('SOB')){const family=['Lake Shore Limited','Floridian','Capitol Limited'].filter(n=>order.includes(n)),slots=order.map((n,i)=>family.includes(n)?i:-1).filter(i=>i>=0);if(normal[1]<0)family.reverse();family.forEach((n,i)=>order[slots[i]]=n);}
+  if(order.includes('Coast Starlight')&&order.includes('Pacific Surfliner')){const c=order.indexOf('Coast Starlight'),p=order.indexOf('Pacific Surfliner');if((normal[0]-normal[1]>=0)?c>p:c<p){order[c]='Pacific Surfliner';order[p]='Coast Starlight';}}
   const lanes=new Map(order.map((n,i)=>[n,(i-(order.length-1)/2)*spacing]));
   Object.assign(bundle,{from,to,a,b,normal,lanes});
   for(const id of [from,to]){if(!incident.has(id))incident.set(id,[]);incident.get(id).push(bundle);}
@@ -49,6 +51,7 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
   if(dot<-.5)continue;
   let vector;if(Math.abs(det)<1e-8)vector=n;else vector=[(m[1]-n[1])/det,(n[0]-m[0])/det];
   if(Math.hypot(...vector)>3)continue;
+  if(names.includes('Coast Starlight')&&names.includes('Pacific Surfliner')&&(vector[0]<0||vector[1]>0))continue;
   if(edges.length===2&&names.some(name=>Math.abs(edges[0].lanes.get(name)-edges[1].lanes.get(name))>1e-8))continue;
   const p=project(node.coordinate);
   for(const name of names){const d=edges[0].lanes.get(name);positions.set(id+'|'+name,[p[0]+vector[0]*d,p[1]+vector[1]*d]);joins.add(id+'|'+name);}
@@ -56,7 +59,9 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
  const features=routes.features.map(f=>{
   const bundle=bundles.get(keyFor(f)),name=f.properties.symbologyName||f.properties.name,d=bundle.lanes.get(name)||0,n=bundle.normal;
   const ids=[f.properties.from,f.properties.to],centers=ids.map(id=>project(nodes.get(id).coordinate)),anchors=ids.map(id=>positions.get(id+'|'+name));
-  const ends=centers.map((p,i)=>joins.has(ids[i]+'|'+name)?anchors[i]:[p[0]+n[0]*d,p[1]+n[1]*d]);
+  // Trim each parallel body at the displayed marker's longitudinal position.
+  // The old center-based endpoint overshot that marker, then doubled back.
+  const ends=centers.map((p,i)=>{if(joins.has(ids[i]+'|'+name))return anchors[i];const anchor=anchors[i],correction=(anchor[0]-p[0])*n[0]+(anchor[1]-p[1])*n[1]-d;return [anchor[0]-n[0]*correction,anchor[1]-n[1]*correction];});
   const points=[anchors[0]];if(Math.hypot(anchors[0][0]-ends[0][0],anchors[0][1]-ends[0][1])>1e-7)points.push(ends[0]);
   points.push(ends[1]);if(Math.hypot(anchors[1][0]-ends[1][0],anchors[1][1]-ends[1][1])>1e-7)points.push(anchors[1]);
   return {feature:f,points,body:ends,normal:n,laneOffset:d};
