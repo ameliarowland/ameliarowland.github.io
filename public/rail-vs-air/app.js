@@ -1,6 +1,6 @@
-import {closestRouteAtPoint} from './hover.js?v=station-schematic-8';
-import {createSchematicEngine} from './schematic.js?v=station-schematic-8';
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-8';
+import {closestRouteAtPoint} from './hover.js?v=station-schematic-10';
+import {createSchematicEngine} from './schematic.js?v=station-schematic-10';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-10';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -134,7 +134,7 @@ async function init() {
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=visible.routes;
   schematicEngine=createSchematicEngine(networkData,stationDataCache);
-  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-8",{type:"module"});
+  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-10",{type:"module"});
   layoutWorker.onmessage=({data})=>{if(data.type==="layout")applyRouteLayout(data);else if(data.type==="error")$("status").textContent=`Map layout failed: ${data.message}`;};
   layoutWorker.onerror=event=>{$("status").textContent=`Map layout worker failed: ${event.message}`;};
   layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache});
