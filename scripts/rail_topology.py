@@ -61,7 +61,15 @@ def simplify_display_sections(fc,tolerance_meters=75):
    # An overlap can straddle two adjoining retained sections. Testing only one
    # feature at a time leaves duplicate tails at bends and section boundaries.
    if nearby and line.covered_by(union_all(nearby).buffer(tolerance,quad_segs=4)):
-    redundant=True
+    # A short bridge can fit inside the buffered ends of two longer sections
+    # even though neither section contains it. Preserve that real connection.
+    # Use source precision here, not the much wider display cleanup tolerance.
+    exact=.25/math.cos(math.radians(latitude))
+    start,end=Point(line.coords[0]),Point(line.coords[-1])
+    start_refs={j for j,reference in enumerate(nearby) if reference.distance(start)<=exact}
+    end_refs={j for j,reference in enumerate(nearby) if reference.distance(end)<=exact}
+    bridge=bool(start_refs and end_refs and not start_refs.intersection(end_refs))
+    redundant=not bridge
    if redundant:removed.add(i)
    else:kept.append((i,line))
  return {'type':'FeatureCollection','features':[f for i,f in enumerate(fc['features']) if i not in removed]},len(removed)
@@ -111,3 +119,29 @@ def join_display_tails(fc,stations=None,tolerance_meters=75):
    points=[ll(p) for p in part.coords]
    for f in g['features']:result.append({**f,'geometry':{'type':'LineString','coordinates':points}})
  return {'type':'FeatureCollection','features':result},joined
+
+
+def restore_north_philadelphia_connector(fc):
+ """Draw the source Crescent gap on the existing shared NEC track segment.
+ This 97 m cartographic repair changes no timetable or stop membership.
+ Both ends must coincide with existing Crescent section endpoints.
+ """
+ from copy import deepcopy
+ a=(-75.1585532,39.995913);b=(-75.1575273,39.9962988)
+ features=deepcopy(fc['features'])
+ crescent=[f for f in features if f['properties']['name']=='Crescent']
+ endpoints={tuple(p) for f in crescent for p in [f['geometry']['coordinates'][0],f['geometry']['coordinates'][-1]]}
+ section=[f for f in features if f['geometry']['coordinates']==[list(a),list(b)]]
+ if not section or not {a,b}.issubset(endpoints):raise ValueError('North Philadelphia source connector changed; review repair')
+ if any(f['properties']['name']=='Crescent' for f in section):return fc
+ template=next(f for f in crescent if tuple(f['geometry']['coordinates'][-1])==a)
+ connector=deepcopy(template);connector['geometry']['coordinates']=[list(a),list(b)]
+ connector['properties']['displayRepair']='North Philadelphia source gap; existing shared track'
+ section.append(connector);features.append(connector)
+ symbols={f['properties'].get('symbologyName',f['properties']['name']) for f in section}
+ priority={f['properties'].get('symbologyName',f['properties']['name']):f['properties'].get('lanePriority') for f in section}
+ ordered=sorted(symbols,key=lambda name:(priority[name] if priority[name] is not None else 999,name))
+ for f in section:
+  f['properties']['lane']=ordered.index(f['properties'].get('symbologyName',f['properties']['name']))-(len(ordered)-1)/2
+  f['properties']['shared']=len(section)
+ return {'type':'FeatureCollection','features':features}
