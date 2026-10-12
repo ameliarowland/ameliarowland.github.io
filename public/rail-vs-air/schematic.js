@@ -1,7 +1,7 @@
-import {stationRouteName} from './model.js?v=station-schematic-14';
+import {stationRouteName} from './model.js?v=station-schematic-15';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
-const south=['Northeast Regional','Vermonter','Acela'];
+const south=['Acela','Vermonter','Northeast Regional'];
 export const chicagoUnionOrder=['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Southwest Chief','Carl Sandburg','Illinois Zephyr','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette'];
 const rank=n=>north.includes(n)?north.indexOf(n):south.includes(n)?1000+south.indexOf(n):100;
 export function schematicDrawingStyle(zoom){const t=Math.max(0,Math.min(1,(zoom-4)/6));return {baseWidth:1.1+1.4*t,highlightWidth:1.8+1.7*t,hoverWidth:2.9+1.4*t};}
@@ -33,6 +33,8 @@ export function createSchematicEngine(routes,stations) {
  }
  }
  carryOrder(chicagoUnionOrder,['CHI']);
+ const losAngelesOrder=['Pacific Surfliner','Southwest Chief','Texas Eagle','Sunset Limited','Coast Starlight'];
+ carryOrder(losAngelesOrder,['LAX']);
  carryOrder(['Floridian','Piedmont','Carolinian','Crescent'],['CLT','GRO','RGH']);
  const defaultOrder=(a,b)=>rank(b)-rank(a)||b.localeCompare(a);
  for(const [id,node] of nodes){
@@ -82,6 +84,33 @@ export function createSchematicEngine(routes,stations) {
   }
   if(!bad.size)break;for(const [id,west] of bad){fixedRows.add(id);if(west)chicagoWestRows.add(id);nodes.get(id).normal=west?[Math.SQRT1_2,Math.SQRT1_2]:fixedNormal;}
  }
+ // Keep the northern Chicago approach visibly separated. Its previous
+ // diagonal row ran almost along the corridor instead of across it.
+ if(nodes.has('GLN')&&nodes.has('CHI')){
+  const a=frameProject(nodes.get('GLN').coordinate),b=frameProject(nodes.get('CHI').coordinate),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);
+  nodes.get('GLN').normal=[dy/length,-dx/length];
+ }
+ // Northeast Regional occupies the south/east edge at every shared stop.
+ for(const node of nodes.values())if(node.names.has('Northeast Regional')){
+  node.normal=[Math.SQRT1_2,Math.SQRT1_2];
+  node.order=node.order.filter(name=>name!=='Northeast Regional').reverse();node.order.push('Northeast Regional');
+ }
+ for(const node of nodes.values())if(node.names.has('Texas Eagle')&&node.names.has('Sunset Limited')){
+  node.normal=[Math.SQRT1_2,Math.SQRT1_2];const texas=node.order.indexOf('Texas Eagle'),sunset=node.order.indexOf('Sunset Limited');if(texas>sunset){node.order[texas]='Sunset Limited';node.order[sunset]='Texas Eagle';}
+ }
+ if(nodes.has('LAX')){const node=nodes.get('LAX');node.normal=[Math.SQRT1_2,Math.SQRT1_2];node.order=[...node.names].sort((a,b)=>losAngelesOrder.indexOf(a)-losAngelesOrder.indexOf(b));}
+ for(const id of ['ARD','YNY'])if(nodes.has(id)){const node=nodes.get(id);if(node.normal[1]<0)node.order.reverse();node.normal=[Math.SQRT1_2,Math.SQRT1_2];}
+ if(nodes.has('FUL'))nodes.get('FUL').normal=[Math.SQRT1_2,Math.SQRT1_2];
+ // Preserve north/south ordering while giving ordinary rows a common frame.
+ for(const [id,node] of nodes){if(['CHI','GLN','HMI','NBU','SOB'].includes(id))continue;if(node.normal[1]<0)node.order.reverse();node.normal=[Math.SQRT1_2,Math.SQRT1_2];}
+ for(const node of nodes.values())if(node.coordinate[0]<-116&&['Coast Starlight','Amtrak Cascades','Empire Builder'].some(name=>node.names.has(name))){
+  const west=['Coast Starlight','Amtrak Cascades','Empire Builder'];node.order=[...west.filter(name=>node.names.has(name)),...node.order.filter(name=>!west.includes(name))];
+ }
+ for(const id of ['POS','ONA'])if(nodes.has(id))nodes.get(id).normal=[0,1];
+ for(const node of nodes.values()){
+  const family=['Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','Missouri River Runner'].filter(name=>node.names.has(name));if(family.length<2)continue;
+  const slots=node.order.map((name,i)=>family.includes(name)?i:-1).filter(i=>i>=0);family.forEach((name,i)=>node.order[slots[i]]=name);
+ }
  for(const node of nodes.values()){
   const p=frameProject(node.coordinate);let nearest=Infinity;for(const edge of node.edges){const q=frameProject(nodes.get(edge.other).coordinate),d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d>1e-12)nearest=Math.min(nearest,d);}
   node.maxRowSpacing=nearest*.5/Math.max(1,node.order.length-1);
@@ -102,10 +131,13 @@ export function createSchematicEngine(routes,stations) {
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
   const radius=Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth=Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05);
-  const rowSpacing=Math.min(spacing,2*(radius+ringWidth)*.88),screen=new Map();
+  const rowSpacing=2*(radius+ringWidth),screen=new Map();
   for(const [id,node] of nodes){
-   const p=project(node.coordinate),stationSpacing=Math.min(rowSpacing,node.maxRowSpacing*world);
-   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;screen.set(id+'|'+name,[p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]);});
+   const p=project(node.coordinate),stationSpacing=id==='CHI'?Math.min(spacing,rowSpacing*.88,node.maxRowSpacing*world):rowSpacing;
+   node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;
+    if(id==='CHI'&&i>13){const start=(13-(node.order.length-1)/2)*stationSpacing,step=(i-13)*stationSpacing;screen.set(id+'|'+name,[p[0]+Math.SQRT1_2*(start+step),p[1]+Math.SQRT1_2*(start-step)]);}
+    else screen.set(id+'|'+name,[p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]);
+   });
   }
   for(const [key,p] of screen)positions.set(key,unproject(p));
   const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
