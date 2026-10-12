@@ -102,6 +102,18 @@ def parallel_routes(fc):
  shared=sum(len(names)>1 for names in edges.values())
  return {'type':'FeatureCollection','features':features},shared
 
+def station_services(stations,routes,trips,times,ntad_names):
+ memberships=defaultdict(set)
+ for tid,rows in times.items():
+  name=routes[trips[tid]['route_id']]['route_long_name']
+  name=ntad_names.get(name.casefold(),name)
+  for row in rows:
+   if row.get('pickup_type')=='1' and row.get('drop_off_type')=='1':continue
+   memberships[row['stop_id']].add(name)
+ for feature in stations['features']:
+  feature['properties']['routeNames']=sorted(memberships[feature['properties']['Code']])
+ return stations
+
 def build(args):
  root=Path(args.input_dir);out=Path(args.output_dir);out.mkdir(parents=True,exist_ok=True)
  def dump(name,data): (out/name).write_text(json.dumps(data,separators=(',',':')),encoding='utf-8')
@@ -109,7 +121,6 @@ def build(args):
  assert all(f['properties']['StnType']=='TRAIN' and f['properties']['StaType']!='Curbside Bus Stop only (no shelter)' for f in stations['features'])
  route_geo=json.loads((root/'routes.geojson').read_text())
  parallel,shared=parallel_routes(route_geo);dump('routes.geojson',parallel)
- dump('stations.geojson',stations)
  ntad_names={f['properties']['name'].casefold():f['properties']['name'] for f in route_geo['features']}
  z=zipfile.ZipFile(root/'amtrak.zip');info=readzip(z,'feed_info.txt')[0]
  routes={r['route_id']:r for r in readzip(z,'routes.txt') if r['route_type']=='2' and r['route_long_name']!='Commuter Rail'}
@@ -132,6 +143,8 @@ def build(args):
  times=defaultdict(list)
  for t in readzip(z,'stop_times.txt'):
   if t['trip_id'] in trips:times[t['trip_id']].append(t)
+ station_services(stations,routes,trips,times,ntad_names)
+ dump('stations.geojson',stations)
  # BTS scheduled gate-to-gate durations, including scheduled flights later cancelled.
  fz=zipfile.ZipFile(root/'flights.zip');filename=next(n for n in fz.namelist() if n.endswith('.csv'))
  flight_times=defaultdict(list);flight_rows=0;periods=set()
