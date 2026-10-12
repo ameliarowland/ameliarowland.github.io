@@ -120,7 +120,10 @@ def build(args):
  stations=json.loads((root/'stations.geojson').read_text())
  assert all(f['properties']['StnType']=='TRAIN' and f['properties']['StaType']!='Curbside Bus Stop only (no shelter)' for f in stations['features'])
  route_geo=json.loads((root/'routes.geojson').read_text())
- parallel,shared=parallel_routes(route_geo);dump('routes.geojson',parallel)
+ from rail_topology import simplify_display_sections
+ parallel,shared=parallel_routes(route_geo)
+ parallel,suppressed=simplify_display_sections(parallel)
+ dump('routes.geojson',parallel)
  ntad_names={f['properties']['name'].casefold():f['properties']['name'] for f in route_geo['features']}
  z=zipfile.ZipFile(root/'amtrak.zip');info=readzip(z,'feed_info.txt')[0]
  routes={r['route_id']:r for r in readzip(z,'routes.txt') if r['route_type']=='2' and r['route_long_name']!='Commuter Rail'}
@@ -216,7 +219,7 @@ def build(args):
   evidence[filename]=rows
  if 'calendar_dates.txt' in z.namelist():evidence['calendar_dates.txt']=readzip(z,'calendar_dates.txt')
  dump('gtfs-evidence.json',evidence)
- manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
+ manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6,'redundantSectionToleranceMeters':75,'suppressedSections':suppressed},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
  dump('manifest.json',manifest)
  print(json.dumps(manifest,indent=2))
  print('Default qualifying route/station/direction records:',sum(r['railMinutes']<=r['flightMinutes']+240 for r in records))
