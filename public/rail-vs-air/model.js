@@ -202,8 +202,8 @@ export function routeDrawingStyle(collection,zoom) {
   const nominal=zoom<=3?3.5:zoom<7?3.5+(zoom-3)/4*2:zoom<11?5.5+(zoom-7)/4*1.5:7;
   const maxLane=Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)));
   const cap=16+Math.max(0,zoom-12)*12;
-  const spacing=Math.min(nominal,cap/maxLane);
-  return {spacing,baseWidth:Math.min(zoom<7?2.5:3.2,spacing*.78),highlightWidth:Math.min(zoom<7?3.5:4.2,spacing*.95)};
+  const spacing=1.5*Math.min(nominal,cap/maxLane);
+  return {spacing,baseWidth:Math.min(zoom<7?3.75:4.8,spacing*.78),highlightWidth:Math.min(zoom<7?5.25:6.3,spacing*.95)};
 }
 export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom)) {
   const world=512*2**zoom;
