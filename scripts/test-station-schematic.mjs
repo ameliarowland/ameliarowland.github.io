@@ -43,6 +43,7 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
   if(byName.has('Vermonter')&&byName.has('Acela'))assert((lane(byName.get('Vermonter'))-lane(byName.get('Acela')))*normal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
   for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Coast Starlight','Pacific Surfliner'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
   if(unique.length===1&&!pair.split('|').includes('CHI'))assert(Math.abs(lane(unique[0]))<1e-6,'Single-route corridors must not inherit a distant hub displacement at '+pair);
+  if(byName.has('Pere Marquette'))for(const [name,f] of byName)assert((lane(byName.get('Pere Marquette'))-lane(f))*normal[1]<=1e-6,'Pere Marquette stays north of every shared route at '+pair);
   if(byName.has('Maple Leaf'))for(const [name,f] of byName)assert((lane(byName.get('Maple Leaf'))-lane(f))*normal[1]<=1e-6,'Maple Leaf stays north at '+pair);
  }
 
