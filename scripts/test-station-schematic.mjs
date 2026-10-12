@@ -74,3 +74,12 @@ assert(regional.some(f=>pair(f)==='PTB|RVR'),'Richmond western bypass connects S
 assert(regional.some(f=>pair(f)==='RVM|RVR'),'Main Street branch connects to Staples Mill');
 assert(!regional.some(f=>pair(f)==='PTB|RVM'),'No artificial Main Street–Petersburg triangle');
 console.log('Original-track pass-through station retention and Richmond branch topology verified.');
+
+for(const code of ['CHI','NYP'])for(const zoom of [4,8,12,16]){
+ const result=engine.render({id:5,zoom,records:[]}),dots=result.dots.features.filter(f=>f.properties.Code===code).sort((a,b)=>a.geometry.coordinates[0]-b.geometry.coordinates[0]);
+ const project=p=>[(p[0]+180)/360*512*2**zoom,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**zoom];
+ const a=project(dots[0].geometry.coordinates),b=project(dots[1].geometry.coordinates),distance=Math.hypot(a[0]-b[0],a[1]-b[1]),diameter=2*(dots[0].properties.radius+dots[0].properties.ringWidth);
+ assert(distance<diameter,'Hub dots should overlap slightly at '+code+' zoom '+zoom);
+ assert(distance>diameter*.8,'Hub overlap must stay modest at '+code+' zoom '+zoom);
+}
+console.log('Slight station-circle overlap verified at Chicago Union and New York Penn.');
