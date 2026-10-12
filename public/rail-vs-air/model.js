@@ -224,7 +224,7 @@ function removeOffsetLoops(shifted,source,protectedVertices) {
     entries=[...entries.slice(0,i-1),{point,index:null},...entries.slice(i+1)];cut=true;break;
   }
   if(cut)continue;
-  outer:for(let i=0;i<entries.length-3;i++)for(let j=i+2;j<entries.length-1;j++) {
+  outer:for(let i=0;i<entries.length-3;i++)for(let j=i+2;j<Math.min(entries.length-1,i+96);j++) {
    const point=crossing(entries[i].point,entries[i+1].point,entries[j].point,entries[j+1].point);if(!point)continue;
    if(entries.slice(i+1,j+1).some(e=>protectedVertices.has(e.index)))continue;
    const a=entries[i].index,b=entries[i+1].index,c=entries[j].index,d=entries[j+1].index;
@@ -240,7 +240,7 @@ export function routeDrawingStyle(collection,zoom) {
   const maxLane=Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)));
   const cap=zoom<=6?16:zoom<7?16+(zoom-6)*32:zoom<=12?48+(zoom-7)*12:108+(zoom-12)*60;
   const spacing=Math.max(6,1.5*Math.min(nominal,cap/maxLane));
-  return {spacing,baseWidth:Math.min(zoom<7?3.75:4.8,spacing*.78),highlightWidth:Math.min(zoom<7?5.25:6.3,spacing*.95)};
+  return {spacing,baseWidth:Math.min(zoom<7?2.4:3.2,spacing*.52),highlightWidth:Math.min(zoom<7?3.4:4.2,spacing*.68)};
 }
 export function continuousRoutePaths(collection) {
   const endpoints=new Map(),links=new Map(),used=new Set(),features=[];
@@ -265,14 +265,14 @@ export function continuousRoutePaths(collection) {
     }
   }
   function walk(index,side) {
-    const first=collection.features[index],coordinates=[],edgeLanes=[];
+    const first=collection.features[index],coordinates=[],edgeLanes=[],edgeFrames=[];
     while(!used.has(index)) {
       const f=collection.features[index],p=side?[...f.geometry.coordinates].reverse():f.geometry.coordinates,lane=(f.properties.lane||0)*(side?-1:1);
       if(!coordinates.length)coordinates.push(p[0]);coordinates.push(...p.slice(1));
-      edgeLanes.push(...Array(p.length-1).fill(lane));used.add(index);
+      edgeLanes.push(...Array(p.length-1).fill(lane));edgeFrames.push(...Array(p.length-1).fill((f.properties.laneFrame||1)*(side?-1:1)));used.add(index);
       const next=links.get(index+':'+(1-side));if(!next||used.has(next.index))break;index=next.index;side=next.side;
     }
-    features.push({type:'Feature',properties:{...first.properties,edgeLanes},geometry:{type:'LineString',coordinates}});
+    features.push({type:'Feature',properties:{...first.properties,edgeLanes,edgeFrames},geometry:{type:'LineString',coordinates}});
   }
   collection.features.forEach((f,index)=>{
     for(const side of [0,1])if(!used.has(index)&&!links.has(index+':'+side))walk(index,side);
@@ -685,7 +685,7 @@ export function alignLaneFrames(collection) {
   }
   for(let i=0;i<n;i++){const [root,s]=find(i);if(!anchor.has(root))anchor.set(root,s);}
   const features=collection.features.map((f,i)=>{
-    const [root,s]=find(i);return {...f,properties:{...f.properties,lane:(f.properties.lane||0)*s*anchor.get(root)}};
+    const [root,s]=find(i);return {...f,properties:{...f.properties,laneFrame:s*anchor.get(root),lane:(f.properties.lane||0)*s*anchor.get(root)}};
   });
   // Apply explicit geographic priorities after resolving through-path direction.
   // Reorder lanes locally instead of forcing unrelated branch frames to reverse.
@@ -893,3 +893,279 @@ export function pinchedStationSymbols(stations,displayed,zoom,activeRouteName=nu
     geometry:s.geometry
   }))};
 }
+// Optimize one order for the network, rather than re-sorting each section by
+// its compass heading. Branch-side preferences are counted at shared junctions.
+export function optimizeLaneOrder(collection) {
+  const symbol=f=>f.properties.symbologyName||f.properties.name;
+  const edges=new Map(),nodes=new Map(),names=[...new Set(collection.features.map(symbol))].sort();
+  for(const f of collection.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
+    const a=f.geometry.coordinates[i-1],b=f.geometry.coordinates[i],[key,sign]=edgeKey(a,b);
+    if(!edges.has(key))edges.set(key,{a:sign===1?a:b,b:sign===1?b:a,members:new Set(),frame:(f.properties.laneFrame||1)*sign});
+    edges.get(key).members.add(symbol(f));
+  }
+  for(const e of edges.values())for(const [p,q,sign] of [[e.a,e.b,1],[e.b,e.a,-1]]) {
+    const key=coordinateKey(p);if(!nodes.has(key))nodes.set(key,[]);
+    const dx=(q[0]-p[0])*Math.cos(p[1]*Math.PI/180),dy=-(q[1]-p[1]),length=Math.hypot(dx,dy);
+    if(length)nodes.get(key).push({edge:e,dx:dx/length,dy:dy/length,frame:e.frame*sign});
+  }
+  const preferences=[];
+  for(const incident of nodes.values()) {
+    if(incident.length<3)continue;
+    const main=[...incident].sort((a,b)=>b.edge.members.size-a.edge.members.size)[0];
+    for(const branch of incident) {
+      if(branch===main)continue;
+      const cross=main.dx*branch.dy-main.dy*branch.dx;
+      if(Math.abs(cross)<.15)continue;
+      const leaving=[...branch.edge.members].filter(n=>main.edge.members.has(n));
+      const staying=[...main.edge.members].filter(n=>!branch.edge.members.has(n));
+      for(const a of leaving)for(const b of staying)preferences.push({first:cross*main.frame<0?a:b,last:cross*main.frame<0?b:a,weight:Math.abs(cross)});
+    }
+  }
+  const north=['Adirondack','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service'];
+  const south=['Northeast Regional','Vermonter','Acela'];
+  const tier=n=>north.includes(n)?0:south.includes(n)?2:1;
+  const order=[...names].sort((a,b)=>tier(a)-tier(b)||(tier(a)===0?north.indexOf(a)-north.indexOf(b):tier(a)===2?south.indexOf(a)-south.indexOf(b):a.localeCompare(b)));
+  const score=order=>{const rank=new Map(order.map((n,i)=>[n,i]));return preferences.reduce((sum,p)=>sum+(rank.get(p.first)>rank.get(p.last)?p.weight:0),0);};
+  const initialCost=score(order);let cost=initialCost,swaps=0;
+  // Adjacent swaps strictly reduce the weighted branch-crossing objective.
+  for(let pass=0;pass<names.length*2;pass++) {
+    let changed=false;
+    for(let i=0;i<order.length-1;i++) {
+      if(tier(order[i])!==1||tier(order[i+1])!==1)continue;
+      [order[i],order[i+1]]=[order[i+1],order[i]];
+      const next=score(order);
+      if(next<cost-1e-8){cost=next;swaps++;changed=true;}else [order[i],order[i+1]]=[order[i+1],order[i]];
+    }
+    if(!changed)break;
+  }
+  const rank=new Map(order.map((n,i)=>[n,i])),features=[];
+  for(const f of collection.features) {
+    const p=f.geometry.coordinates;let run=[p[0]],lane=null,shared=1,frame=f.properties.laneFrame||1;
+    const flush=()=>{if(run.length>1)features.push({...f,properties:{...f.properties,lane,shared,laneFrame:frame},geometry:{type:'LineString',coordinates:run}});};
+    for(let i=1;i<p.length;i++) {
+      const [key,sign]=edgeKey(p[i-1],p[i]),e=edges.get(key),members=[...e.members].sort((a,b)=>rank.get(a)-rank.get(b));
+      const next=(members.indexOf(symbol(f))-(members.length-1)/2)*e.frame*sign;
+      if(lane!==null&&next!==lane){flush();run=[p[i-1]];}
+      lane=next;frame=e.frame*sign;shared=e.members.size;run.push(p[i]);
+    }
+    flush();
+  }
+  return {type:'FeatureCollection',orderingAudit:{initialCost,optimizedCost:cost,swaps,preferences:preferences.length,order},features};
+}
+
+// Use the upstream Leaflet.PolylineOffset geometry engine on screen points.
+// MapLibre still provides the basemap, controls, hit testing and popups.
+export function untangledNetwork(collection,zoom,style=routeDrawingStyle(collection,zoom),stations=null,engine=globalThis.L?.PolylineOffset) {
+  if(!engine)throw new Error('Leaflet.PolylineOffset is unavailable');
+  const world=512*2**zoom,spacing=style.spacing;
+  const project=p=>({x:(p[0]+180)/360*world,y:(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world});
+  const unproject=p=>[p.x/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p.y/world)))*180/Math.PI];
+  const anchored=anchorStationGeometry(collection,stations),associations=new Map();
+  for(const a of anchored.stationAnchorAssociations||[]) {
+    const key=a.name+'|'+a.key;if(!associations.has(key))associations.set(key,[]);associations.get(key).push(a.Code);
+  }
+  const paths=continuousRoutePaths(simplifyDisplayGeometry(anchored,zoom)),support=new Map();
+  for(const f of paths.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
+    const key=edgeKey(f.geometry.coordinates[i-1],f.geometry.coordinates[i])[0];support.set(key,(support.get(key)||0)+1);
+  }
+  // Round the common centerline before offsetting when its turn radius is
+  // smaller than the displayed bundle. Every shared vertex uses one reference;
+  // the upstream engine then computes the parallel circular joins.
+  const radius=Math.max(4,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)))*3);
+  const centers=new Map();
+  for(const f of paths.features) {
+    const coords=f.geometry.coordinates,xy=coords.map(project),dist=[0];
+    for(let i=1;i<xy.length;i++)dist.push(dist.at(-1)+Math.hypot(xy[i].x-xy[i-1].x,xy[i].y-xy[i-1].y));
+    const at=t=>{
+      if(t<=0)return xy[0];if(t>=dist.at(-1))return xy.at(-1);
+      let lo=0,hi=dist.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(dist[m]<=t)lo=m;else hi=m;}
+      const u=(t-dist[lo])/(dist[hi]-dist[lo]||1);return {x:xy[lo].x+(xy[hi].x-xy[lo].x)*u,y:xy[lo].y+(xy[hi].y-xy[lo].y)*u};
+    };
+    for(let i=0;i<coords.length;i++) {
+      const key=coordinateKey(coords[i]),left=i?support.get(edgeKey(coords[i-1],coords[i])[0])||1:0,right=i+1<coords.length?support.get(edgeKey(coords[i],coords[i+1])[0])||1:0;
+      const window=Math.min(radius,dist[i],dist.at(-1)-dist[i]),quality=Math.max(left,right)*1000+Math.min(window,radius);
+      if(centers.has(key)&&centers.get(key).quality>=quality)continue;
+      const sum={x:0,y:0},weights=[1,4,6,4,1];
+      for(let j=0;j<5;j++){const q=at(dist[i]+(j-2)*window/2);sum.x+=q.x*weights[j]/16;sum.y+=q.y*weights[j]/16;}
+      centers.set(key,{point:sum,quality});
+    }
+  }
+  const junctionCounts=new Map();
+  for(const f of paths.features)for(const p of f.geometry.coordinates){const key=stationRouteName(f.properties.symbologyName||f.properties.name)+'|'+coordinateKey(p);junctionCounts.set(key,(junctionCounts.get(key)||0)+1);}
+  const nodePoints=new Map();
+  const drafts=paths.features.map(f=>{
+    const coords=f.geometry.coordinates,xy=coords.map(p=>centers.get(coordinateKey(p)).point),lanes=f.properties.edgeLanes;
+    const segments=coords.slice(1).map((p,i)=>engine.offsetPointLine([xy[i],xy[i+1]],lanes[i]*spacing)[0]);
+    const corners=coords.map((p,i)=>{
+      if(i===0)return [segments[0].offset[0]];
+      if(i===coords.length-1)return [segments.at(-1).offset[1]];
+      const a=segments[i-1],b=segments[i];
+      if(lanes[i-1]===lanes[i]) {
+        const angle=engine.getSignedAngle(a.original,b.original);
+        // Near-collinear station projections can differ by floating point
+        // noise. Do not turn that noise into a nearly complete circular arc.
+        if(Math.abs(angle)<.001)return [{x:(a.offset[1].x+b.offset[0].x)/2,y:(a.offset[1].y+b.offset[0].y)/2}];
+        const joined=engine.joinSegments(a,b,lanes[i]*spacing);
+        const limit=Math.max(8,Math.abs(lanes[i]*spacing)*3);
+        if(joined.length>10||joined.some(p=>Math.hypot(p.x-xy[i].x,p.y-xy[i].y)>limit))return [a.offset[1],b.offset[0]];
+        return joined;
+      }
+      // Membership changes translate parallel lanes. Carry the wider slot to
+      // the junction; ease the change on the adjacent source edge below.
+      const use=Math.abs(lanes[i-1])>=Math.abs(lanes[i])?a:b;
+      return [use===a?a.offset[1]:b.offset[0]];
+    });
+    const name=stationRouteName(f.properties.symbologyName||f.properties.name);
+    for(let i=0;i<coords.length;i++) {
+      const left=i?support.get(edgeKey(coords[i-1],coords[i])[0])||1:0;
+      const right=i+1<coords.length?support.get(edgeKey(coords[i],coords[i+1])[0])||1:0;
+      const points=corners[i],point=points[Math.floor(points.length/2)]||xy[i];
+      const quality=Math.max(left,right)*1000+(i>0&&i<coords.length-1?1:0),key=name+'|'+coordinateKey(coords[i]);
+      if(!nodePoints.has(key)||quality>nodePoints.get(key).quality)nodePoints.set(key,{point,quality});
+    }
+    return {f,coords,xy,lanes,segments,corners,name};
+  });
+  const features=drafts.map(({f,coords,xy,lanes,segments,corners,name})=>{
+    const points=[],sourcePoints=[],stationPositions=[],protectedVertices=new Set();
+    for(let i=0;i<coords.length;i++) {
+      const key=coordinateKey(coords[i]),node=nodePoints.get(name+'|'+key).point;
+      let corner=corners[i];
+      if(i===0||i===coords.length-1)corner=[node];
+      // Keep exact station vertices and same-service branch endpoints. Native
+      // round joins elsewhere come directly from the upstream plugin.
+      const codes=associations.get(name+'|'+key)||[];
+      if(codes.length||junctionCounts.get(name+'|'+key)>1) {
+        const middle=Math.floor(corner.length/2);corner=[...corner.slice(0,middle),node,...corner.slice(middle+1)];
+        protectedVertices.add(points.length+middle);
+        for(const Code of codes)stationPositions.push({Code,name,coordinates:unproject(node)});
+      }
+      points.push(...corner);sourcePoints.push(...corner.map(()=>[xy[i].x,xy[i].y]));
+      if(i+1<coords.length) {
+        const start=corner.at(-1),end=i+1===coords.length-1?nodePoints.get(name+'|'+coordinateKey(coords[i+1])).point:corners[i+1][0];
+        const a=segments[i].offset[0],b=segments[i].offset[1],length=Math.hypot(b.x-a.x,b.y-a.y);
+        const gap=Math.max(Math.hypot(start.x-a.x,start.y-a.y),Math.hypot(end.x-b.x,end.y-b.y));
+        if(gap>1e-5&&length>1e-5&&((i>0&&lanes[i-1]!==lanes[i])||(i+1<lanes.length&&lanes[i+1]!==lanes[i]))) {
+          const window=Math.min(length/2,Math.max(16,gap*3));
+          const dx=(b.x-a.x)/length,dy=(b.y-a.y)/length;
+          const first={x:a.x+dx*window,y:a.y+dy*window},last={x:b.x-dx*window,y:b.y-dy*window};
+          // Cubic easing translates a lane without a triangular dogleg.
+          const curve=(a,b,c,d)=>{const out=[];for(let j=1;j<=8;j++){const t=j/8,u=1-t;out.push({x:u*u*u*a.x+3*u*u*t*b.x+3*u*t*t*c.x+t*t*t*d.x,y:u*u*u*a.y+3*u*u*t*b.y+3*u*t*t*c.y+t*t*t*d.y});}return out;};
+          const beforeLength=points.length;
+          points.push(...curve(start,{x:start.x+dx*window/3,y:start.y+dy*window/3},{x:first.x-dx*window/3,y:first.y-dy*window/3},first));
+          points.push(last,...curve(last,{x:last.x+dx*window/3,y:last.y+dy*window/3},{x:end.x-dx*window/3,y:end.y-dy*window/3},end));
+          for(let j=beforeLength;j<points.length;j++){const t=(j-beforeLength+1)/(points.length-beforeLength+1);sourcePoints.push([xy[i].x+(xy[i+1].x-xy[i].x)*t,xy[i].y+(xy[i+1].y-xy[i].y)*t]);}
+        }
+      }
+    }
+    return {...f,properties:{...f.properties,stationPositions},geometry:{type:'LineString',coordinates:removeOffsetLoops(points.map(p=>[p.x,p.y]),sourcePoints,protectedVertices).map(p=>unproject({x:p[0],y:p[1]}))}};
+  });
+  // A short terminal throat can be smaller than the pixel-wide bundle.
+  // Connect directly to the retained stop dot instead of tracing a folded
+  // offset around that tiny source corner. This applies to every terminus.
+  if(stations) {
+    const stationByCode=new Map(stations.features.map(s=>[s.properties.Code,s]));
+    const endpointCounts=new Map();
+    for(const draft of drafts)for(const p of [draft.coords[0],draft.coords.at(-1)]){const key=draft.name+'|'+coordinateKey(p);endpointCounts.set(key,(endpointCounts.get(key)||0)+1);}
+    const fans=new Map(),terminalTargets=new Map();
+    features.forEach((f,index)=>{
+      const draft=drafts[index];
+      for(const side of [0,1]) {
+        const source=side?draft.coords:[...draft.coords].reverse(),endpoint=source.at(-1);
+        if(junctionCounts.get(draft.name+'|'+coordinateKey(endpoint))>1)continue;
+        const stop=(f.properties.stationPositions||[]).find(stop=>{
+          const station=stationByCode.get(stop.Code);if(!station)return false;const p=station.geometry.coordinates;
+          return Math.hypot((endpoint[0]-p[0])*Math.cos(p[1]*Math.PI/180),endpoint[1]-p[1])*111320<750;
+        });
+        if(!stop)continue;
+        const station=stationByCode.get(stop.Code),center=project(station.geometry.coordinates),scale=40075016.686*Math.cos(station.geometry.coordinates[1]*Math.PI/180)/world;
+        const approach=[...source].reverse().find(p=>{const q=project(p);return Math.hypot(q.x-center.x,q.y-center.y)*scale>1500;})||source[0];
+        const q=project(approach),angle=Math.round(Math.atan2(q.y-center.y,q.x-center.x)/(Math.PI/3)),key=stop.Code+'|'+angle;
+        if(!fans.has(key))fans.set(key,[]);fans.get(key).push({index,side,stop,approach:q,name:draft.name});
+      }
+    });
+    for(const group of fans.values()) {
+      if(group.length<2)continue;
+      const targets=group.map(item=>project(item.stop.coordinates));
+      const center=targets.reduce((s,p)=>({x:s.x+p.x/group.length,y:s.y+p.y/group.length}),{x:0,y:0});
+      const entry=group.reduce((s,p)=>({x:s.x+p.approach.x/group.length,y:s.y+p.approach.y/group.length}),{x:0,y:0});
+      const dx=center.x-entry.x,dy=center.y-entry.y,normal={x:-dy,y:dx};
+      // Incoming route order is measured where the approaches are still
+      // separate. Matching that order to the terminal slots minimizes crossings.
+      const incoming=item=>{
+        const f=features[item.index],line=item.side?f.geometry.coordinates:[...f.geometry.coordinates].reverse();
+        const target=project(item.stop.coordinates),window=Math.max(70,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)))*4);
+        let j=line.findIndex(p=>coordinateKey(p)===coordinateKey(item.stop.coordinates)),travel=0;
+        while(j>0&&travel<window){const a=project(line[j]),b=project(line[j-1]);travel+=Math.hypot(b.x-a.x,b.y-a.y);j--;}
+        const p=project(line[Math.max(0,j)]);return p.x*normal.x+p.y*normal.y;
+      };
+      group.sort((a,b)=>incoming(a)-incoming(b)||a.name.localeCompare(b.name));
+      targets.sort((a,b)=>(a.x-b.x)*normal.x+(a.y-b.y)*normal.y);
+      group.forEach((item,i)=>terminalTargets.set(item.index+':'+item.side,unproject(targets[i])));
+    }
+    features.forEach((f,index)=>{
+      const source=drafts[index].coords,sourceXY=source.map(project),total=[0];
+      for(let i=1;i<sourceXY.length;i++)total.push(total.at(-1)+Math.hypot(sourceXY[i].x-sourceXY[i-1].x,sourceXY[i].y-sourceXY[i-1].y));
+      for(const side of [0,1]) {
+        const endpoint=source[side?source.length-1:0];
+        if(junctionCounts.get(drafts[index].name+'|'+coordinateKey(endpoint))>1)continue;
+        const stops=(f.properties.stationPositions||[]).filter(stop=>{
+          const station=stationByCode.get(stop.Code);if(!station)return false;
+          const p=station.geometry.coordinates;return Math.hypot((endpoint[0]-p[0])*Math.cos(p[1]*Math.PI/180),endpoint[1]-p[1])*111320<750;
+        });
+        if(!stops.length)continue;
+        const stop=stops.sort((a,b)=>{
+          const pa=project(a.coordinates),pb=project(b.coordinates),e=project(endpoint);return Math.hypot(pa.x-e.x,pa.y-e.y)-Math.hypot(pb.x-e.x,pb.y-e.y);
+        })[0];
+        const line=side?f.geometry.coordinates:[...f.geometry.coordinates].reverse(),target=project(terminalTargets.get(index+':'+side)||stop.coordinates);
+        let stopIndex=line.findIndex(p=>coordinateKey(p)===coordinateKey(stop.coordinates));if(stopIndex<1)continue;
+        const otherStops=new Set(f.properties.stationPositions.filter(s=>s.Code!==stop.Code).map(s=>coordinateKey(s.coordinates)));
+        const window=Math.max(70,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)))*4);
+        let startIndex=stopIndex,travel=0;
+        while(startIndex>0&&travel<window) {
+          const a=project(line[startIndex]),b=project(line[startIndex-1]);travel+=Math.hypot(b.x-a.x,b.y-a.y);startIndex--;
+          if(otherStops.has(coordinateKey(line[startIndex])))break;
+        }
+        if(startIndex===stopIndex)continue;
+        const a=project(line[startIndex]),previous=project(line[Math.max(0,startIndex-1)]);
+        let dx=a.x-previous.x,dy=a.y-previous.y,len=Math.hypot(dx,dy);
+        if(!len){dx=target.x-a.x;dy=target.y-a.y;len=Math.hypot(dx,dy)||1;}
+        const forward=Math.max(0,(target.x-a.x)*dx/len+(target.y-a.y)*dy/len);
+        const control={x:a.x+dx/len*forward*.55,y:a.y+dy/len*forward*.55},curve=[];
+        for(let j=1;j<=24;j++){const t=j/24,u=1-t;curve.push(unproject({x:u*u*a.x+2*u*t*control.x+t*t*target.x,y:u*u*a.y+2*u*t*control.y+t*t*target.y}));}
+        const joined=[...line.slice(0,startIndex+1),...curve];
+        f.geometry.coordinates=side?joined:joined.reverse();
+        stop.coordinates=unproject(target);
+      }
+    });
+  }
+  for(const f of features) {
+    const keep=new Set(f.properties.stationPositions.map(s=>coordinateKey(s.coordinates)));
+    const name=stationRouteName(f.properties.symbologyName||f.properties.name);
+    for(const [key,entry] of nodePoints)if(key.startsWith(name+'|')&&junctionCounts.get(key)>1)keep.add(coordinateKey(unproject(entry.point)));
+    let line=f.geometry.coordinates;
+    for(let pass=0;pass<12;pass++) {
+      let changed=false;
+      outer:for(let i=0;i<line.length-3;i++)for(let j=i+2;j<Math.min(line.length-1,i+96);j++) {
+        const a=project(line[i]),b=project(line[i+1]),c=project(line[j]),d=project(line[j+1]);
+        const rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y,den=rx*sy-ry*sx;if(Math.abs(den)<1e-9)continue;
+        const t=((c.x-a.x)*sy-(c.y-a.y)*sx)/den,u=((c.x-a.x)*ry-(c.y-a.y)*rx)/den;
+        if(t<=1e-6||t>=1-1e-6||u<=1e-6||u>=1-1e-6)continue;
+        const retained=line.slice(i+1,j+1).filter(p=>keep.has(coordinateKey(p)));
+        line=[...line.slice(0,i+1),unproject({x:a.x+t*rx,y:a.y+t*ry}),...retained,...line.slice(j+1)];
+        changed=true;break outer;
+      }
+      if(!changed)break;
+    }
+    f.geometry.coordinates=line;
+  }
+  const brokenJunctions=[];
+  drafts.forEach((draft,index)=>{
+    for(const p of [draft.coords[0],draft.coords.at(-1)]) {
+      const key=draft.name+'|'+coordinateKey(p);if(junctionCounts.get(key)<=1)continue;
+      const expected=unproject(nodePoints.get(key).point);
+      if(!features[index].geometry.coordinates.some(q=>Math.hypot(q[0]-expected[0],q[1]-expected[1])<1e-9))brokenJunctions.push({name:draft.name,source:p});
+    }
+  });
+  return {type:'FeatureCollection',connectivityAudit:{brokenJunctions},features};
+}
+
