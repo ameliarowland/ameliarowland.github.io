@@ -324,7 +324,8 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=drawingStyle.spacing;
   const tangentRadius=Math.max(4,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0))));
-  const features=continuousRoutePaths(simplifyDisplayGeometry(anchorStationGeometry(collection,stations),zoom)).features.map(f=>{
+  const sourcePaths=continuousRoutePaths(simplifyDisplayGeometry(anchorStationGeometry(collection,stations),zoom));
+  const features=sourcePaths.features.map(f=>{
     const lanes=f.properties.edgeLanes;
     const projected=f.geometry.coordinates.map((p,i)=>{
       const xy=project(p),lane=i===0?lanes[0]:i===lanes.length?lanes.at(-1):(lanes[i-1]+lanes[i])/2;
@@ -356,6 +357,29 @@ export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(c
       const amount=p[2]*spacing;return [p[0]-dy/len*amount,p[1]+dx/len*amount];
     });
     return {...f,geometry:{type:'LineString',coordinates:shifted.map(unproject)}};
+  });
+  // At a true same-service branch, join the offset branch to that service's
+  // through lane. A short quadratic transition removes floating caps and kinks.
+  const through=new Map();
+  sourcePaths.features.forEach((f,index)=>{
+    const p=f.geometry.coordinates;
+    for(let i=1;i<p.length-1;i++)through.set((f.properties.name||f.properties.route)+'|'+coordinateKey(p[i]),{index,point:features[index].geometry.coordinates[i]});
+  });
+  sourcePaths.features.forEach((f,index)=>{
+    for(const side of [0,1]) {
+      const source=f.geometry.coordinates,key=(f.properties.name||f.properties.route)+'|'+coordinateKey(source[side?source.length-1:0]),join=through.get(key);
+      if(!join||join.index===index)continue;
+      const coordinates=features[index].geometry.coordinates;
+      const oriented=side?coordinates:[...coordinates].reverse();
+      if(oriented.length<2)continue;
+      const end=project(oriented.at(-1)),prior=project(oriented.at(-2)),target=project(join.point),span=Math.hypot(end[0]-prior[0],end[1]-prior[1]);
+      if(!span||Math.hypot(target[0]-end[0],target[1]-end[1])>spacing*12)continue;
+      const ratio=Math.min(1,Math.max(24,spacing*2)/span),start=[end[0]+(prior[0]-end[0])*ratio,end[1]+(prior[1]-end[1])*ratio];
+      const curve=[];
+      for(let i=0;i<=8;i++) {const t=i/8,u=1-t;curve.push(unproject([u*u*start[0]+2*u*t*end[0]+t*t*target[0],u*u*start[1]+2*u*t*end[1]+t*t*target[1]]));}
+      const joined=[...oriented.slice(0,-1),...curve];
+      features[index].geometry.coordinates=side?joined:joined.reverse();
+    }
   });
   return {type:'FeatureCollection',features};
 }
