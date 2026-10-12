@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-8';
+import {stationRouteName} from './model.js?v=station-schematic-10';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -33,8 +33,8 @@ export function createSchematicEngine(routes,stations) {
  }
  }
  carryOrder(chicagoUnionOrder,['CHI']);
- carryOrder(['Crescent','Carolinian','Piedmont','Floridian'],['CLT','GRO','RGH']);
- const defaultOrder=(a,b)=>rank(a)-rank(b)||a.localeCompare(b);
+ carryOrder(['Floridian','Piedmont','Carolinian','Crescent'],['CLT','GRO','RGH']);
+ const defaultOrder=(a,b)=>rank(b)-rank(a)||b.localeCompare(a);
  for(const [id,node] of nodes){
   const incoming=new Map([...node.names].map(n=>[n,0])),outgoing=new Map([...node.names].map(n=>[n,new Set()]));
   for(const [a,b] of preferences.get(id)||[]){if(outgoing.get(a).has(b))continue;outgoing.get(a).add(b);incoming.set(b,incoming.get(b)+1);}
@@ -53,7 +53,7 @@ export function createSchematicEngine(routes,stations) {
  // Station rows use one diagonal screen direction throughout the schematic.
  // Their route order therefore cannot reverse as a corridor bends. A fixed
  // frame also avoids enlarging low-zoom rows into crossed local tangent planes.
- for(const node of nodes.values())node.normal=[Math.SQRT1_2,Math.SQRT1_2];
+ for(const node of nodes.values())node.normal=[Math.SQRT1_2,-Math.SQRT1_2];
  function journey(record){
   const name=stationRouteName(record.ntadName||record.route),key=name+'|'+record.origin+'|'+record.destination;
   if(pathCache.has(key))return pathCache.get(key);
@@ -71,7 +71,7 @@ export function createSchematicEngine(routes,stations) {
   const spacing=Math.min(13,6+Math.max(0,job.zoom-4)*.65),positions=new Map();
   const radius=Math.min(5,1.6+Math.max(0,job.zoom-4)*.3,spacing/2-1),ringWidth=Math.min(1.2,.8+Math.max(0,job.zoom-4)*.05);
   for(const [id,node] of nodes){
-   const p=project(node.coordinate),stationSpacing=["CHI","NYP"].includes(id)?Math.min(spacing,2*(radius+ringWidth)*.88):spacing;
+   const p=project(node.coordinate),stationSpacing=Math.min(spacing,2*(radius+ringWidth)*.88);
    node.order.forEach((name,i)=>{const offset=(i-(node.order.length-1)/2)*stationSpacing;positions.set(id+'|'+name,unproject([p[0]+node.normal[0]*offset,p[1]+node.normal[1]*offset]));});
   }
   const displayed=collection(routes.features.map(f=>{const name=stationRouteName(f.properties.symbologyName||f.properties.name);return {...f,properties:{...f.properties,stationPositions:[f.properties.from,f.properties.to].filter(id=>!id.startsWith('junction:')).map(Code=>({Code,name,coordinates:positions.get(Code+'|'+name)}))},geometry:{type:'LineString',coordinates:[positions.get(f.properties.from+'|'+name),positions.get(f.properties.to+'|'+name)]}};}));
