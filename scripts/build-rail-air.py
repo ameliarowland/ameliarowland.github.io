@@ -11,7 +11,7 @@ STATIONS_URL='https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/
 GTFS_URL='https://content.amtrak.com/content/gtfs/GTFS.zip'
 AIRPORTS_URL='https://davidmegginson.github.io/ourairports-data/airports.csv'
 DISPLAY_ROUTE_PRIORITY=['Pennsylvanian','Keystone Service']
-DISPLAY_ROUTE_SOUTHERN=['Acela','Northeast Regional','Vermonter']
+DISPLAY_ROUTE_SOUTHERN=['Northeast Regional','Vermonter','Acela']
 STATION_SQL="StnType = 'TRAIN' AND StaType <> 'Curbside Bus Stop only (no shelter)'"
 US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
 
