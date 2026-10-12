@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -71,6 +71,24 @@ const branchFrames={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'A',lane:.5},geometry:{type:'LineString',coordinates:[[1,0],[1,1]]}}
 ]};
 assert(alignLaneFrames(branchFrames).features.every(f=>f.properties.lane===.5));
+// Multi-service symbols span the actual offset lanes perpendicular to track;
+// a passing second route must not turn a single-service stop into a bar.
+const stationFixture={type:'FeatureCollection',features:[
+ {type:'Feature',properties:{Code:'MULTI',routeNames:['A','B']},geometry:{type:'Point',coordinates:[0,0]}},
+ {type:'Feature',properties:{Code:'SINGLE',routeNames:['A']},geometry:{type:'Point',coordinates:[.005,0]}}
+]};
+const stationTracks={type:'FeatureCollection',features:['A','B'].map((name,i)=>({type:'Feature',properties:{name,lane:i-.5},geometry:{type:'LineString',coordinates:[[-.01,0],[.01,0]]}}))};
+for(const zoom of [4,10,15]) {
+ const style=routeDrawingStyle(stationTracks,zoom),display=offsetNetwork(stationTracks,zoom,style);
+ const symbols=stationSymbols(stationFixture,stationTracks,display,zoom,style);
+ assert.equal(symbols.bars.features.length,1);assert.equal(symbols.bars.features[0].properties.Code,'MULTI');
+ assert.equal(symbols.dots.features.length,1);assert.equal(symbols.dots.features[0].properties.Code,'SINGLE');
+ const [a,b]=symbols.bars.features[0].geometry.coordinates;
+ assert(Math.abs(a[0]-b[0])<1e-10); // north–south bar across east–west track
+ const latitudes=display.features.map(f=>f.geometry.coordinates[0][1]);
+ assert(Math.min(a[1],b[1])<Math.min(...latitudes));
+ assert(Math.max(a[1],b[1])>Math.max(...latitudes));
+}
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
@@ -99,4 +117,11 @@ for(const f of stationData.features){assert.equal(f.properties.StnType,'TRAIN');
 assert.equal(comparisons.length,manifest.matchedPairs);
 assert.equal(comparisons.filter(r=>!r.shapeRange).length,manifest.geometryMissing);
 assert.equal(stationData.features.length,manifest.stationCount);
+assert(stationData.features.every(f=>Array.isArray(f.properties.routeNames)&&new Set(f.properties.routeNames).size===f.properties.routeNames.length));
+const actualStyle=routeDrawingStyle(actualNetwork,12);
+const actualSymbols=stationSymbols(stationData,actualNetwork,offsetNetwork(actualNetwork,12,actualStyle),12,actualStyle);
+for(const code of ['PHL','NYP','RVR'])assert(actualSymbols.bars.features.some(f=>f.properties.Code===code));
+assert(actualSymbols.dots.features.some(f=>f.properties.Code==='DOW'));
+assert.equal(actualSymbols.dots.features.length+actualSymbols.bars.features.length,stationData.features.length);
+
 console.log(`Verified ${comparisons.length} comparisons against retained GTFS evidence, station filters, geometry bounds, threshold boundaries, and opposite-direction offsets.`);
