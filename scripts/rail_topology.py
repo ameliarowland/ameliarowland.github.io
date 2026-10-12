@@ -247,3 +247,18 @@ def trim_philadelphia_station_branches(fc):
   target=[a[0]+t*dx,math.degrees(2*math.atan(math.exp(math.radians(a[1]+t*dy)))-math.pi/2)]
   f['geometry']={'type':'LineString','coordinates':[target]+[list(point) for point in p[1:]]}
  return {'type':'FeatureCollection','features':features}
+
+
+def add_pennsylvanian_station_approach(fc):
+ """Add the verified Philadelphia stop approach without deleting or moving
+ any original NTAD Pennsylvanian section. The timetable establishes the stop;
+ geometry comes from the existing NEC track in the original source.
+ """
+ from copy import deepcopy
+ features=deepcopy(fc['features'])
+ for f in fc['features']:
+  if f['properties']['name']!='Acela':continue
+  if not all(-75.201<p[0]<-75.175 and 39.9516<=p[1]<=39.97806 for p in f['geometry']['coordinates']):continue
+  clone=deepcopy(f);clone['properties'].update(name='Pennsylvanian',symbologyName='Pennsylvanian',lanePriority=0,laneSouthPriority=None,displayRepair='Philadelphia scheduled stop approach; existing shared NEC track; original Pennsylvanian preserved')
+  features.append(clone)
+ return {'type':'FeatureCollection','features':features}
