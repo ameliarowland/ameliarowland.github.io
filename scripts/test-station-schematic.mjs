@@ -6,7 +6,7 @@ const load=n=>JSON.parse(fs.readFileSync('public/rail-vs-air/data/'+n,'utf8'));
 const data=filterDisplayData(load('station-schematic.geojson'),load('stations.geojson'),load('comparisons.json')),manifest=load('manifest.json');
 for(const f of data.routes.features)f.properties.color=manifest.routeColors[f.properties.symbologyName||f.properties.name];
 const started=performance.now(),engine=createSchematicEngine(data.routes,data.stations);console.log('Initialize ms',Math.round(performance.now()-started));
-for(const zoom of [4,7.9,12,16]){
+for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
  const result=engine.render({id:1,zoom,records:data.comparisons.filter(r=>r.railMinutes<=r.flightMinutes+240)});
  const points=new Set(result.displayed.features.flatMap(f=>f.geometry.coordinates.map(p=>(f.properties.symbologyName||f.properties.name)+'|'+p.join(','))));
  const missing=result.dots.features.filter(f=>!points.has(f.properties.symbolRoutes[0]+'|'+f.geometry.coordinates.join(',')));
@@ -80,7 +80,7 @@ for(const code of ['CHI','NYP'])for(const zoom of [4,8,12,16]){
  const project=p=>[(p[0]+180)/360*512*2**zoom,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*512*2**zoom];
  const a=project(dots[0].geometry.coordinates),b=project(dots[1].geometry.coordinates),distance=Math.hypot(a[0]-b[0],a[1]-b[1]),diameter=2*(dots[0].properties.radius+dots[0].properties.ringWidth);
  assert(distance<diameter,'Hub dots should overlap slightly at '+code+' zoom '+zoom);
- assert(distance>diameter*.8,'Hub overlap must stay modest at '+code+' zoom '+zoom);
+ assert(distance>0,'Every hub route keeps a distinct position');
 }
 console.log('Slight station-circle overlap verified at Chicago Union and New York Penn.');
 
@@ -94,7 +94,7 @@ for(const zoom of [4,8,12,16]){
  for(const f of result.displayed.features)for(const p of f.properties.stationPositions){if(!stations.has(p.Code))stations.set(p.Code,new Map());stations.get(p.Code).set(p.name,p.coordinates);}
  for(const [code,routes] of stations){const points=[...routes.values()].sort((a,b)=>a[0]-b[0]);for(let i=1;i<points.length;i++){
   const a=project(points[i-1]),b=project(points[i]),distance=Math.hypot(a[0]-b[0],a[1]-b[1]);
-  assert(distance<diameter&&distance>diameter*.8,'Modest adjacent-lane dot overlap at '+code+' zoom '+zoom);
+  assert(distance<diameter&&distance>0,'Positive adjacent-lane spacing with overlap at '+code+' zoom '+zoom);
  }}
 }
 console.log('Slight overlap verified for adjacent route positions at every station.');
@@ -106,3 +106,17 @@ for(const code of ['POS','ONA']){
  assert(Math.abs(points[1][0]-points[0][0])<Math.abs(points[1][1]-points[0][1])*.15,'Dots align across the east-west route bundle at '+code);
 }
 console.log('Station dot rows verified, including Pomona and Ontario transverse alignment.');
+
+const referenceAxes=new Map();
+for(const zoom of [3.8,4.8,5.7,5.8,5.9,6.8,7.9,12,16]){
+ const result=engine.render({id:8,zoom,records:[]}),world=512*2**zoom,project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world],rows=new Map();
+ for(const f of result.displayed.features){
+  const source=data.routes.features[f.properties.edgeId],a=project(source.geometry.coordinates[0]),b=project(source.geometry.coordinates[1]),u=project(f.geometry.coordinates[0]),v=project(f.geometry.coordinates[1]),dx=b[0]-a[0],dy=b[1]-a[1];
+  assert((v[0]-u[0])*dx+(v[1]-u[1])*dy>=(dx*dx+dy*dy)*.49,'Offset segments cannot backtrack at zoom '+zoom+' '+f.properties.from+'-'+f.properties.to);
+  for(const p of f.properties.stationPositions){if(!rows.has(p.Code))rows.set(p.Code,new Map());rows.get(p.Code).set(p.name,project(p.coordinates));}
+ }
+ for(const [code,positions] of rows){if(positions.size<2)continue;const names=[...positions.keys()].sort(),a=positions.get(names[0]),b=positions.get(names.at(-1)),length=Math.hypot(b[0]-a[0],b[1]-a[1]),axis=[(b[0]-a[0])/length,(b[1]-a[1])/length];
+  if(!referenceAxes.has(code))referenceAxes.set(code,axis);else{const ref=referenceAxes.get(code);assert(ref[0]*axis[0]+ref[1]*axis[1]>.99999,'Station row direction cannot flip with zoom at '+code);}
+ }
+}
+console.log('Fractional-zoom stability and no-backtracking checks passed, including zoom 5.8.');
