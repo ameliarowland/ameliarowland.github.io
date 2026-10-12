@@ -87,7 +87,7 @@ for(const zoom of [4,10,15]) {
  assert(Math.abs(a[0]-b[0])<1e-10); // north–south bar across east–west track
  const latitudes=display.features.map(f=>f.geometry.coordinates[0][1]);
  const world=512*2**zoom,y=latitude=>(1-Math.log(Math.tan(Math.PI/4+latitude*Math.PI/360))/Math.PI)/2*world;
- const symbolMin=Math.min(y(a[1]),y(b[1]))-2.5,symbolMax=Math.max(y(a[1]),y(b[1]))+2.5;
+ const symbolMin=Math.min(y(a[1]),y(b[1])),symbolMax=Math.max(y(a[1]),y(b[1]));
  const routeMin=Math.min(...latitudes.map(y))-style.highlightWidth/2,routeMax=Math.max(...latitudes.map(y))+style.highlightWidth/2;
  assert(Math.abs(symbolMin-routeMin)<1e-5);assert(Math.abs(symbolMax-routeMax)<1e-5);
 }
