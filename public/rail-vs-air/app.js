@@ -1,9 +1,10 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,pinchedNetwork,pinchedStationSymbols,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=pinched-stations-1';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=leaflet-offset-2';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
 let colors=new Map(),networkData=null,stationDataCache=null,qualifiedRecords=[],activeRouteName=null,lastRenderZoom=null,available=false;
+const geometryCache=new Map();
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
 const coords=code=>stations[code]?.geometry.coordinates;
@@ -41,7 +42,10 @@ function renderRouteGeometry() {
  if(!available)return;
  const zoom=map.getZoom();lastRenderZoom=zoom;
  const drawingStyle=routeDrawingStyle(networkData,zoom);
- const displayed=pinchedNetwork(networkData,zoom,drawingStyle,stationDataCache);
+ const cacheKey=zoom.toFixed(2);
+ const displayed=geometryCache.get(cacheKey)||untangledNetwork(networkData,zoom,drawingStyle,stationDataCache);
+ geometryCache.set(cacheKey,displayed);
+ if(geometryCache.size>6)geometryCache.delete(geometryCache.keys().next().value);
  map.getSource('network').setData(displayed);
  const focus={type:'FeatureCollection',features:displayed.features.filter(f=>(f.properties.symbologyName||f.properties.name)===activeRouteName)};
  map.getSource('route-focus').setData(focus);
@@ -53,7 +57,9 @@ function renderRouteGeometry() {
  map.getSource('qualifying').setData(networkHighlights(qualifiedRecords,shapes,displayed,color));
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
- const dots=pinchedStationSymbols(stationDataCache,displayed,zoom,activeRouteName);
+ const allDots=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle).dots;
+ const dots=activeRouteName?{...allDots,features:allDots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName)))}:allDots;
+ dots.features=dots.features.map(f=>({...f,properties:{...f.properties,focusRadius:f.properties.radius}}));
  map.getSource('stations').setData(dots);
  map.getSource('station-focus').setData(activeRouteName?dots:empty());
 }
@@ -113,7 +119,7 @@ async function init() {
   const colorNames=[...new Set([...(manifest.sourceRouteNames||names),...names])].sort();
   colors=new Map(colorNames.map((name,i)=>[name,manifest.routeColors?.[name]||`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
-  networkData=alignLaneFrames(visible.routes);
+  networkData=optimizeLaneOrder(alignLaneFrames(visible.routes));
   const services=[...new Set(records.map(r=>r.route))].sort();
   for(const name of services){const o=document.createElement('option');o.value=name;o.textContent=name;$('route').append(o);}
   if(services.includes(params.get('route')))$('route').value=params.get('route');
@@ -122,7 +128,7 @@ async function init() {
   $('dates').textContent=`Train service: ${manifest.railStart} through ${manifest.railEnd}. Flights: ${manifest.flightPeriod}. Built: ${manifest.generatedDate}.`;
   $('coverage').textContent=`${new Set(visible.routes.features.map(f=>f.properties.name)).size} displayed NTAD routes (Auto Train excluded) · ${manifest.stationCount} train stations in the filtered source inventory · ${records.length.toLocaleString()} matched comparisons. Source snapshots, not live booking information.`;
   draw();
-  if(!window.maplibregl){$('status').textContent+=' Map library unavailable; the comparison list and CSV still work.';return;}
+  if(!window.maplibregl||!window.L?.PolylineOffset){$('status').textContent+=' Map or offset library unavailable; the comparison list and CSV still work.';return;}
   map=new maplibregl.Map({container:'map',style:{version:8,sources:{basemap:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}},layers:[{id:'background',type:'background',paint:{'background-color':'#101b2a'}},{id:'basemap',type:'raster',source:'basemap',paint:{'raster-saturation':-1,'raster-brightness-min':.015,'raster-brightness-max':.28,'raster-contrast':.15,'raster-opacity':.8}}]},bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
   map.on('load',()=>{
@@ -167,12 +173,8 @@ async function init() {
    const updateZoomReadout=()=>{const value=map.getZoom().toFixed(1);$('map-zoom').hidden=false;$('map-zoom').textContent=`Zoom ${value}`;$('map-zoom').setAttribute('aria-label',`Map zoom level ${value}`);};
    updateZoomReadout();map.on('zoom',updateZoomReadout);
    available=true;draw();
-   // Offsets remain pixel-sized while zooming; the final frame always refreshes.
-   let geometryFrame=null;
-   map.on('zoom',()=>{
-    if(Math.abs(map.getZoom()-lastRenderZoom)<.2||geometryFrame!==null)return;
-    geometryFrame=requestAnimationFrame(()=>{geometryFrame=null;renderRouteGeometry();});
-   });
+   // Keep lines and circles together during the zoom animation. Recompute
+   // pixel offsets on the final frame, avoiding repeated expensive layouts.
    map.on('zoomend',renderRouteGeometry);
   });
   map.on('error',()=>{$('status').textContent='Some map resources could not load. The sourced journey list and CSV remain available.';});
