@@ -474,7 +474,7 @@ export function stationSymbols(stations, network, displayed, zoom, style, active
     }
     function stopProperties(name,color) {
       const ringWidth=Math.min(1.8,.75+Math.max(0,zoom-3)*.08,style.spacing*.18);
-      const radius=Math.max(.35,Math.min(3.8,1.3+Math.max(0,zoom-3)*.2,style.spacing*.45-ringWidth));
+      const radius=Math.max(.5,Math.min(4.8,1.7+Math.max(0,zoom-3)*.26,style.spacing*.5-ringWidth));
       return {...station.properties,symbolRoutes:[name],stopStatus:'stop',color,radius,ringWidth};
     }
     for(const [name,crossing] of crossings) {
@@ -516,7 +516,7 @@ export function overviewStations(stops,zoom) {
     const center=ordered[Math.floor(ordered.length/2)],routes=[...new Set(group.flatMap(f=>f.properties.symbolRoutes))].sort();
     return {...center,properties:{...center.properties,symbolRoutes:routes,overview:true}};
   }).sort((a,b)=>b.properties.symbolRoutes.length-a.properties.symbolRoutes.length||a.properties.Code.localeCompare(b.properties.Code));
-  const gap=zoom<5.5?8:6,grid=new Map(),features=[];
+  const gap=zoom<5.5?9:8,grid=new Map(),features=[];
   for(const f of candidates){
     const p=project(f.geometry.coordinates),gx=Math.floor(p[0]/gap),gy=Math.floor(p[1]/gap);let crowded=false;
     for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const q of grid.get(x+','+y)||[])if(Math.hypot(p[0]-q[0],p[1]-q[1])<gap)crowded=true;
