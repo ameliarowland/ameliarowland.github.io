@@ -366,7 +366,7 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
   const sourceNear=index(network),displayNear=index(displayed,zoom<9),dots=[],bars=[];
   for(const station of stations.features) {
     const names=new Set(station.properties.routeNames||[]);
-    if(names.size<2){dots.push(station);continue;}
+    if(!names.size)continue;
     const coordinate=station.geometry.coordinates,p=project(coordinate);
     // NTAD stations and tracks can differ slightly. Keep the association within
     // 750 m and require an actual stopping service's named route.
@@ -378,7 +378,7 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
       const q=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(q[0]-p[0],q[1]-p[1]);
       if(d<distance){distance=d;best={q,tangent:[e.dx/e.length,e.dy/e.length]};}
     }
-    if(!best){dots.push(station);continue;}
+    if(!best)continue;
     const {q,tangent}=best,normal=[-tangent[1],tangent[0]],crossings=new Map();
     // Restrict the span to the physical track corridor. At small zooms an
     // unrelated branch may also cross the same screen-space perpendicular.
@@ -404,15 +404,43 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
       const last=clusters.at(-1);
       if(!last||item[1]-last.at(-1)[1]>style.spacing*1.75)clusters.push([item]);else last.push(item);
     }
-    const served=cluster=>cluster.filter(([name])=>names.has(name)).length;
-    const nearest=cluster=>Math.min(...cluster.map(([,value])=>Math.abs(value)));
-    const bundle=clusters.filter(cluster=>served(cluster)>=2).sort((a,b)=>served(b)-served(a)||b.length-a.length||nearest(a)-nearest(b))[0];
-    if(!bundle){dots.push(station);continue;}
-    // A 5px rounded outline extends 2.5px past each geometry endpoint.
-    // Account for that cap so the whole symbol ends at the outer route edges.
-    const values=bundle.map(([,value])=>value),padding=style.highlightWidth/2-2.5;
-    const lo=Math.min(...values)-padding,hi=Math.max(...values)+padding;
-    bars.push({type:'Feature',properties:{...station.properties},geometry:{type:'LineString',coordinates:[unproject([q[0]+normal[0]*lo,q[1]+normal[1]*lo]),unproject([q[0]+normal[0]*hi,q[1]+normal[1]*hi])]}});
+    // Break the bar wherever a non-stopping lane intervenes. A single stopping
+    // lane gets a dot on that lane, not a dot on the source centerline.
+    function drawRun(run) {
+      if(!run.length)return;
+      const properties={...station.properties,symbolRoutes:run.map(([name])=>name)};
+      const position=value=>unproject([q[0]+normal[0]*value,q[1]+normal[1]*value]);
+      if(run.length===1) {
+        dots.push({type:'Feature',properties,geometry:{type:'Point',coordinates:position(run[0][1])}});
+        return;
+      }
+      // A 5px rounded outline extends 2.5px beyond the geometry endpoints.
+      const values=run.map(([,value])=>value),padding=style.highlightWidth/2-2.5;
+      const lo=Math.min(...values)-padding,hi=Math.max(...values)+padding;
+      bars.push({type:'Feature',properties,geometry:{type:'LineString',coordinates:[position(lo),position(hi)]}});
+    }
+    for(const cluster of clusters) {
+      let run=[];
+      for(const item of cluster) {
+        if(names.has(item[0]))run.push(item);
+        else {drawRun(run);run=[];}
+      }
+      drawRun(run);
+    }
+    // If a curved/terminal lane does not cross the local perpendicular, retain
+    // its real scheduled stop as a dot on its nearest displayed route segment.
+    const shown=new Set([...dots,...bars].filter(f=>f.properties.Code===station.properties.Code).flatMap(f=>f.properties.symbolRoutes||[]));
+    for(const name of names) {
+      if(shown.has(name))continue;
+      let nearest=null,limit=maxOffset+style.spacing*2;
+      for(const e of displayNear(unproject(q))) {
+        if(e.name!==name||!bundleNames.has(name))continue;
+        const t=Math.max(0,Math.min(1,((q[0]-e.a[0])*e.dx+(q[1]-e.a[1])*e.dy)/(e.length*e.length)));
+        const point=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(point[0]-q[0],point[1]-q[1]);
+        if(d<limit){limit=d;nearest=point;}
+      }
+      if(nearest)dots.push({type:'Feature',properties:{...station.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:unproject(nearest)}});
+    }
   }
   return {dots:{type:'FeatureCollection',features:dots},bars:{type:'FeatureCollection',features:bars}};
 }
