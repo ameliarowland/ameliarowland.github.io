@@ -27,3 +27,14 @@ protected=feature('A',[[-74.001,40],[-74,40.0001]])
 protected['properties']['preserveConnector']=True
 result,count=simplify_display_sections({'type':'FeatureCollection','features':[main,protected]})
 assert protected in result['features'] and count==0
+
+# A shallow through-line vertex is still a real branch junction. Simplification
+# must retain it even when route membership/lane slots do not change there.
+import importlib.util
+spec=importlib.util.spec_from_file_location('builder','scripts/build-rail-air.py');builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
+junction=[-74,40.0001]
+source={'type':'FeatureCollection','features':[feature('A',[[-74.02,40],junction,[-73.98,40]]),feature('A',[junction,[-74,40.01]])]}
+drawn,_=builder.parallel_routes(source)
+assert any(tuple(junction) in [tuple(p) for p in f['geometry']['coordinates'][1:-1]] for f in drawn['features'])
+assert sum(tuple(junction) in [tuple(p) for p in f['geometry']['coordinates']] for f in drawn['features'])==2
+print('Verified a shared source junction survives shallow-bend simplification.')
