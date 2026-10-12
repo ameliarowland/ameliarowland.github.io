@@ -127,6 +127,7 @@ def restore_north_philadelphia_connector(fc):
  """
  from copy import deepcopy
  features=deepcopy(fc['features'])
+ for f in features:f['geometry']['coordinates']=[list(p) for p in f['geometry']['coordinates']]
  repairs=[
   ('Crescent',(-75.1585532,39.995913),(-75.1575273,39.9962988),'North Philadelphia'),
   ('Palmetto',(-75.1818291,39.9599444),(-75.18414,39.96235),'Philadelphia 30th Street'),
@@ -185,3 +186,43 @@ def connect_keystone_philadelphia(fc):
     part=deepcopy(f);part['geometry']['coordinates']=coordinates;result.append(part)
   else:result.append(f)
  return {'type':'FeatureCollection','features':result}
+
+
+def extend_pennsylvanian_to_philadelphia(fc):
+ """Represent the scheduled Philadelphia stop on the existing NEC approach.
+ The retained NTAD Pennsylvanian shortcut omits this station approach; reuse
+ shared source track and keep timetable membership independent of the drawing.
+ """
+ from copy import deepcopy
+ features=deepcopy(fc['features'])
+ # Remove the shortcut across the junction, then use the shared station approach.
+ shortcuts=[([-75.1985969,39.9720838],[-75.1928297,39.977063]),([-75.1928297,39.977063],[-75.1912282,39.9780567])]
+ features=[f for f in features if not(f['properties']['name']=='Pennsylvanian' and (f['geometry']['coordinates'][0],f['geometry']['coordinates'][-1]) in shortcuts)]
+ west=next(f for f in features if f['properties']['name']=='Pennsylvanian' and f['geometry']['coordinates'][0]==[-76.8938411,40.306624])
+ key_west=next(f for f in features if f['properties']['name']=='Keystone Service' and f['geometry']['coordinates'][0]==[-76.8938411,40.306624])
+ west['geometry']=deepcopy(west['geometry']);west['geometry']['coordinates'][-1]=list(key_west['geometry']['coordinates'][-1])
+ # All shared sections between the station and the northern NEC junction.
+ additions=[]
+ for f in features:
+  if f['properties']['name']!='Acela':continue
+  points=f['geometry']['coordinates']
+  if all(-75.201<p[0]<-75.175 and 39.9516<=p[1]<=39.97806 for p in points):
+   clone=deepcopy(f);clone['properties'].update(name='Pennsylvanian',symbologyName='Pennsylvanian',lanePriority=0,displayRepair='Philadelphia scheduled stop approach; existing shared NEC track');additions.append(clone)
+ features.extend(additions)
+ return {'type':'FeatureCollection','features':features}
+
+
+def reorder_display_bundles(fc,priorities):
+ """Recompute shared lane slots after documented display repairs."""
+ groups=defaultdict(list)
+ for f in fc['features']:groups[tuple(tuple(p) for p in f['geometry']['coordinates'])].append(f)
+ for group in groups.values():
+  if not all(-75.201<p[0]<-75.175 and 39.9516<=p[1]<=39.97806 for p in group[0]['geometry']['coordinates']):continue
+  symbols={f['properties'].get('symbologyName',f['properties']['name']) for f in group}
+  ordered=sorted(symbols,key=lambda name:(priorities.index(name) if name in priorities else len(priorities),name))
+  for f in group:
+   name=f['properties']['name'];symbol=f['properties'].get('symbologyName',name)
+   f['properties']['lane']=ordered.index(symbol)-(len(ordered)-1)/2
+   f['properties']['lanePriority']=priorities.index(name) if name in priorities else None
+   f['properties']['shared']=len(group)
+ return fc
