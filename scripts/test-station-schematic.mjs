@@ -12,6 +12,9 @@ for(const zoom of [4,7.9,12,16]){
  const missing=result.dots.features.filter(f=>!points.has(f.properties.symbolRoutes[0]+'|'+f.geometry.coordinates.join(',')));
  console.log(JSON.stringify({zoom,ms:result.layoutMilliseconds,segments:result.displayed.features.length,dots:result.dots.features.length,missing:missing.map(f=>f.properties.Code+'|'+f.properties.symbolRoutes[0])}));
  assert.equal(result.dots.features.length,909);assert.equal(missing.length,0,'All station circles must lie on their route');
+ const passes=new Set(result.displayed.features.flatMap(f=>f.properties.stationPositions.map(p=>p.Code+'|'+p.name)));
+ const missingPasses=(data.routes.sourceStationPasses||[]).filter(key=>!key.endsWith('|Auto Train')&&!passes.has(key));
+ assert.deepEqual(missingPasses,[],'Every station passed on the original tracks must remain a line vertex, independently of stop membership');
  assert(result.displayed.features.every(f=>f.geometry.coordinates.length===2),'Only straight segments');
  const stationCodes=new Set(data.stations.features.map(s=>s.properties.Code));
  assert(result.displayed.features.every(f=>stationCodes.has(f.properties.from)&&stationCodes.has(f.properties.to)),'Every line endpoint is an actual station');
@@ -52,3 +55,22 @@ for(const f of chicago.displayed.features)for(const p of f.properties.stationPos
 const westToEast=[...chicagoPositions].sort((a,b)=>a[1]-b[1]).map(([name])=>name);
 assert.deepEqual(westToEast,['Borealis','Empire Builder','Hiawatha Service','California Zephyr','Carl Sandburg','Illinois Zephyr','Southwest Chief','Lincoln Service','Lincoln Service Missouri River Runner','Texas Eagle','City Of New Orleans','Illini','Saluki','Cardinal','Floridian','Capitol Limited','Lake Shore Limited','Wolverine','Blue Water','Pere Marquette']);
 console.log('Chicago Union Station west-to-east order verified for all 20 lanes.');
+
+for(const code of ['HMI','NBU','SOB']){
+ const positions=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code===code)positions.set(p.name,p.coordinates[0]);
+ const actual=[...positions].sort((a,b)=>a[1]-b[1]).map(([name])=>name);
+ assert.deepEqual(actual,westToEast.filter(name=>positions.has(name)),'Chicago order must continue at '+code);
+}
+console.log('Chicago order retained at Hammond-Whiting, New Buffalo and South Bend.');
+
+for(const [code,expected] of [['CLT',['Crescent','Carolinian','Piedmont']],['GRO',['Crescent','Carolinian','Piedmont']],['RGH',['Carolinian','Piedmont','Floridian']],['CYN',['Carolinian','Piedmont','Floridian']]]){
+ const positions=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code===code&&expected.includes(p.name))positions.set(p.name,p.coordinates[1]);
+ assert.deepEqual([...positions].sort((a,b)=>b[1]-a[1]).map(([name])=>name),expected,'North-to-south service order at '+code);
+}
+console.log('Crescent / Carolinian / Piedmont and Raleigh Floridian ordering verified.');
+
+const regional=data.routes.features.filter(f=>f.properties.name==='Northeast Regional'),pair=f=>[f.properties.from,f.properties.to].sort().join('|');
+assert(regional.some(f=>pair(f)==='PTB|RVR'),'Richmond western bypass connects Staples Mill to Petersburg');
+assert(regional.some(f=>pair(f)==='RVM|RVR'),'Main Street branch connects to Staples Mill');
+assert(!regional.some(f=>pair(f)==='PTB|RVM'),'No artificial Main Street–Petersburg triangle');
+console.log('Original-track pass-through station retention and Richmond branch topology verified.');
