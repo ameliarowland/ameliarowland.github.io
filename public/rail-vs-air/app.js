@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
-let colors=new Map(),networkData=null,qualifiedData=empty(),lastRenderZoom=null,available=false;
+let colors=new Map(),networkData=null,qualifiedRecords=[],lastRenderZoom=null,available=false;
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
 const coords=code=>stations[code]?.geometry.coordinates;
@@ -28,7 +28,7 @@ function draw() {
  const qualified=filtered.filter(r=>qualifies(r,t));
  $('status').textContent=filtered.length?`${qualified.length.toLocaleString()} qualify. Directions and train services count separately.`:'No matched journeys for these filters. This is not evidence that flying is faster.';
  if(available) {
-  qualifiedData=networkHighlights(qualified,shapes,networkData,color);
+  qualifiedRecords=qualified;
   renderRouteGeometry();
   // Service filters narrow comparisons, while the full route network stays visible.
   map.setFilter('network',null);
@@ -41,8 +41,10 @@ function renderRouteGeometry() {
  if(!available)return;
  const zoom=map.getZoom();lastRenderZoom=zoom;
  const drawingStyle=routeDrawingStyle(networkData,zoom);
- map.getSource('network').setData(offsetNetwork(networkData,zoom,drawingStyle));
- map.getSource('qualifying').setData(offsetNetwork(qualifiedData,zoom,drawingStyle));
+ const displayed=offsetNetwork(networkData,zoom,drawingStyle);
+ map.getSource('network').setData(displayed);
+ // Clip coverage from the final displayed lines, never offset a second copy.
+ map.getSource('qualifying').setData(networkHighlights(qualifiedRecords,shapes,displayed,color));
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
 }
