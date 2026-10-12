@@ -247,16 +247,62 @@ export function continuousRoutePaths(collection) {
   collection.features.forEach((f,index)=>{if(!used.has(index))walk(index,0);});
   return {type:'FeatureCollection',features};
 }
+const stationAnchorCache=new WeakMap();
+// Insert station projections into their source track segments, once, and share
+// those anchors with every route using that edge. Offsets still retain their
+// separate lanes; anchoring does not pinch a bundle into one station point.
+export function anchorStationGeometry(collection,stations) {
+  if(!stations)return collection;
+  const cached=stationAnchorCache.get(collection);
+  if(cached?.stations===stations)return cached.result;
+  const grid=new Map(),cell=.05,anchors=new Map(),keys=new Set();
+  for(const f of collection.features) {
+    const name=f.properties.symbologyName||f.properties.name,p=f.geometry.coordinates;
+    for(let i=1;i<p.length;i++) {
+      const a=p[i-1],b=p[i],entry={a,b,name};
+      for(let x=Math.floor(Math.min(a[0],b[0])/cell);x<=Math.floor(Math.max(a[0],b[0])/cell);x++)for(let y=Math.floor(Math.min(a[1],b[1])/cell);y<=Math.floor(Math.max(a[1],b[1])/cell);y++) {
+        const key=x+','+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(entry);
+      }
+    }
+  }
+  for(const station of stations.features) {
+    const p=station.geometry.coordinates,names=new Set(station.properties.routeNames||[]),best=new Map(),cos=Math.cos(p[1]*Math.PI/180),gx=Math.floor(p[0]/cell),gy=Math.floor(p[1]/cell);
+    for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const e of grid.get(x+','+y)||[]) {
+      if(!names.has(e.name))continue;
+      const dx=(e.b[0]-e.a[0])*cos,dy=e.b[1]-e.a[1],den=dx*dx+dy*dy;if(!den)continue;
+      const t=Math.max(0,Math.min(1,((p[0]-e.a[0])*cos*dx+(p[1]-e.a[1])*dy)/den));
+      const distance=Math.hypot((p[0]-e.a[0])*cos-t*dx,p[1]-e.a[1]-t*dy)*111320;
+      if(distance<=750&&(!best.has(e.name)||distance<best.get(e.name).distance))best.set(e.name,{...e,t,distance});
+    }
+    for(const e of best.values()) {
+      const [key,sign]=edgeKey(e.a,e.b),point=[e.a[0]+e.t*(e.b[0]-e.a[0]),e.a[1]+e.t*(e.b[1]-e.a[1])].map(v=>Number(v.toFixed(7)));
+      keys.add(coordinateKey(point));
+      if(e.t<1e-6||e.t>1-1e-6)continue;
+      if(!anchors.has(key))anchors.set(key,new Map());anchors.get(key).set(coordinateKey(point),{point,t:sign===1?e.t:1-e.t});
+    }
+  }
+  const result={type:'FeatureCollection',stationAnchorKeys:[...keys],features:collection.features.map(f=>{
+    const p=f.geometry.coordinates,coordinates=[p[0]];
+    for(let i=1;i<p.length;i++) {
+      const [key,sign]=edgeKey(p[i-1],p[i]);
+      const additions=[...(anchors.get(key)?.values()||[])].sort((a,b)=>sign*(a.t-b.t));
+      for(const {point} of additions)if(coordinateKey(point)!==coordinateKey(coordinates.at(-1))&&coordinateKey(point)!==coordinateKey(p[i]))coordinates.push(point);
+      coordinates.push(p[i]);
+    }
+    return {...f,geometry:{type:'LineString',coordinates}};
+  })};
+  stationAnchorCache.set(collection,{stations,result});return result;
+}
 // Union retained vertices across services so a shared source vertex is either
-// kept for every route or removed for every route. Error stays below one pixel
-// at wide zooms and fades to zero at zoom 13; endpoints remain fixed.
+// kept for every route or removed for every route. Country overviews permit
+// 3 pixels of generalization; zoom 13 restores detail. Station anchors are fixed.
 export function simplifyDisplayGeometry(collection,zoom) {
-  const tolerance=zoom<=6?.9:zoom>=13?0:.9*(13-zoom)/7;
+  const tolerance=zoom<=4?3:zoom<7?3-(zoom-4)*.6:zoom<10?1.2-(zoom-7)*.85/3:zoom<13?.35*(13-zoom)/3:0;
   if(!tolerance)return collection;
-  const world=512*2**zoom,keep=new Set();
+  const world=512*2**zoom,keep=new Set(collection.stationAnchorKeys||[]);
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   for(const f of collection.features) {
-    const p=f.geometry.coordinates,xy=p.map(project),stack=[[0,p.length-1]];
+    const p=f.geometry.coordinates,xy=p.map(project),breaks=[0,...p.map((point,i)=>keep.has(coordinateKey(point))?i:-1).filter(i=>i>0&&i<p.length-1),p.length-1],stack=breaks.slice(1).map((hi,i)=>[breaks[i],hi]);
     keep.add(coordinateKey(p[0]));keep.add(coordinateKey(p.at(-1)));
     while(stack.length) {
       const [lo,hi]=stack.pop(),a=xy[lo],b=xy[hi],dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;
@@ -271,13 +317,13 @@ export function simplifyDisplayGeometry(collection,zoom) {
   }
   return {type:'FeatureCollection',features:collection.features.map(f=>({...f,geometry:{type:'LineString',coordinates:f.geometry.coordinates.filter(p=>keep.has(coordinateKey(p)))}}))};
 }
-export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom)) {
+export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom), stations=null) {
   const world=512*2**zoom;
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
   const spacing=drawingStyle.spacing;
   const tangentRadius=Math.max(4,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0))));
-  const features=continuousRoutePaths(simplifyDisplayGeometry(collection,zoom)).features.map(f=>{
+  const features=continuousRoutePaths(simplifyDisplayGeometry(anchorStationGeometry(collection,stations),zoom)).features.map(f=>{
     const lanes=f.properties.edgeLanes;
     const projected=f.geometry.coordinates.map((p,i)=>{
       const xy=project(p),lane=i===0?lanes[0]:i===lanes.length?lanes.at(-1):(lanes[i-1]+lanes[i])/2;
@@ -364,7 +410,7 @@ export function alignLaneFrames(collection) {
 
 // Timetable service membership determines eligibility; geometry only positions
 // the symbol. Passing routes do not create a multi-service station.
-export function stationSymbols(stations, network, displayed, zoom, style) {
+export function stationSymbols(stations, network, displayed, zoom, style, activeRoutes=null) {
   const world=512*2**zoom;
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
@@ -375,7 +421,7 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
     for(const f of collection.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
       const u=f.geometry.coordinates[i-1],v=f.geometry.coordinates[i],a=project(u),b=project(v),dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);
       if(!length)continue;
-      const entry={a,b,dx,dy,length,name:f.properties.symbologyName||f.properties.name};
+      const entry={a,b,dx,dy,length,name:f.properties.symbologyName||f.properties.name,originalName:f.properties.name,color:f.properties.color||'#ffffff'};
       const first=screen?a:u,last=screen?b:v;
       for(let x=Math.floor(Math.min(first[0],last[0])/cell);x<=Math.floor(Math.max(first[0],last[0])/cell);x++)for(let y=Math.floor(Math.min(first[1],last[1])/cell);y<=Math.floor(Math.max(first[1],last[1])/cell);y++) {
         const key=x+','+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(entry);
@@ -387,17 +433,17 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
       return result;
     };
   }
-  const sourceNear=index(network),displayNear=index(displayed,zoom<9),dots=[],bars=[];
+  const sourceNear=index(network),displayNear=index(displayed,zoom<9),dots=[],passes=[];
+  const known=activeRoutes||new Set(stations.features.flatMap(f=>f.properties.routeNames||[]));
   for(const station of stations.features) {
     const names=new Set(station.properties.routeNames||[]);
-    if(!names.size)continue;
     const coordinate=station.geometry.coordinates,p=project(coordinate);
     // NTAD stations and tracks can differ slightly. Keep the association within
     // 750 m and require an actual stopping service's named route.
     const metersPerPixel=40075016.686*Math.cos(coordinate[1]*Math.PI/180)/world;
     let best=null,distance=750/metersPerPixel;
     for(const e of sourceNear(coordinate)) {
-      if(!names.has(e.name))continue;
+      if(names.size?!names.has(e.name):!known.has(e.name))continue;
       const t=Math.max(0,Math.min(1,((p[0]-e.a[0])*e.dx+(p[1]-e.a[1])*e.dy)/(e.length*e.length)));
       const q=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(q[0]-p[0],q[1]-p[1]);
       if(d<distance){distance=d;best={q,tangent:[e.dx/e.length,e.dy/e.length]};}
@@ -415,49 +461,35 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
     for(const e of displayNear(unproject(q))) {
       // Span all parallel visible lanes in this bundle, including passing lines.
       if(!bundleNames.has(e.name))continue;
+      // Do not classify an unmatched legacy source route as an operating
+      // passing service merely because it shares another route’s symbology.
+      if(!names.has(e.name)&&!known.has(e.originalName))continue;
       const alongA=(e.a[0]-q[0])*tangent[0]+(e.a[1]-q[1])*tangent[1];
       const alongB=(e.b[0]-q[0])*tangent[0]+(e.b[1]-q[1])*tangent[1];
       if(alongA*alongB>0||Math.abs(alongB-alongA)<1e-7)continue;
       const t=-alongA/(alongB-alongA),x=e.a[0]+t*e.dx,y=e.a[1]+t*e.dy;
       const across=(x-q[0])*normal[0]+(y-q[1])*normal[1];
       if(Math.abs(across)>maxOffset+style.spacing*2)continue;
-      if(!crossings.has(e.name)||Math.abs(across)<Math.abs(crossings.get(e.name)))crossings.set(e.name,across);
+      if(!crossings.has(e.name)||Math.abs(across)<Math.abs(crossings.get(e.name).value))crossings.set(e.name,{value:across,point:[x,y],normal:[-e.dy/e.length,e.dx/e.length],color:e.color});
     }
-    const clusters=[];
-    for(const item of [...crossings.entries()].sort((a,b)=>a[1]-b[1])) {
-      const last=clusters.at(-1);
-      if(!last||item[1]-last.at(-1)[1]>style.spacing*1.75)clusters.push([item]);else last.push(item);
+    function stopProperties(name,color) {
+      const ringWidth=Math.min(1.8,.75+Math.max(0,zoom-3)*.08,style.spacing*.18);
+      const radius=Math.max(.35,Math.min(3.8,1.3+Math.max(0,zoom-3)*.2,style.spacing*.45-ringWidth));
+      return {...station.properties,symbolRoutes:[name],stopStatus:'stop',color,radius,ringWidth};
     }
-    // Break the bar wherever a non-stopping lane intervenes. A single stopping
-    // lane gets a dot on that lane, not a dot on the source centerline.
-    function drawRun(run) {
-      if(!run.length)return;
-      const properties={...station.properties,symbolRoutes:run.map(([name])=>name)};
-      const position=value=>unproject([q[0]+normal[0]*value,q[1]+normal[1]*value]);
-      if(run.length===1) {
-        dots.push({type:'Feature',properties,geometry:{type:'Point',coordinates:position(run[0][1])}});
-        return;
+    for(const [name,crossing] of crossings) {
+      if(names.has(name))dots.push({type:'Feature',properties:stopProperties(name,crossing.color),geometry:{type:'Point',coordinates:unproject(crossing.point)}});
+      else if(known.has(name)) {
+        const {point,normal}=crossing,half=style.highlightWidth/2;
+        passes.push({type:'Feature',properties:{...station.properties,symbolRoutes:[name],stopStatus:'no-stop'},geometry:{type:'LineString',coordinates:[unproject([point[0]-normal[0]*half,point[1]-normal[1]*half]),unproject([point[0]+normal[0]*half,point[1]+normal[1]*half])]}});
       }
-      // Flat square ends stop at the geometry endpoints, aligned with the
-      // outer route strokes; there is no round-cap extension to subtract.
-      const values=run.map(([,value])=>value),padding=style.highlightWidth/2;
-      const lo=Math.min(...values)-padding,hi=Math.max(...values)+padding;
-      bars.push({type:'Feature',properties,geometry:{type:'LineString',coordinates:[position(lo),position(hi)]}});
-    }
-    for(const cluster of clusters) {
-      let run=[];
-      for(const item of cluster) {
-        if(names.has(item[0]))run.push(item);
-        else {drawRun(run);run=[];}
-      }
-      drawRun(run);
     }
     // If a curved/terminal lane does not cross the local perpendicular, retain
     // its real scheduled stop as a dot on its nearest displayed route segment.
-    const shown=new Set([...dots,...bars].filter(f=>f.properties.Code===station.properties.Code).flatMap(f=>f.properties.symbolRoutes||[]));
+    const shown=new Set(dots.filter(f=>f.properties.Code===station.properties.Code).flatMap(f=>f.properties.symbolRoutes||[]));
     for(const name of names) {
       if(shown.has(name))continue;
-      let nearest=null,limit=750/metersPerPixel+maxOffset;
+      let nearest=null,nearestColor='#ffffff',limit=750/metersPerPixel+maxOffset;
       // Terminal/platform branches need their own station association. They
       // may lie outside the narrow through-track bundle but still serve this
       // exact GTFS stop. Use the same 750 m source association limit.
@@ -465,10 +497,10 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
         if(e.name!==name)continue;
         const t=Math.max(0,Math.min(1,((p[0]-e.a[0])*e.dx+(p[1]-e.a[1])*e.dy)/(e.length*e.length)));
         const point=[e.a[0]+t*e.dx,e.a[1]+t*e.dy],d=Math.hypot(point[0]-p[0],point[1]-p[1]);
-        if(d<limit){limit=d;nearest=point;}
+        if(d<limit){limit=d;nearest=point;nearestColor=e.color;}
       }
-      if(nearest)dots.push({type:'Feature',properties:{...station.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:unproject(nearest)}});
+      if(nearest)dots.push({type:'Feature',properties:stopProperties(name,nearestColor),geometry:{type:'Point',coordinates:unproject(nearest)}});
     }
   }
-  return {dots:{type:'FeatureCollection',features:dots},bars:{type:'FeatureCollection',features:bars}};
+  return {dots:{type:'FeatureCollection',features:dots},passes:{type:'FeatureCollection',features:passes}};
 }
