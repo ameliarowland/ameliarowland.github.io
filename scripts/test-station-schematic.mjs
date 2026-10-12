@@ -42,7 +42,7 @@ for(const zoom of [3,4,4.8,5.8,6.8,7.9,12,16]){
   const byName=new Map(group.map(f=>[f.properties.symbologyName,f]));
   for(const [below,above] of [['Borealis','Empire Builder'],['Capitol Limited','Floridian']])if(byName.has(below)&&byName.has(above))assert((lane(byName.get(below))-lane(byName.get(above)))*normal[1]>=-1e-6,below+' stays south of '+above+' at '+pair);
   if(byName.has('Vermonter')&&byName.has('Acela'))assert((lane(byName.get('Vermonter'))-lane(byName.get('Acela')))*normal[0]<=1e-6,'Vermonter stays west of Acela at '+pair);
-  for(const [west,east] of [['Pacific Surfliner','Southwest Chief'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
+  for(const [west,east] of [['Silver Meteor','Floridian'],['Pacific Surfliner','Southwest Chief'],['Missouri River Runner','Texas Eagle'],['Lincoln Service Missouri River Runner','Texas Eagle']])if(byName.has(west)&&byName.has(east))assert((lane(byName.get(west))-lane(byName.get(east)))*normal[0]<=1e-6,west+' stays west of '+east+' at '+pair);
   if(unique.length===1&&!pair.split('|').includes('CHI'))assert(Math.abs(lane(unique[0]))<1e-6,'Single-route corridors must not inherit a distant hub displacement at '+pair);
   if(byName.has('Coast Starlight')&&byName.has('Pacific Surfliner'))assert((lane(byName.get('Pacific Surfliner'))-lane(byName.get('Coast Starlight')))*(normal[0]-normal[1])>0,'Pacific Surfliner stays on the northeast side of Coast Starlight at '+pair);
   if(byName.has('Blue Water')&&byName.has('Wolverine'))assert((lane(byName.get('Blue Water'))-lane(byName.get('Wolverine')))*normal[1]<0,'Blue Water stays north of Wolverine at '+pair);
@@ -161,6 +161,7 @@ for(const [code,row] of orderedRows){
  if(coastal.length>1&&[...row.values()][0][0]<-116)assert.deepEqual([...coastal].sort((a,b)=>row.get(a)[0]-row.get(b)[0]),coastal,'West-coast service order at '+code);
  if(row.has('Coast Starlight')&&[...row.values()][0][0]<-116)for(const [name,p] of row)assert(row.get('Coast Starlight')[0]<=p[0]+1e-10,'Coast Starlight remains westernmost at '+code);
 }
+for(const [code,row] of orderedRows)if(row.has('Silver Meteor')&&row.has('Floridian'))assert(row.get('Silver Meteor')[0]<row.get('Floridian')[0],'Silver Meteor west of Floridian / Silver Star at '+code);
 for(const [code,row] of orderedRows)if(row.has('Blue Water')&&row.has('Wolverine'))assert(row.get('Blue Water')[1]>row.get('Wolverine')[1],'Blue Water north of Wolverine at station '+code);
 const southBend=orderedRows.get('SOB'),southBendNames=['Lake Shore Limited','Floridian','Capitol Limited'];assert.deepEqual(southBendNames.toSorted((a,b)=>southBend.get(b)[1]-southBend.get(a)[1]),southBendNames,'South Bend north-to-south order');
 const pittsburgh=orderedRows.get('PGH');assert(pittsburgh.get('Pennsylvanian')[1]>pittsburgh.get('Floridian')[1],'Pennsylvanian north of Floridian / Silver Star at Pittsburgh');
