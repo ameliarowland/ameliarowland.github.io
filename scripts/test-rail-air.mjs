@@ -147,6 +147,15 @@ for(const name of ['Acela','Cardinal','Carolinian','Crescent','Northeast Regiona
  assert(lanes.length>=3,`${name} station approach is missing`);
  assert(lanes.every(l=>l===0||Math.sign(l)===Math.sign(lanes.find(x=>x!==0))),`${name} reverses order at Philadelphia`);
 }
+// New Haven and the Palmetto station approach retain their connecting sections.
+for(const [name,a,b] of [
+ ['Vermonter',[-72.8977453,41.3192796],[-72.8976368,41.3194073]],
+ ['Northeast Regional',[-72.904287,41.3146575],[-72.8976368,41.3194073]],
+ ['Palmetto',[-75.1818291,39.9599444],[-75.18414,39.96235]]
+]) {
+ assert(continuousRoutePaths(actualNetwork).features.some(f=>f.properties.name===name&&[a,b].every(q=>f.geometry.coordinates.some(p=>p[0]===q[0]&&p[1]===q[1]))),`${name} approach disconnected`);
+}
+assert(!actualNetwork.features.some(f=>f.properties.name==='Keystone Service'&&f.geometry.coordinates[0][0]===-75.2024265));
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
