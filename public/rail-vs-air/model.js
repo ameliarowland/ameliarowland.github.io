@@ -391,7 +391,6 @@ export function stationSymbols(stations, network, displayed, zoom, style) {
     for(const e of displayNear(unproject(q))) {
       // Span all parallel visible lanes in this bundle, including passing lines.
       if(!bundleNames.has(e.name))continue;
-      if(Math.abs((e.dx*tangent[0]+e.dy*tangent[1])/e.length)<.7)continue;
       const alongA=(e.a[0]-q[0])*tangent[0]+(e.a[1]-q[1])*tangent[1];
       const alongB=(e.b[0]-q[0])*tangent[0]+(e.b[1]-q[1])*tangent[1];
       if(alongA*alongB>0||Math.abs(alongB-alongA)<1e-7)continue;
