@@ -1,5 +1,6 @@
-import {createSchematicEngine} from './schematic.js?v=station-schematic-2';
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-2';
+import {closestRouteAtPoint} from './hover.js?v=station-schematic-3';
+import {createSchematicEngine} from './schematic.js?v=station-schematic-3';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-3';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -63,6 +64,8 @@ function applyRouteLayout(result) {
  map.getSource('qualifying').setData(result.qualifying);
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
+ map.setPaintProperty('route-hover','line-width',drawingStyle.hoverWidth);
+ map.setPaintProperty('selected','line-width',drawingStyle.highlightWidth+.5);
  let dots=activeRouteName?{...allDots,features:allDots.features.filter(f=>f.properties.symbolRoutes.includes(stationRouteName(activeRouteName)))}:allDots;
  if(activeRouteName&&(manifest.commuterServices||[]).includes(activeRouteName)) {
   dots={type:'FeatureCollection',features:comparisonStationCache.features.filter(f=>(f.properties.comparisonRouteNames||[]).includes(activeRouteName)).map(f=>({...f,properties:{...f.properties,symbolRoutes:[activeRouteName],radius:3,ringWidth:1.2,color:color(activeRouteName)}}))};
@@ -131,7 +134,7 @@ async function init() {
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=visible.routes;
   schematicEngine=createSchematicEngine(networkData,stationDataCache);
-  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-2",{type:"module"});
+  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-3",{type:"module"});
   layoutWorker.onmessage=({data})=>{if(data.type==="layout")applyRouteLayout(data);else if(data.type==="error")$("status").textContent=`Map layout failed: ${data.message}`;};
   layoutWorker.onerror=event=>{$("status").textContent=`Map layout worker failed: ${event.message}`;};
   layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache});
@@ -151,6 +154,7 @@ async function init() {
    map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,2.5,7,3.2,11,4],'line-offset':0,'line-opacity':1}});
    map.addSource('qualifying',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':0,'line-opacity':1}});
+   map.addLayer({id:'route-hover',type:'line',source:'network',filter:['==',['coalesce',['get','symbologyName'],['get','name']],''],layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':3}});
    map.addSource('route-focus',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'route-focus-outline',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#ffffff','line-width':7.8}});
    map.addLayer({id:'route-focus',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':6.3}});
@@ -183,7 +187,17 @@ async function init() {
     for(const name of names){const button=document.createElement('button');button.className='route-choice';button.textContent=name==='Floridian'?'Floridian / Silver Star':name;button.style.borderLeft=`5px solid ${color(name)}`;button.onclick=()=>{chooseRoute(name);popup.remove();};div.append(button);}
     popup.setDOMContent(div).addTo(map);
    });
-   map.on('mousemove',e=>{map.getCanvas().style.cursor=nearbyRoutes(e.point).length||map.queryRenderedFeatures(e.point,{layers:stationLayers}).length?'pointer':'';});
+   const hoverBubble=document.createElement('div');hoverBubble.className='route-hover-bubble';hoverBubble.hidden=true;hoverBubble.setAttribute('role','tooltip');map.getContainer().append(hoverBubble);
+   let hoveredName=null;
+   const clearHover=()=>{hoveredName=null;hoverBubble.hidden=true;map.setFilter('route-hover',['==',['coalesce',['get','symbologyName'],['get','name']],'']);map.getCanvas().style.cursor='';};
+   map.on('mousemove',e=>{
+    const hits=map.queryRenderedFeatures([[e.point.x-9,e.point.y-9],[e.point.x+9,e.point.y+9]],{layers:['network']}),name=closestRouteAtPoint(hits,e.point,p=>map.project(p));
+    if(name!==hoveredName){hoveredName=name;map.setFilter('route-hover',['==',['coalesce',['get','symbologyName'],['get','name']],name||'']);}
+    hoverBubble.hidden=!name;
+    if(name){hoverBubble.textContent=name==='Floridian'?'Floridian / Silver Star':name;hoverBubble.style.borderColor=color(name);const container=map.getContainer();hoverBubble.style.left=`${Math.max(8,Math.min(e.point.x+14,container.clientWidth-hoverBubble.offsetWidth-8))}px`;hoverBubble.style.top=`${Math.max(8,Math.min(e.point.y+14,container.clientHeight-hoverBubble.offsetHeight-8))}px`;}
+    map.getCanvas().style.cursor=name||map.queryRenderedFeatures(e.point,{layers:stationLayers}).length?'pointer':'';
+   });
+   map.getCanvas().addEventListener('mouseleave',clearHover);map.on('movestart',clearHover);map.on('click',clearHover);
    for(const id of ['station-focus','stations','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
    const updateZoomReadout=()=>{const value=map.getZoom().toFixed(1);$('map-zoom').hidden=false;$('map-zoom').textContent=`Zoom ${value}`;$('map-zoom').setAttribute('aria-label',`Map zoom level ${value}`);};
    updateZoomReadout();map.on('zoom',updateZoomReadout);
