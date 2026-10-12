@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Rebuild auditable rail/air comparisons from downloaded primary-source files.
-No modeled speeds or invented flight durations. Standard library only.
+No modeled speeds or invented flight durations. Shapely is used for shared-track display topology.
 """
 import argparse,csv,io,json,zipfile,math,statistics,datetime,hashlib
 from collections import defaultdict,Counter
@@ -73,13 +73,8 @@ def corridor_chains(edges):
  return chains
 
 def parallel_routes(fc):
- edges=defaultdict(set)
- for f in fc['features']:
-  geom=f['geometry'];lines=geom['coordinates'] if geom['type']=='MultiLineString' else [geom['coordinates']]
-  for line in lines:
-   for p,q in zip(line,line[1:]):
-    a,b=tuple(round(v,6) for v in p[:2]),tuple(round(v,6) for v in q[:2])
-    if a!=b:edges[tuple(sorted((a,b)))].add(f['properties']['name'])
+ from rail_topology import noded_route_edges
+ edges=noded_route_edges(fc)
  features=[]
  for points in corridor_chains(edges):
   memberships=[edges[tuple(sorted((a,b)))] for a,b in zip(points,points[1:])]
@@ -208,7 +203,7 @@ def build(args):
   evidence[filename]=rows
  if 'calendar_dates.txt' in z.namelist():evidence['calendar_dates.txt']=readzip(z,'calendar_dates.txt')
  dump('gtfs-evidence.json',evidence)
- manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
+ manifest={'generatedDate':args.as_of,'railStart':start.isoformat(),'railEnd':end.isoformat(),'feedVersion':info['feed_version'],'flightPeriod':args.flight_period,'airportRadiusKm':args.airport_radius,'flightRows':flight_rows,'routeCount':len(ntad_names),'stationCount':len(stations['features']),'directRailPairs':len(direct_pairs),'matchedPairs':len(records),'geometryMissing':geometry_missing,'sharedEdges':shared,'displayTopology':{'engine':'Shapely 2.1.2 / GEOS','precisionDegrees':1e-7,'membershipToleranceDegrees':2e-6},'stationFilter':STATION_SQL,'sources':{'routes':ROUTES_URL,'stations':STATIONS_URL,'rail':GTFS_URL,'flights':f'https://www.transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{args.flight_period.replace("-","_").replace("_0","_")}.zip','airports':AIRPORTS_URL},'sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['amtrak.zip','flights.zip','airports.csv','stations.geojson','routes.geojson']}}
  dump('manifest.json',manifest)
  print(json.dumps(manifest,indent=2))
  print('Default qualifying route/station/direction records:',sum(r['railMinutes']<=r['flightMinutes']+240 for r in records))
