@@ -387,31 +387,30 @@ export function alignLaneFrames(collection) {
       if(!ends.has(key))ends.set(key,[]);ends.get(key).push({index,side,out:[dx/len,dy/len],shared:f.properties.shared||1});
     }
   });
-  // Explicit lane priorities take precedence over ambiguous branch pairings.
-  // Orient their frames west to east so negative offsets stay on the north side.
+  // Geographic lane priorities anchor the shared corridor orientation.
   const priorities=collection.features.map((f,index)=>({f,index}))
-    .filter(({f})=>Number.isFinite(f.properties.lanePriority))
+    .filter(({f})=>Number.isFinite(f.properties.lanePriority)&&f.properties.lane!==0)
     .sort((a,b)=>a.f.properties.lanePriority-b.f.properties.lanePriority);
-  const preferred=new Map();
-  for(const {f,index} of priorities) {
-    const p=f.geometry.coordinates,direction=p.at(-1)[0]>=p[0][0]?1:-1;
-    const priority=f.properties.lanePriority;
-    if(preferred.has(priority)){const prior=preferred.get(priority);link(prior.index,index,prior.direction*direction);}
-    else preferred.set(priority,{index,direction});
-  }
+  const continuations=[];
   for(const group of ends.values()) {
-    // Pair a through continuation at branches without imposing contradictory
-    // all-pairs parity constraints on the diverging arms.
     const pairs=[];
     for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++) {
       const a=group[i],b=group[j];if(a.index!==b.index)pairs.push({a,b,bundle:Math.min(a.shared,b.shared),dot:a.out[0]*b.out[0]+a.out[1]*b.out[1]});
     }
     pairs.sort((a,b)=>b.bundle-a.bundle||a.dot-b.dot);
     const paired=new Set();
-    for(const {a,b} of pairs){
-      if(paired.has(a)||paired.has(b))continue;
-      link(a.index,b.index,a.side===b.side?-1:1);paired.add(a);paired.add(b);
+    for(const pair of pairs){
+      if(paired.has(pair.a)||paired.has(pair.b))continue;
+      continuations.push(pair);paired.add(pair.a);paired.add(pair.b);
     }
+  }
+  // Resolve the strongest through corridors before branch constraints. A branch
+  // must never reverse the entire shared bundle at a station approach.
+  continuations.sort((a,b)=>b.bundle-a.bundle||a.dot-b.dot);
+  for(const {a,b} of continuations) {
+    // A lone centered line has no lane order to propagate to another bundle.
+    if((a.shared<=1&&collection.features[a.index].properties.lane===0)||(b.shared<=1&&collection.features[b.index].properties.lane===0))continue;
+    link(a.index,b.index,a.side===b.side?-1:1);
   }
   // Anchor priority corridors first; other components retain their stored frame.
   const anchor=new Map();
@@ -420,9 +419,29 @@ export function alignLaneFrames(collection) {
     if(!anchor.has(root))anchor.set(root,s*(p.at(-1)[0]>=p[0][0]?1:-1));
   }
   for(let i=0;i<n;i++){const [root,s]=find(i);if(!anchor.has(root))anchor.set(root,s);}
-  return {type:'FeatureCollection',features:collection.features.map((f,i)=>{
+  const features=collection.features.map((f,i)=>{
     const [root,s]=find(i);return {...f,properties:{...f.properties,lane:(f.properties.lane||0)*s*anchor.get(root)}};
-  })};
+  });
+  // Apply explicit geographic priorities after resolving through-path direction.
+  // Reorder lanes locally instead of forcing unrelated branch frames to reverse.
+  const bundles=new Map();
+  for(const f of features) {
+    const key=JSON.stringify(f.geometry.coordinates);
+    if(!bundles.has(key))bundles.set(key,[]);bundles.get(key).push(f);
+  }
+  for(const bundle of bundles.values()) {
+    if(!bundle.some(f=>Number.isFinite(f.properties.lanePriority)))continue;
+    const p=bundle[0].geometry.coordinates,direction=p.at(-1)[0]>=p[0][0]?1:-1;
+    const values=[...new Set(bundle.map(f=>f.properties.lane*direction))].sort((a,b)=>a-b);
+    const symbols=new Map();
+    for(const f of bundle) {
+      const name=f.properties.symbologyName||f.properties.name;
+      if(!symbols.has(name))symbols.set(name,{name,lane:f.properties.lane*direction,priority:f.properties.lanePriority??Infinity});
+    }
+    const ordered=[...symbols.values()].sort((a,b)=>a.priority-b.priority||a.lane-b.lane);
+    for(const f of bundle)f.properties.lane=values[ordered.findIndex(s=>s.name===(f.properties.symbologyName||f.properties.name))]*direction;
+  }
+  return {type:'FeatureCollection',features};
 }
 
 // Timetable service membership determines eligibility; geometry only positions
