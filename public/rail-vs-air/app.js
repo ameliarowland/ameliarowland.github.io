@@ -45,8 +45,8 @@ function renderRouteGeometry() {
  map.getSource('network').setData(displayed);
  const focus={type:'FeatureCollection',features:displayed.features.filter(f=>(f.properties.symbologyName||f.properties.name)===activeRouteName)};
  map.getSource('route-focus').setData(focus);
- map.setPaintProperty('route-focus-outline','line-width',drawingStyle.highlightWidth+4);
- map.setPaintProperty('route-focus','line-width',drawingStyle.highlightWidth+1);
+ map.setPaintProperty('route-focus-outline','line-width',drawingStyle.highlightWidth+1.5);
+ map.setPaintProperty('route-focus','line-width',drawingStyle.highlightWidth);
  $('route-focus-label').hidden=!activeRouteName;
  $('route-focus-label').textContent=activeRouteName?`Selected: ${activeRouteName==='Floridian'?'Floridian / Silver Star':activeRouteName}`:'';
  // Clip coverage from the final displayed lines, never offset a second copy.
@@ -119,8 +119,8 @@ async function init() {
    map.addSource('qualifying',{type:'geojson',data:empty()});
    map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':0,'line-opacity':1}});
    map.addSource('route-focus',{type:'geojson',data:empty()});
-   map.addLayer({id:'route-focus-outline',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#ffffff','line-width':10}});
-   map.addLayer({id:'route-focus',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':7}});
+   map.addLayer({id:'route-focus-outline',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#ffffff','line-width':7.8}});
+   map.addLayer({id:'route-focus',type:'line',source:'route-focus',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':6.3}});
    map.addSource('selected',{type:'geojson',data:empty()});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:stationData});
