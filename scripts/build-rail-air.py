@@ -180,7 +180,7 @@ def build(args):
  times=defaultdict(list)
  for t in readzip(z,'stop_times.txt'):
   if t['trip_id'] in trips:times[t['trip_id']].append(t)
- from rail_topology import simplify_display_sections,join_display_tails,restore_north_philadelphia_connector,connect_keystone_philadelphia,extend_pennsylvanian_to_philadelphia,reorder_display_bundles
+ from rail_topology import simplify_display_sections,join_display_tails,restore_north_philadelphia_connector,connect_keystone_philadelphia,extend_pennsylvanian_to_philadelphia,reorder_display_bundles,trim_philadelphia_station_branches
  parallel,shared=parallel_routes(route_geo)
  parallel=restore_north_philadelphia_connector(parallel)
  parallel,suppressed=simplify_display_sections(parallel)
@@ -188,6 +188,7 @@ def build(args):
  parallel=connect_keystone_philadelphia(parallel)
  parallel=extend_pennsylvanian_to_philadelphia(parallel)
  parallel=reorder_display_bundles(parallel,DISPLAY_ROUTE_PRIORITY)
+ parallel=trim_philadelphia_station_branches(parallel)
  dump('routes.geojson',parallel)
  station_services(stations,routes,trips,times,ntad_names)
  dump('stations.geojson',stations)
