@@ -165,6 +165,8 @@ async function init() {
    });
    map.on('mousemove',e=>{map.getCanvas().style.cursor=nearbyRoutes(e.point).length||map.queryRenderedFeatures(e.point,{layers:['station-overview','stations','station-passes']}).length?'pointer':'';});
    for(const id of ['station-overview','stations','station-passes','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
+   const updateZoomReadout=()=>{const value=map.getZoom().toFixed(1);$('map-zoom').hidden=false;$('map-zoom').textContent=`Zoom ${value}`;$('map-zoom').setAttribute('aria-label',`Map zoom level ${value}`);};
+   updateZoomReadout();map.on('zoom',updateZoomReadout);
    available=true;draw();
    // Offsets remain pixel-sized while zooming; the final frame always refreshes.
    let geometryFrame=null;
