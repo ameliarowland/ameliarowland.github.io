@@ -1,0 +1,15 @@
+import {Worker} from 'node:worker_threads';
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const worker=new Worker(new URL('./layout-worker-node-bridge.mjs',import.meta.url));
+const load=async n=>JSON.parse(await readFile(new URL('../public/rail-vs-air/data/'+n,import.meta.url),'utf8'));
+const [routes,stations,shapes,manifest]=await Promise.all(['routes.geojson','stations.geojson','shapes.json','manifest.json'].map(load));
+for(const f of routes.features)f.properties.color=manifest.routeColors[f.properties.name];
+let ticks=0;const timer=setInterval(()=>ticks++,10);
+const ready=new Promise((resolve,reject)=>{worker.on('error',reject);worker.on('message',m=>{if(m.type==='ready')resolve();if(m.type==='error')reject(Error(m.message));});});
+worker.postMessage({type:'init',routes,stations,shapes});await ready;assert(ticks>5,'Layout initialization blocked the calling thread');
+const result=new Promise((resolve,reject)=>worker.on('message',m=>{if(m.type==='layout')resolve(m);if(m.type==='error')reject(Error(m.message));}));
+worker.postMessage({type:'layout',id:10,zoom:12,bounds:[-90.28,38.86,-90.13,39.04],records:[]});
+worker.postMessage({type:'layout',id:11,zoom:13,bounds:[-90.28,38.86,-90.13,39.04],records:[]});
+const r=await result;assert.equal(r.id,11,'Queued stale layouts should coalesce');assert(r.displayed.features.length>0);
+clearInterval(timer);await worker.terminate();console.log('Actual layout worker passed: responsive caller, initialized geometry and latest-request coalescing.');
