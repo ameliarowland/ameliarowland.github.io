@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {closestRouteAtPoint} from '../public/rail-vs-air/hover.js';
+const line=(name,y)=>({properties:{name},geometry:{type:'LineString',coordinates:[[0,y],[100,y]]}}),project=p=>({x:p[0],y:p[1]});
+const features=[line('Silver Meteor',0),line('Palmetto',8)];
+assert.equal(closestRouteAtPoint(features,{x:50,y:1},project),'Silver Meteor');
+assert.equal(closestRouteAtPoint(features,{x:50,y:7},project),'Palmetto');
+assert.equal(closestRouteAtPoint(features,{x:50,y:30},project),null);
+assert.equal(closestRouteAtPoint(features,{x:-5,y:0},project),'Silver Meteor');
+assert.equal(closestRouteAtPoint(features,{x:-15,y:0},project),null);
+console.log('Hover checks passed: nearest line chosen, endpoints respected and distant cursor clears hover.');

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rail vs. Air — Amelia Rowland</title>
+  <meta name="description" content="Explore where direct Amtrak journeys compare with nonstop flights plus three hours at the airport. Sourced timetables, transparent assumptions, and parallel route lines." />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="/rail-vs-air/styles.css?v=station-schematic-27" />
+</head>
+<body>
+  <header class="masthead">
+    <a href="/" class="author">Amelia Rowland <span>/ Maps &amp; data stories</span></a>
+    <a href="/maps/rail-vs-air/">Read the article ↗</a>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">A different way to count the journey</p><h1>Rail vs. <em>air.</em></h1></div>
+      <p>A short flight isn’t always a short trip. Compare direct Amtrak journeys and nonstop flights. Note: three hours are added for flight travel time, including 2 hours for pre-flight security and boarding, and 1 hour after landing for deplaning.</p>
+    </section>
+    <div class="workspace">
+      <aside aria-label="Journey comparison controls">
+        <div class="controls">
+          <p class="eyebrow">Explore the network</p>
+          <label for="search">Find a city or station</label>
+          <input id="search" type="search" placeholder="Try New York, Chicago, or LAX…" />
+          <label for="route">Train service</label>
+          <select id="route"><option value="">All services</option></select>
+          <label for="tolerance">How close is comparable? <output id="tolerance-output">60 min</output></label>
+          <input id="tolerance" type="range" min="0" max="120" step="15" value="60" />
+          <p class="help">Show trains taking at most <strong id="formula">flight time + 3 hours + 60 minutes</strong>. Faster trains are included.</p>
+          <label for="view">Show comparisons</label>
+          <select id="view"><option value="qualifying">Faster or comparable trains</option><option value="all">All matched journeys</option></select>
+          <div class="stats"><div><strong id="match-count">—</strong><span>journey comparisons</span></div><div><strong id="service-count">—</strong><span>train services</span></div></div>
+          <p id="status" class="status" role="status">Loading source data…</p>
+          <button id="download" class="download" disabled>Download these comparisons ↓</button>
+          <details><summary>What is being compared?</summary><p>The fastest direct train in the timetable week versus the lowest median scheduled nonstop flight duration among airports within 50 km of each station, plus 180 minutes. Airport distances are straight-line, not access times.</p><p>No transfers, fares, ground travel, delays, or station arrival buffer are modeled. A nearby airport is a candidate, not necessarily your best airport. Missing comparisons mean insufficient matched data.</p><p id="dates"></p><a href="/maps/rail-vs-air/">Methods &amp; sources ↗</a></details>
+        </div>
+        <section class="journeys" aria-label="Journey results"><h2>Find your next train trip <span>→</span></h2><div id="results"></div><button id="more" hidden>Show more journeys</button></section>
+      </aside>
+      <section class="map-section" aria-label="Interactive United States rail map">
+        <div id="map"></div>
+        <div id="map-zoom" class="map-zoom" hidden></div>
+        <div class="map-actions"><button id="reset">U.S. network ↗</button><button id="layers" aria-expanded="false" aria-controls="legend">Legend</button></div>
+        <div class="map-key"><div id="route-focus-label" hidden aria-live="polite"></div><span class="key-line"></span>Qualifying train journey <span class="key-stop"></span>Stop<br /><small>Select a route to see its scheduled stops</small></div>
+        <div id="legend" hidden><h2>Map legend</h2><p>Colors follow the NTAD NAME field. Silver Star and Floridian share a color and lane where their tracks overlap; both source routes are retained.</p><p><span class="key-stop"></span> Select a route: a circle means a scheduled stop; no circle means no scheduled stop for that route.</p><div id="legend-list"></div></div>
+        <div id="selection" hidden aria-live="polite"></div>
+      </section>
+    </div>
+    <footer><p id="coverage">Source snapshots, not live booking information.</p><a href="https://github.com/ameliarowland/ameliarowland.github.io/tree/main/public/rail-vs-air">Data &amp; code on GitHub ↗</a></footer>
+    <noscript><p>This map requires JavaScript. Read the <a href="/maps/rail-vs-air/">article and methodology</a>, or download the <a href="/rail-vs-air/data/comparisons.json">sourced comparisons</a>.</p></noscript>
+  </main>
+  <script is:inline src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+  <script is:inline type="module" src="/rail-vs-air/app.js?v=station-schematic-27"></script>
+</body>
+</html>
