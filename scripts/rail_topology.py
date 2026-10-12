@@ -262,3 +262,53 @@ def add_pennsylvanian_station_approach(fc):
   clone=deepcopy(f);clone['properties'].update(name='Pennsylvanian',symbologyName='Pennsylvanian',lanePriority=0,laneSouthPriority=None,displayRepair='Philadelphia scheduled stop approach; existing shared NEC track; original Pennsylvanian preserved')
   features.append(clone)
  return {'type':'FeatureCollection','features':features}
+
+
+def connect_verified_route_gaps(fc,shapes_by_route,maximum_length=750,maximum_deviation=100):
+ """Fill gaps only along existing original track, corroborated by official
+ GTFS geometry. No straight bridges, station changes or travel times inferred.
+ """
+ import math,heapq
+ from copy import deepcopy
+ edges=noded_route_edges(fc);adj=defaultdict(list);degrees=defaultdict(lambda:defaultdict(int));parents=defaultdict(dict)
+ def distance(a,b):return math.hypot((a[0]-b[0])*math.cos((a[1]+b[1])*math.pi/360),a[1]-b[1])*111320
+ def find(name,p):
+  parent=parents[name];parent.setdefault(p,p)
+  root=p
+  while parent[root]!=root:root=parent[root]
+  while parent[p]!=p:p,parent[p]=parent[p],root
+  return root
+ for (a,b),names in edges.items():
+  length=distance(a,b);adj[a].append((b,length));adj[b].append((a,length))
+  for name in names:
+   degrees[name][a]+=1;degrees[name][b]+=1
+   ra,rb=find(name,a),find(name,b)
+   if ra!=rb:parents[name][rb]=ra
+ repairs=[];rejected=[]
+ for name,counts in degrees.items():
+  ends={p for p,count in counts.items() if count==1}
+  for start in sorted(ends):
+   queue=[(0,start)];seen={start:0};previous={};target=None
+   while queue:
+    length,p=heapq.heappop(queue)
+    if length>maximum_length:break
+    if p!=start and p in ends and find(name,p)!=find(name,start):target=p;break
+    for q,segment_length in adj[p]:
+     if name in edges[tuple(sorted((p,q)))]:continue
+     candidate=length+segment_length
+     if candidate<=maximum_length and candidate<seen.get(q,float('inf')):seen[q]=candidate;previous[q]=p;heapq.heappush(queue,(candidate,q))
+   if target is None or start>=target:continue
+   path=[target]
+   while path[-1]!=start:path.append(previous[path[-1]])
+   path.reverse();cos=math.cos(start[1]*math.pi/180);xy=lambda p:(p[0]*cos*111320,p[1]*111320)
+   verification_name='Floridian' if name=='Silver Star' else name
+   lines=[LineString([xy(p) for p in shape]) for shape in shapes_by_route.get(verification_name.casefold(),[]) if len(shape)>1]
+   deviation=min((max(line.distance(Point(xy(p))) for p in path) for line in lines),default=None)
+   record={'route':name,'lengthMeters':round(seen[target],1),'coordinates':[list(p) for p in path],'verificationRoute':verification_name,'gtfsMaximumDeviationMeters':round(deviation,1) if deviation is not None else None,'method':'Existing NTAD track path; GTFS shape corroboration'}
+   if deviation is None or deviation>maximum_deviation:rejected.append(record);continue
+   repairs.append(record);parents[name][find(name,target)]=find(name,start)
+ features=deepcopy(fc['features'])
+ for repair in repairs:
+  template=next(f for f in fc['features'] if f['properties']['name']==repair['route'])
+  features.append({'type':'Feature','properties':{**template['properties'],'displayRepair':repair['method']},'geometry':{'type':'LineString','coordinates':repair['coordinates']}})
+ return {**fc,'features':features},repairs,rejected
