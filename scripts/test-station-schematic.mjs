@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import {createSchematicEngine} from '../public/rail-vs-air/schematic.js';
+import {createSchematicEngine,schematicDrawingStyle} from '../public/rail-vs-air/schematic.js';
 import {filterDisplayData} from '../public/rail-vs-air/model.js';
 const load=n=>JSON.parse(fs.readFileSync('public/rail-vs-air/data/'+n,'utf8'));
 const data=filterDisplayData(load('station-schematic.geojson'),load('stations.geojson'),load('comparisons.json')),manifest=load('manifest.json');
@@ -36,3 +36,14 @@ for(const name of nwkNames)assert(ewrNames.has(name),'Newark corridor must inclu
 const ewr=data.stations.features.find(s=>s.properties.Code==='EWR');assert.deepEqual(ewr.properties.routeNames,['Keystone Service','Northeast Regional'],'Pass-through fixes must not add scheduled stops');
 
 console.log('Station schematic checks passed: all stops attached, no shared-segment crossings, station-only endpoints and Newark pass-throughs.');
+
+const meteor=data.routes.features.filter(f=>f.properties.name==='Silver Meteor');
+for(const code of ['FAY','SSM','WLN','RMT'])assert.equal(meteor.filter(f=>[f.properties.from,f.properties.to].includes(code)).length,2,'Silver Meteor must have no spurs at '+code);
+for(const [a,b] of [['DIL','FAY'],['FAY','SSM'],['SSM','WLN'],['WLN','RMT']])assert(meteor.some(f=>[f.properties.from,f.properties.to].sort().join('|')===[a,b].sort().join('|')),'Missing Silver Meteor station sequence '+a+'-'+b);
+assert(!meteor.some(f=>[f.properties.from,f.properties.to].includes('DIL')&&[f.properties.from,f.properties.to].includes('SSM')),'No bypass around Fayetteville');
+assert(schematicDrawingStyle(4).baseWidth<schematicDrawingStyle(12).baseWidth);
+assert(schematicDrawingStyle(4).highlightWidth<schematicDrawingStyle(12).highlightWidth);
+for(const zoom of [4,8,12])assert(schematicDrawingStyle(zoom).hoverWidth>schematicDrawingStyle(zoom).baseWidth);
+const wide=engine.render({id:2,zoom:4,records:[]}),close=engine.render({id:3,zoom:12,records:[]});
+assert(wide.dots.features[0].properties.radius<close.dots.features[0].properties.radius);
+console.log('Silver Meteor continuity and zoom sizing checks passed.');
