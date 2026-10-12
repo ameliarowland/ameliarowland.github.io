@@ -156,6 +156,10 @@ for(const [name,a,b] of [
  assert(continuousRoutePaths(actualNetwork).features.some(f=>f.properties.name===name&&[a,b].every(q=>f.geometry.coordinates.some(p=>p[0]===q[0]&&p[1]===q[1]))),`${name} approach disconnected`);
 }
 assert(!actualNetwork.features.some(f=>f.properties.name==='Keystone Service'&&f.geometry.coordinates[0][0]===-75.2024265));
+// Editing Keystone's shared west-approach coordinates must not move Pennsylvanian.
+const pennThrough=continuousRoutePaths(actualNetwork).features.filter(f=>f.properties.name==='Pennsylvanian');
+assert.equal(pennThrough.length,1,'Pennsylvanian must be continuous from Pittsburgh to New York');
+assert(pennThrough[0].geometry.coordinates.some(p=>p[0]===-75.1985969&&p[1]===39.9720838));
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
