@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -26,6 +26,18 @@ const overlay=networkHighlights([{route:'A',ntadName:'A',shapeId:'x',shapeRange:
 assert.equal(overlay.features.length,1);
 assert.deepEqual(overlay.features[0].geometry.coordinates,canonical.features[0].geometry.coordinates);
 assert.equal(overlay.features[0].properties.lane,-1.5);
+// A near-reversal formerly produced huge shader offset spikes. Every bevel
+// point must remain within twice the intended pixel offset of the source vertex.
+const hairpin={type:'FeatureCollection',features:[{type:'Feature',properties:{name:'test',lane:3},geometry:{type:'LineString',coordinates:[[-77,39],[-76.999,39],[-77,39.000001],[-76.999,39.000002]]}}]};
+for(const zoom of [4,8,12,16]) {
+ const shifted=offsetNetwork(hairpin,zoom).features[0].geometry.coordinates;
+ const world=512*2**zoom,project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
+ const source=hairpin.features[0].geometry.coordinates.map(project);
+ for(const p of shifted.map(project)) {
+  assert(p.every(Number.isFinite));
+  assert(Math.min(...source.map(q=>Math.hypot(p[0]-q[0],p[1]-q[1])))<=42.00001);
+ }
+}
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
