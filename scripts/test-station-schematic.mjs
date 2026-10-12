@@ -13,8 +13,26 @@ for(const zoom of [4,7.9,12,16]){
  console.log(JSON.stringify({zoom,ms:result.layoutMilliseconds,segments:result.displayed.features.length,dots:result.dots.features.length,missing:missing.map(f=>f.properties.Code+'|'+f.properties.symbolRoutes[0])}));
  assert.equal(result.dots.features.length,909);assert.equal(missing.length,0,'All station circles must lie on their route');
  assert(result.displayed.features.every(f=>f.geometry.coordinates.length===2),'Only straight segments');
+ const stationCodes=new Set(data.stations.features.map(s=>s.properties.Code));
+ assert(result.displayed.features.every(f=>stationCodes.has(f.properties.from)&&stationCodes.has(f.properties.to)),'Every line endpoint is an actual station');
+ const grouped=Map.groupBy(result.displayed.features,f=>[f.properties.from,f.properties.to].sort().join('|'));
+ const project=p=>[p[0],Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))*180/Math.PI];
+ const side=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+ const crossed=[];
+ for(const [pair,group] of grouped)for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++){
+  const a=group[i],b=group[j];if(a.properties.symbologyName===b.properties.symbologyName)continue;
+  const [u,v]=a.geometry.coordinates.map(project),[p,q]=b.geometry.coordinates.map(project);
+  if(side(u,v,p)*side(u,v,q)<-1e-20&&side(p,q,u)*side(p,q,v)<-1e-20)crossed.push(pair+' '+a.properties.name+' / '+b.properties.name);
+ }
+ assert.deepEqual(crossed,[],'Parallel routes must not cross between the same stations');
  if(zoom===7.9)fs.writeFileSync('../station-schematic-render.json',JSON.stringify(result));
 }
 const lnc=data.routes.features.filter(f=>f.properties.name==='Pennsylvanian'&&(f.properties.from==='LNC'||f.properties.to==='LNC'));assert(lnc.length);
 assert(engine.journey({route:'Pennsylvanian',origin:'PHL',destination:'NYP'}).length);
-console.log('Station schematic checks passed.');
+
+const ewrNames=new Set(data.routes.features.filter(f=>[f.properties.from,f.properties.to].includes('EWR')).map(f=>f.properties.symbologyName));
+const nwkNames=new Set(data.routes.features.filter(f=>[f.properties.from,f.properties.to].includes('NWK')).map(f=>f.properties.symbologyName));
+for(const name of nwkNames)assert(ewrNames.has(name),'Newark corridor must include airport pass-through for '+name);
+const ewr=data.stations.features.find(s=>s.properties.Code==='EWR');assert.deepEqual(ewr.properties.routeNames,['Keystone Service','Northeast Regional'],'Pass-through fixes must not add scheduled stops');
+
+console.log('Station schematic checks passed: all stops attached, no shared-segment crossings, station-only endpoints and Newark pass-throughs.');
