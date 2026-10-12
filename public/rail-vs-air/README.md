@@ -71,3 +71,5 @@ Duplicate-track cleanup preserves short sections connecting two retained track s
 Crescent has a 97 m source geometry gap at North Philadelphia. Its display connector follows the existing shared NEC segment between the exact source section endpoints; `displayRepair` records the correction. This does not add scheduled stops or change journey times.
 
 Through-corridor direction constraints are resolved before branch constraints. Centered single-route sections do not carry a lane frame into other bundles. Geographic priority is then applied to the local shared lane order, avoiding a whole-corridor reversal at Philadelphia 30th Street.
+
+Additional documented source display repairs: Palmetto near Philadelphia 30th Street and Vermonter near New Haven follow existing shared source track between exact section endpoints. The Northeast Regional New Haven branch connectors are protected from cleanup. Keystone’s west approach is snapped within 50 m to the shared NEC, with an isolated non-station spur omitted from display; branch offsets receive short quadratic joins. Timetable membership and retained original sources remain unchanged.
