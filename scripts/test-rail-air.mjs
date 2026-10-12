@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry,filterDisplayData} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -224,10 +224,17 @@ for(const point of [[-74.0019961,40.7541352],[-72.904287,41.3146575]]) {
  assert(bundle,'Southern family is missing a shared corridor');
  const direction=bundle[0].geometry.coordinates.at(-1)[0]>=bundle[0].geometry.coordinates[0][0]?1:-1;
  const lane=name=>bundle.find(f=>f.properties.name===name).properties.lane*direction;
- assert.equal(lane('Northeast Regional')-lane('Acela'),1);
  assert.equal(lane('Vermonter')-lane('Northeast Regional'),1);
- assert(bundle.filter(f=>!['Acela','Northeast Regional','Vermonter'].includes(f.properties.name)).every(f=>f.properties.lane*direction<lane('Acela')));
+ assert.equal(lane('Acela')-lane('Vermonter'),1);
+ assert(bundle.filter(f=>!['Acela','Northeast Regional','Vermonter'].includes(f.properties.name)).every(f=>f.properties.lane*direction<lane('Northeast Regional')));
 }
+// Auto Train is filtered from the app without altering retained source data.
+const visible=filterDisplayData(await load('routes.geojson'),stationData,comparisons);
+assert(!visible.routes.features.some(f=>f.properties.name==='Auto Train'));
+assert(!visible.comparisons.some(r=>r.route==='Auto Train'||r.ntadName==='Auto Train'));
+assert(!visible.stations.features.some(f=>f.properties.routeNames.includes('Auto Train')));
+assert.equal(new Set(visible.routes.features.map(f=>f.properties.name)).size,manifest.routeCount-1);
+assert(stationData.features.some(f=>f.properties.routeNames.includes('Auto Train')));
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
