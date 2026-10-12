@@ -105,11 +105,29 @@ const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
 // Regression for the reported Coatesville–Downingtown color switching.
 const actualNetwork=alignLaneFrames(await load('routes.geojson'));
-for(const [name,expected] of [['Pennsylvanian',.5],['Keystone Service',-.5]]) {
+for(const [name,expected] of [['Pennsylvanian',-.5],['Keystone Service',.5]]) {
  const corridor=actualNetwork.features.filter(f=>f.properties.name===name&&f.geometry.coordinates.some(p=>p[0]>-75.85&&p[0]<-75.65&&p[1]>39.98&&p[1]<40.06));
  assert(corridor.length>=1);
  assert(corridor.every(f=>f.properties.lane===expected),`${name} changed sides on the Pennsylvania corridor`);
 }
+// Every shared Pennsylvanian edge must retain the northernmost physical lane.
+const sharedLanes=new Map();
+for(const f of actualNetwork.features) {
+ const points=f.geometry.coordinates;
+ for(let i=1;i<points.length;i++) {
+  const a=points[i-1],b=points[i],keys=[a.join(','),b.join(',')].sort(),key=keys.join('|');
+  if(!sharedLanes.has(key))sharedLanes.set(key,[]);
+  sharedLanes.get(key).push({name:f.properties.name,lane:f.properties.lane*(b[0]>=a[0]?1:-1)});
+ }
+}
+let priorityEdges=0;
+for(const lanes of sharedLanes.values()) {
+ const penn=lanes.find(f=>f.name==='Pennsylvanian');
+ if(!penn||lanes.length<2)continue;
+ priorityEdges++;
+ assert(lanes.every(f=>f.lane>=penn.lane),'Pennsylvanian is south of another shared route');
+}
+assert(priorityEdges>200);
 assert.equal(new Set(actualNetwork.features.map(f=>f.properties.name)).size,manifest.routeCount);
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
