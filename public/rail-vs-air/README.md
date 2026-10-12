@@ -63,3 +63,5 @@ Routes separate more at regional zooms from 7 onward, with wider spacing as you 
 Stop-circle centers use `#3d3f42`, sampled from the supplied state-background reference, at both overview and detailed zooms. Their outlines match the route color.
 
 Parallel-route colors are assigned using shared-track conflicts and perceptual color distance rather than sequential hues. Silver Star and Floridian retain their intentional combined color. The display cleanup can join redundant loose tails within 75 m of the same service bundle, with a 750 m tail limit; station-bearing branches are protected. Original source snapshots and timetable evidence remain intact.
+
+Lane ordering is controlled by `DISPLAY_ROUTE_PRIORITY` in the data builder and recorded as `routeLanePriority` in the manifest. Pennsylvanian has first priority, placing it on the north/upper side of predominantly west-to-east shared corridors. Remaining services retain alphabetical order, and shared direction frames preserve the lane order through bends.
