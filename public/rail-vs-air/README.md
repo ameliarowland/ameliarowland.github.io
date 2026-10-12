@@ -69,3 +69,5 @@ Lane ordering is controlled by `DISPLAY_ROUTE_PRIORITY` in the data builder and 
 Duplicate-track cleanup preserves short sections connecting two retained track sections, including the North Philadelphia connection. Timetable stop membership is independent of this display geometry.
 
 Crescent has a 97 m source geometry gap at North Philadelphia. Its display connector follows the existing shared NEC segment between the exact source section endpoints; `displayRepair` records the correction. This does not add scheduled stops or change journey times.
+
+Through-corridor direction constraints are resolved before branch constraints. Centered single-route sections do not carry a lane frame into other bundles. Geographic priority is then applied to the local shared lane order, avoiding a whole-corridor reversal at Philadelphia 30th Street.
