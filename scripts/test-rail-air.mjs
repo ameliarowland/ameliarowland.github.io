@@ -212,6 +212,22 @@ for(const zoom of [3,7.9,13,16]) {
   assert(Math.hypot(p[0]-q[0],p[1]-q[1])+.01>=a.properties.radius+b.properties.radius+(a.properties.ringWidth+b.properties.ringWidth)/2,'New York circles overlap because route lanes converge');
  }
 }
+// The southern family stays adjacent and outside the other shared services.
+for(const point of [[-74.0019961,40.7541352],[-72.904287,41.3146575]]) {
+ const groups=new Map();
+ for(const f of actualNetwork.features) {
+  const p=f.geometry.coordinates;
+  if(!p.some(q=>q[0]===point[0]&&q[1]===point[1]))continue;
+  const key=JSON.stringify(p);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(f);
+ }
+ const bundle=[...groups.values()].find(fs=>['Acela','Northeast Regional','Vermonter'].every(name=>fs.some(f=>f.properties.name===name)));
+ assert(bundle,'Southern family is missing a shared corridor');
+ const direction=bundle[0].geometry.coordinates.at(-1)[0]>=bundle[0].geometry.coordinates[0][0]?1:-1;
+ const lane=name=>bundle.find(f=>f.properties.name===name).properties.lane*direction;
+ assert.equal(lane('Northeast Regional')-lane('Acela'),1);
+ assert.equal(lane('Vermonter')-lane('Northeast Regional'),1);
+ assert(bundle.filter(f=>!['Acela','Northeast Regional','Vermonter'].includes(f.properties.name)).every(f=>f.properties.lane*direction<lane('Acela')));
+}
 // Newark had three duplicate offset fragments for many of the same services.
 const newark=actualNetwork.features.filter(f=>f.geometry.coordinates.some(p=>p[0]>-74.22&&p[0]<-74.1&&p[1]>40.70&&p[1]<40.8));
 assert.equal(newark.length,11);
