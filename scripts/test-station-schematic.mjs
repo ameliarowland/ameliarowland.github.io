@@ -120,3 +120,13 @@ for(const zoom of [3.8,4.8,5.7,5.8,5.9,6.8,7.9,12,16]){
  }
 }
 console.log('Fractional-zoom stability and no-backtracking checks passed, including zoom 5.8.');
+const chicagoArrivals=chicago.displayed.features.filter(f=>['CHI'].includes(f.properties.from)||['CHI'].includes(f.properties.to));
+const westFamily=new Set(westToEast.slice(0,westToEast.indexOf('Cardinal'))),westArrivals=chicagoArrivals.filter(f=>westFamily.has(f.properties.symbologyName));
+const arrivalSide=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+for(let i=0;i<westArrivals.length;i++)for(let j=i+1;j<westArrivals.length;j++){
+ const [a,b]=westArrivals[i].geometry.coordinates.map(screenPoint),[c,d]=westArrivals[j].geometry.coordinates.map(screenPoint);
+ assert(!(arrivalSide(a,b,c)*arrivalSide(a,b,d)<-1e-8&&arrivalSide(c,d,a)*arrivalSide(c,d,b)<-1e-8),'Chicago northern / western / southern arrivals must not cross: '+westArrivals[i].properties.name+' / '+westArrivals[j].properties.name);
+}
+const chiRow=new Map();for(const f of chicago.displayed.features)for(const p of f.properties.stationPositions)if(p.Code==='CHI')chiRow.set(p.name,p.coordinates[1]);
+for(let i=1;i<westToEast.length;i++)assert(chiRow.get(westToEast[i-1])>chiRow.get(westToEast[i]),'Chicago row runs northwest to southeast in the requested order');
+console.log('Chicago northern, western and southern arrivals verified without crossings.');
