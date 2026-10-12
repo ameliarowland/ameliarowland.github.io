@@ -1,4 +1,4 @@
-import {stationRouteName} from './model.js?v=station-schematic-4';
+import {stationRouteName} from './model.js?v=station-schematic-7';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Northeast Regional','Vermonter','Acela'];
@@ -22,14 +22,18 @@ export function createSchematicEngine(routes,stations) {
  // routes split, keeping incoming lanes consistent without changing distant
  // corridors where the same services approach from separate directions.
  const preferences=new Map();
- for(let i=0;i<chicagoUnionOrder.length;i++)for(let j=i+1;j<chicagoUnionOrder.length;j++){
-  const a=chicagoUnionOrder[i],b=chicagoUnionOrder[j],shared=new Map();
+ function carryOrder(order,seeds){
+ for(let i=0;i<order.length;i++)for(let j=i+1;j<order.length;j++){
+  const a=order[i],b=order[j],shared=new Map();
   for(const [key,names] of groups){if(!names.has(a)||!names.has(b))continue;const [u,v]=key.split('|');for(const [from,to] of [[u,v],[v,u]]){if(!shared.has(from))shared.set(from,new Set());shared.get(from).add(to);}}
-  const queue=['CHI'],visited=new Set();while(queue.length){const id=queue.pop();if(visited.has(id))continue;visited.add(id);
+  const queue=[...seeds],visited=new Set();while(queue.length){const id=queue.pop();if(visited.has(id))continue;visited.add(id);
    if(nodes.get(id)?.names.has(a)&&nodes.get(id)?.names.has(b)){if(!preferences.has(id))preferences.set(id,[]);preferences.get(id).push([a,b]);}
    for(const other of shared.get(id)||[])queue.push(other);
   }
  }
+ }
+ carryOrder(chicagoUnionOrder,['CHI']);
+ carryOrder(['Crescent','Carolinian','Piedmont','Floridian'],['CLT','GRO','RGH']);
  const defaultOrder=(a,b)=>rank(a)-rank(b)||a.localeCompare(b);
  for(const [id,node] of nodes){
   const incoming=new Map([...node.names].map(n=>[n,0])),outgoing=new Map([...node.names].map(n=>[n,new Set()]));
@@ -38,6 +42,13 @@ export function createSchematicEngine(routes,stations) {
   while(available.length){available.sort(defaultOrder);const name=available.shift();order.push(name);for(const next of outgoing.get(name)){incoming.set(next,incoming.get(next)-1);if(incoming.get(next)===0)available.push(next);}}
   node.order=order;
  }
+
+ // The first two station steps from Union Station retain the complete local
+ // Chicago order, including services that branch toward different next stops.
+ const chicagoSteps=new Map([['CHI',0]]),stationLinks=new Map();
+ for(const key of groups.keys()){const [a,b]=key.split('|');for(const [from,to] of [[a,b],[b,a]]){if(!stationLinks.has(from))stationLinks.set(from,new Set());stationLinks.get(from).add(to);}}
+ const chicagoQueue=['CHI'];while(chicagoQueue.length){const id=chicagoQueue.shift(),step=chicagoSteps.get(id);if(step>=2)continue;for(const other of stationLinks.get(id)||[]){if(chicagoSteps.has(other))continue;chicagoSteps.set(other,step+1);chicagoQueue.push(other);}}
+ for(const id of chicagoSteps.keys()){const node=nodes.get(id);if(!node)continue;node.order=[...node.names].sort((a,b)=>{const ai=chicagoUnionOrder.indexOf(a),bi=chicagoUnionOrder.indexOf(b);return (ai<0?100:ai)-(bi<0?100:bi)||defaultOrder(a,b);});}
 
  // Station rows use one diagonal screen direction throughout the schematic.
  // Their route order therefore cannot reverse as a corridor bends. A fixed
