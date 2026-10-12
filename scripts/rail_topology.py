@@ -144,7 +144,8 @@ def restore_north_philadelphia_connector(fc):
   section.append(connector);features.append(connector)
   symbols={f['properties'].get('symbologyName',f['properties']['name']) for f in section}
   priority={f['properties'].get('symbologyName',f['properties']['name']):f['properties'].get('lanePriority') for f in section}
-  ordered=sorted(symbols,key=lambda name:(priority[name] if priority[name] is not None else 999,name))
+  south={f['properties'].get('symbologyName',f['properties']['name']):f['properties'].get('laneSouthPriority') for f in section}
+  ordered=sorted(symbols,key=lambda name:(2,south[name]) if south[name] is not None else (0,priority[name]) if priority[name] is not None else (1,name))
   for f in section:
    f['properties']['preserveConnector']=True
    f['properties']['lane']=ordered.index(f['properties'].get('symbologyName',f['properties']['name']))-(len(ordered)-1)/2
@@ -207,7 +208,7 @@ def extend_pennsylvanian_to_philadelphia(fc):
   if f['properties']['name']!='Acela':continue
   points=f['geometry']['coordinates']
   if all(-75.201<p[0]<-75.175 and 39.9516<=p[1]<=39.97806 for p in points):
-   clone=deepcopy(f);clone['properties'].update(name='Pennsylvanian',symbologyName='Pennsylvanian',lanePriority=0,displayRepair='Philadelphia scheduled stop approach; existing shared NEC track');additions.append(clone)
+   clone=deepcopy(f);clone['properties'].update(name='Pennsylvanian',symbologyName='Pennsylvanian',lanePriority=0,laneSouthPriority=None,displayRepair='Philadelphia scheduled stop approach; existing shared NEC track');additions.append(clone)
  features.extend(additions)
  return {'type':'FeatureCollection','features':features}
 
@@ -219,7 +220,8 @@ def reorder_display_bundles(fc,priorities):
  for group in groups.values():
   if not all(-75.201<p[0]<-75.175 and 39.9516<=p[1]<=39.97806 for p in group[0]['geometry']['coordinates']):continue
   symbols={f['properties'].get('symbologyName',f['properties']['name']) for f in group}
-  ordered=sorted(symbols,key=lambda name:(priorities.index(name) if name in priorities else len(priorities),name))
+  south={f['properties'].get('symbologyName',f['properties']['name']):f['properties'].get('laneSouthPriority') for f in group}
+  ordered=sorted(symbols,key=lambda name:(2,south[name]) if south[name] is not None else (0,priorities.index(name)) if name in priorities else (1,name))
   for f in group:
    name=f['properties']['name'];symbol=f['properties'].get('symbologyName',name)
    f['properties']['lane']=ordered.index(symbol)-(len(ordered)-1)/2
