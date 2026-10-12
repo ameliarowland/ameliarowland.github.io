@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -35,7 +35,12 @@ for(const zoom of [4,8,12,16]) {
  const source=hairpin.features[0].geometry.coordinates.map(project);
  for(const p of shifted.map(project)) {
   assert(p.every(Number.isFinite));
-  assert(Math.min(...source.map(q=>Math.hypot(p[0]-q[0],p[1]-q[1])))<=42.00001);
+  const distances=source.slice(1).map((b,i)=>{
+   const a=source[i],dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;
+   const t=den?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/den)):0;
+   return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);
+  });
+  assert(Math.min(...distances)<=44.00001); // 2x offset + 2px generalization
  }
 }
 // Adjacent source sections of the same service must remain connected after a lane change.
@@ -44,11 +49,20 @@ const sections={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'A',lane:1},geometry:{type:'LineString',coordinates:[[0,0],[.01,0]]}},
  {type:'Feature',properties:{name:'B',lane:2},geometry:{type:'LineString',coordinates:[[0,0],[0,.01]]}}
 ]};
-const joined=offsetNetwork(sections,12),connectors=joined.features.filter(f=>f.properties.displayJoin);
-assert.equal(connectors.length,1);assert.equal(connectors[0].properties.name,'A');
+const joined=offsetNetwork(sections,12);
+assert.equal(joined.features.length,sections.features.length); // no synthetic bridges
 const near=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-10;
-assert(near(connectors[0].geometry.coordinates[0],joined.features[0].geometry.coordinates.at(-1)));
-assert(near(connectors[0].geometry.coordinates.at(-1),joined.features[1].geometry.coordinates[0]));
+assert(near(joined.features[0].geometry.coordinates.at(-1),[0,0]));
+assert(near(joined.features[1].geometry.coordinates[0],[0,0]));
+assert(near(joined.features[2].geometry.coordinates[0],[0,0]));
+// Reversed stored sections must retain the same physical lane ordering.
+const reversedFrames={type:'FeatureCollection',features:[
+ {type:'Feature',properties:{name:'A',lane:-1},geometry:{type:'LineString',coordinates:[[-.01,0],[0,0]]}},
+ {type:'Feature',properties:{name:'A',lane:-1},geometry:{type:'LineString',coordinates:[[.01,0],[0,0]]}}
+]};
+const alignedFrames=alignLaneFrames(reversedFrames);
+assert.equal(alignedFrames.features[0].properties.lane,-alignedFrames.features[1].properties.lane);
+const style=routeDrawingStyle(alignedFrames,12);assert(style.baseWidth<style.spacing);assert(style.highlightWidth<style.spacing);
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
