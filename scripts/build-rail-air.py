@@ -81,15 +81,31 @@ def parallel_routes(fc):
     if a!=b:edges[tuple(sorted((a,b)))].add(f['properties']['name'])
  features=[]
  for points in corridor_chains(edges):
-  start=0;names=tuple(sorted(edges[tuple(sorted((points[0],points[1])))]))
-  def emit(a,b,names):
-   coords=simplify(points[a:b+1])
-   for i,name in enumerate(names):
-    features.append({'type':'Feature','properties':{'name':name,'lane':i-(len(names)-1)/2,'shared':len(names)},'geometry':{'type':'LineString','coordinates':coords}})
-  for i in range(1,len(points)-1):
-   next_names=tuple(sorted(edges[tuple(sorted((points[i],points[i+1])))]))
-   if next_names!=names:emit(start,i,names);start=i;names=next_names
-  emit(start,len(points)-1,names)
+  memberships=[edges[tuple(sorted((a,b)))] for a,b in zip(points,points[1:])]
+  slots=[{name:0 for name in members} for members in memberships]
+  i=0
+  while i<len(memberships):
+   if len(memberships[i])<2:i+=1;continue
+   start=i;names=set()
+   while i<len(memberships) and len(memberships[i])>=2:names.update(memberships[i]);i+=1
+   ordered=sorted(names);ranks={name:j-(len(ordered)-1)/2 for j,name in enumerate(ordered)}
+   for j in range(start,i):slots[j]={name:ranks[name] for name in memberships[j]}
+  # Simplify each common section once so every route uses identical bend vertices.
+  breaks=[0]+[i for i in range(1,len(memberships)) if memberships[i]!=memberships[i-1] or slots[i]!=slots[i-1]]+[len(memberships)]
+  display=[];display_index={}
+  for lo,hi in zip(breaks,breaks[1:]):
+   part=simplify(points[lo:hi+1]);display_index[lo]=len(display)
+   display.extend(part[:-1])
+  display_index[breaks[-1]]=len(display);display.append(points[-1])
+  # One continuous path per route/lane run, even when another service joins/leaves.
+  for name in sorted(set().union(*memberships)):
+   i=0
+   while i<len(slots):
+    if name not in slots[i]:i+=1;continue
+    start=i;lane=slots[i][name]
+    while i<len(slots) and slots[i].get(name)==lane:i+=1
+    coords=display[display_index[start]:display_index[i]+1]
+    features.append({'type':'Feature','properties':{'name':name,'lane':lane,'shared':max(len(m) for m in memberships[start:i])},'geometry':{'type':'LineString','coordinates':coords}})
  shared=sum(len(names)>1 for names in edges.values())
  return {'type':'FeatureCollection','features':features},shared
 
