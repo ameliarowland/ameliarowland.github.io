@@ -16,6 +16,9 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing){
   for(const [below,above] of [['Capitol Limited','Floridian'],['Borealis','Empire Builder']])if(order.includes(below)&&order.includes(above)){
    const b=order.indexOf(below),a=order.indexOf(above);if(normal[1]>=0?b<a:b>a){order[b]=above;order[a]=below;}
   }
+  const northPairs=[['Pennsylvanian','Floridian'],...([from,to].includes('SOB')?[['Lake Shore Limited','Floridian']]:[])];
+  for(const [north,south] of northPairs)if(order.includes(north)&&order.includes(south)){const n=order.indexOf(north),s=order.indexOf(south);if(normal[1]>=0?n>s:n<s){order[n]=south;order[s]=north;}}
+  if([from,to].includes('SOB')){const family=['Lake Shore Limited','Floridian','Capitol Limited'].filter(n=>order.includes(n)),slots=order.map((n,i)=>family.includes(n)?i:-1).filter(i=>i>=0);if(normal[1]<0)family.reverse();family.forEach((n,i)=>order[slots[i]]=n);}
   const lanes=new Map(order.map((n,i)=>[n,(i-(order.length-1)/2)*spacing]));
   Object.assign(bundle,{from,to,a,b,normal,lanes});
   for(const id of [from,to]){if(!incident.has(id))incident.set(id,[]);incident.get(id).push(bundle);}
