@@ -1,9 +1,9 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,stationSymbols} from './model.js';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
-let colors=new Map(),networkData=null,qualifiedRecords=[],lastRenderZoom=null,available=false;
+let colors=new Map(),networkData=null,stationDataCache=null,qualifiedRecords=[],lastRenderZoom=null,available=false;
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
 const coords=code=>stations[code]?.geometry.coordinates;
@@ -47,6 +47,9 @@ function renderRouteGeometry() {
  map.getSource('qualifying').setData(networkHighlights(qualifiedRecords,shapes,displayed,color));
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
+ const symbols=stationSymbols(stationDataCache,networkData,displayed,zoom,drawingStyle);
+ map.getSource('stations').setData(symbols.dots);
+ map.getSource('station-bars').setData(symbols.bars);
 }
 function renderResults() {
  $('results').innerHTML=filtered.slice(0,shown).map(r=>`<button class="journey" data-id="${r.id}" aria-pressed="${selected?.id===r.id}"><strong>${esc(stationName(r.origin))} → ${esc(stationName(r.destination))}</strong><small>${esc(r.route)} · ${esc(r.origin)} → ${esc(r.destination)}</small><span class="duration"><span>Rail <b>${duration(r.railMinutes)}</b></span><span>Air + 3h <b>${duration(r.flightMinutes+AIRPORT_OVERHEAD)}</b></span></span><span class="badge ${qualifies(r,tolerance())?'':'slower'}">${badge(r)}</span></button>`).join('') || '<p class="help">Try another city, show all matched journeys, or expand the time tolerance.</p>';
@@ -86,7 +89,7 @@ async function load(name) {const response=await fetch(`/rail-vs-air/data/${name}
 async function init() {
  try {
   const [routeData,stationData,comparisons,shapeData,airportData,metadata]=await Promise.all(['routes.geojson','stations.geojson','comparisons.json','shapes.json','airports.json','manifest.json'].map(load));
-  records=comparisons;shapes=shapeData;networkData=routeData;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
+  stationDataCache=stationData;records=comparisons;shapes=shapeData;networkData=routeData;airports=airportData;manifest=metadata;stations=Object.fromEntries(stationData.features.map(f=>[f.properties.Code,f]));
   const names=[...new Set([...routeData.features.map(f=>f.properties.name),...records.map(r=>r.ntadName||r.route)])].sort();
   colors=new Map(names.map((name,i)=>[name,`hsl(${Math.round(i*137.508)%360}, ${55+(i%3)*8}%, ${58+(i%2)*10}%)`]));
   for(const feature of routeData.features)feature.properties.color=color(feature.properties.name);
@@ -113,9 +116,14 @@ async function init() {
    map.addLayer({id:'station-glow',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,3,7,5,12,7],'circle-color':'#ffffff','circle-blur':.9,'circle-opacity':.4}});
    map.addLayer({id:'station-inner-glow',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,2,7,3,12,4],'circle-color':'#ffffff','circle-blur':.65,'circle-opacity':.5}});
    map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':['interpolate',['linear'],['zoom'],3,1,7,1.6,12,2.3],'circle-color':'#ffffff','circle-stroke-width':.2,'circle-stroke-color':'#ffffff'}});
-   map.on('click','stations',e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);});
+   map.addSource('station-bars',{type:'geojson',data:empty()});
+   map.addLayer({id:'station-bar-glow',type:'line',source:'station-bars',layout:{'line-cap':'round'},paint:{'line-color':'#ffffff','line-width':10,'line-blur':4,'line-opacity':.3}});
+   map.addLayer({id:'station-bar-outline',type:'line',source:'station-bars',layout:{'line-cap':'round'},paint:{'line-color':'#89a9b3','line-width':7}});
+   map.addLayer({id:'station-bars',type:'line',source:'station-bars',layout:{'line-cap':'round'},paint:{'line-color':'#ffffff','line-width':4}});
+   const stationPopup=e=>{const p=e.features[0].properties;const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=p.StationName;div.append(strong,document.createElement('br'));const b=document.createElement('button');b.textContent=`Find journeys from/to ${p.Code}`;b.onclick=()=>{$('search').value=p.Code;draw();};div.append(b);new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);};
+   for(const id of ['stations','station-bars'])map.on('click',id,stationPopup);
    map.on('click','network',e=>{const name=e.features[0].properties.name;const service=records.find(r=>r.ntadName===name)?.route;if(service){$('route').value=service;draw();}else{new maplibregl.Popup().setLngLat(e.lngLat).setText(`${name}: no matched travel-time comparisons in this snapshot.`).addTo(map);}});
-   for(const id of ['stations','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
+   for(const id of ['stations','station-bars','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
    available=true;draw();
    // Offsets remain pixel-sized while zooming; the final frame always refreshes.
    let geometryFrame=null;
