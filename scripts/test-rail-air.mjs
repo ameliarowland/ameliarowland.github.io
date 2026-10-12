@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry} from '../public/rail-vs-air/model.js';
+import {delta,qualifies,prepareLanes,mergedHighlights,networkHighlights,offsetNetwork,alignLaneFrames,routeDrawingStyle,continuousRoutePaths,stationSymbols,simplifyDisplayGeometry,anchorStationGeometry} from '../public/rail-vs-air/model.js';
 assert.equal(delta({railMinutes:240,flightMinutes:60}),0);
 assert(qualifies({railMinutes:300,flightMinutes:60},60));
 assert(!qualifies({railMinutes:301,flightMinutes:60},60));
@@ -71,8 +71,8 @@ const branchFrames={type:'FeatureCollection',features:[
  {type:'Feature',properties:{name:'A',lane:.5},geometry:{type:'LineString',coordinates:[[1,0],[1,1]]}}
 ]};
 assert(alignLaneFrames(branchFrames).features.every(f=>f.properties.lane===.5));
-// Multi-service symbols span the actual offset lanes perpendicular to track;
-// a passing second route must not turn a single-service stop into a bar.
+// Each stopping lane receives its own circle; known passing lanes get a
+// perpendicular no-stop tick, never a stop circle or a shared station bar.
 const stationFixture={type:'FeatureCollection',features:[
  {type:'Feature',properties:{Code:'MULTI',routeNames:['A','B']},geometry:{type:'Point',coordinates:[0,0]}},
  {type:'Feature',properties:{Code:'SINGLE',routeNames:['A']},geometry:{type:'Point',coordinates:[.005,0]}}
@@ -81,27 +81,25 @@ const stationTracks={type:'FeatureCollection',features:['A','B'].map((name,i)=>(
 for(const zoom of [4,10,15]) {
  const style=routeDrawingStyle(stationTracks,zoom),display=offsetNetwork(stationTracks,zoom,style);
  const symbols=stationSymbols(stationFixture,stationTracks,display,zoom,style);
- assert.equal(symbols.bars.features.length,1);assert.equal(symbols.bars.features[0].properties.Code,'MULTI');
- assert.equal(symbols.dots.features.length,1);assert.equal(symbols.dots.features[0].properties.Code,'SINGLE');
- const [a,b]=symbols.bars.features[0].geometry.coordinates;
- assert(Math.abs(a[0]-b[0])<1e-10); // north–south bar across east–west track
- const latitudes=display.features.map(f=>f.geometry.coordinates[0][1]);
- const world=512*2**zoom,y=latitude=>(1-Math.log(Math.tan(Math.PI/4+latitude*Math.PI/360))/Math.PI)/2*world;
- const symbolMin=Math.min(y(a[1]),y(b[1])),symbolMax=Math.max(y(a[1]),y(b[1]));
- const routeMin=Math.min(...latitudes.map(y))-style.highlightWidth/2,routeMax=Math.max(...latitudes.map(y))+style.highlightWidth/2;
- assert(Math.abs(symbolMin-routeMin)<1e-5);assert(Math.abs(symbolMax-routeMax)<1e-5);
+ assert.equal(symbols.dots.features.length,3);
+ assert.equal(symbols.dots.features.filter(f=>f.properties.Code==='MULTI').length,2);
+ assert.equal(symbols.passes.features.length,1);
+ assert.equal(symbols.passes.features[0].properties.Code,'SINGLE');
+ assert.deepEqual(symbols.passes.features[0].properties.symbolRoutes,['B']);
+ const [a,b]=symbols.passes.features[0].geometry.coordinates;
+ assert(Math.abs(a[0]-b[0])<1e-10); // tick perpendicular to east–west track
+ for(const f of symbols.dots.features)assert(f.properties.radius>0&&f.properties.ringWidth>0);
 }
-// A passing lane between stopping lanes splits the symbols rather than
-// implying that the middle route also stops. Stations with no train stops hide.
 const interleaved={type:'FeatureCollection',features:['A','B','C'].map((name,i)=>({type:'Feature',properties:{name,lane:i-1},geometry:{type:'LineString',coordinates:[[-.01,0],[.01,0]]}}))};
 const stopsOnly={type:'FeatureCollection',features:[
  {type:'Feature',properties:{Code:'SPLIT',routeNames:['A','C']},geometry:{type:'Point',coordinates:[0,0]}},
  {type:'Feature',properties:{Code:'NONE',routeNames:[]},geometry:{type:'Point',coordinates:[.005,0]}}
 ]};
-const splitStyle=routeDrawingStyle(interleaved,12),split=stationSymbols(stopsOnly,interleaved,offsetNetwork(interleaved,12,splitStyle),12,splitStyle);
-assert.equal(split.bars.features.length,0);assert.equal(split.dots.features.length,2);
+const splitStyle=routeDrawingStyle(interleaved,12),split=stationSymbols(stopsOnly,interleaved,offsetNetwork(interleaved,12,splitStyle),12,splitStyle,new Set(['A','B','C']));
+assert.equal(split.dots.features.length,2);
 assert.deepEqual(split.dots.features.flatMap(f=>f.properties.symbolRoutes).sort(),['A','C']);
-assert(split.dots.features.every(f=>f.properties.Code==='SPLIT'));
+assert.deepEqual(split.passes.features.filter(f=>f.properties.Code==='SPLIT').flatMap(f=>f.properties.symbolRoutes),['B']);
+assert.equal(split.passes.features.filter(f=>f.properties.Code==='NONE').length,3);
 const root=new URL('../public/rail-vs-air/data/',import.meta.url);
 const load=async name=>JSON.parse(await readFile(new URL(name,root),'utf8'));
 const [comparisons,geometry,manifest,evidence,stationData]=await Promise.all(['comparisons.json','shapes.json','manifest.json','gtfs-evidence.json','stations.geojson'].map(load));
@@ -142,6 +140,14 @@ assert.equal(overview.features[0].geometry.coordinates.length,2);
 assert.deepEqual(overview.features[0].geometry.coordinates,overview.features[1].geometry.coordinates);
 assert.equal(simplifyDisplayGeometry(sharedWiggle,13),sharedWiggle);
 assert.equal(simplifyDisplayGeometry(actualNetwork,13),actualNetwork);
+// Country-level generalization must preserve station anchors, including a
+// station projected between two original source vertices on a shared edge.
+const anchorTracks={type:'FeatureCollection',features:['A','B'].map(name=>({type:'Feature',properties:{name,lane:0},geometry:{type:'LineString',coordinates:[[-1,0],[1,0]]}}))};
+const anchorStops={type:'FeatureCollection',features:[{type:'Feature',properties:{Code:'ANCHOR',routeNames:['A','B']},geometry:{type:'Point',coordinates:[.2,0]}}]};
+const anchored=anchorStationGeometry(anchorTracks,anchorStops),country=simplifyDisplayGeometry(anchored,4);
+for(const f of country.features)assert(f.geometry.coordinates.some(p=>p[0]===.2&&p[1]===0));
+assert.deepEqual(country.features[0].geometry.coordinates,country.features[1].geometry.coordinates);
+
 const stopsByTrip=new Map();
 for(const stop of evidence['stop_times.txt']){if(!stopsByTrip.has(stop.trip_id))stopsByTrip.set(stop.trip_id,new Map());stopsByTrip.get(stop.trip_id).set(stop.stop_id,stop);}
 const parse=t=>{const [h,m,s]=t.split(':').map(Number);return h*60+m+s/60;};
@@ -162,9 +168,9 @@ assert.equal(stationData.features.length,manifest.stationCount);
 assert(stationData.features.every(f=>Array.isArray(f.properties.routeNames)&&new Set(f.properties.routeNames).size===f.properties.routeNames.length));
 const actualStyle=routeDrawingStyle(actualNetwork,12);
 const actualSymbols=stationSymbols(stationData,actualNetwork,offsetNetwork(actualNetwork,12,actualStyle),12,actualStyle);
-for(const code of ['PHL','NYP','RVR'])assert(actualSymbols.bars.features.some(f=>f.properties.Code===code));
+for(const code of ['PHL','NYP','RVR'])assert(actualSymbols.dots.features.some(f=>f.properties.Code===code));
 assert(actualSymbols.dots.features.some(f=>f.properties.Code==='DOW'));
-for(const f of [...actualSymbols.dots.features,...actualSymbols.bars.features]) {
+for(const f of actualSymbols.dots.features) {
  assert(f.properties.symbolRoutes.length);
  assert(f.properties.symbolRoutes.every(name=>f.properties.routeNames.includes(name)),`${f.properties.Code}: marker on a passing route`);
 }
@@ -172,14 +178,19 @@ const lancaster=stationData.features.find(f=>f.properties.Code==='LNC');
 assert.deepEqual(lancaster.properties.routeNames,['Keystone Service','Pennsylvanian']);
 for(const zoom of [6,7,8,10,12,15]) {
  const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols({type:'FeatureCollection',features:[lancaster]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
- assert(symbols.bars.features.some(f=>f.properties.Code==='LNC'&&f.properties.symbolRoutes.length===2),`Lancaster bar missing at zoom ${zoom}`);
+ assert.deepEqual(symbols.dots.features.filter(f=>f.properties.Code==='LNC').flatMap(f=>f.properties.symbolRoutes).sort(),['Keystone Service','Pennsylvanian']);
 }
 const aberdeen=stationData.features.find(f=>f.properties.Code==='ABE');
 assert.deepEqual(aberdeen.properties.routeNames,['Northeast Regional']);
 const aberdeenSymbols=stationSymbols({type:'FeatureCollection',features:[aberdeen]},actualNetwork,offsetNetwork(actualNetwork,12,actualStyle),12,actualStyle);
-assert.equal(aberdeenSymbols.bars.features.length,0);
+
 assert.equal(aberdeenSymbols.dots.features.length,1);
 assert.deepEqual(aberdeenSymbols.dots.features[0].properties.symbolRoutes,['Northeast Regional']);
+const actualKnown=new Set(stationData.features.flatMap(f=>f.properties.routeNames));
+for(const f of actualSymbols.passes.features) {
+ assert(f.properties.symbolRoutes.every(name=>actualKnown.has(name)&&!f.properties.routeNames.includes(name)));
+}
+
 // Miami's terminal branches are not all in the 75m through-track corridor.
 // Both actual stopping services must remain marked; the NTAD-only Silver Star
 // must not receive a station marker from the retained timetable.
@@ -187,7 +198,7 @@ const miami=stationData.features.find(f=>f.properties.Code==='MIA');
 assert.deepEqual(miami.properties.routeNames,['Floridian','Silver Meteor']);
 for(const zoom of [5,7,10,12,15]) {
  const style=routeDrawingStyle(actualNetwork,zoom),symbols=stationSymbols({type:'FeatureCollection',features:[miami]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
- const marked=new Set([...symbols.dots.features,...symbols.bars.features].flatMap(f=>f.properties.symbolRoutes));
+ const marked=new Set(symbols.dots.features.flatMap(f=>f.properties.symbolRoutes));
  assert.deepEqual([...marked].sort(),['Floridian','Silver Meteor'],`Miami missing a stopping route at zoom ${zoom}`);
 }
 // Curved displayed lanes may cross the station's perpendicular at a different
@@ -196,7 +207,7 @@ for(const zoom of [6,7,7.5,8,10,12]) {
  const style=routeDrawingStyle(actualNetwork,zoom);
  const station=stationData.features.find(f=>f.properties.Code==='WIL');
  const symbols=stationSymbols({type:'FeatureCollection',features:[station]},actualNetwork,offsetNetwork(actualNetwork,zoom,style),zoom,style);
- assert(symbols.bars.features.some(f=>f.properties.Code==='WIL'),`Wilmington reverted to a dot at zoom ${zoom}`);
+ assert(symbols.dots.features.some(f=>f.properties.Code==='WIL'&&f.properties.symbolRoutes.includes('Silver Meteor')),`Wilmington stopping route missing at zoom ${zoom}`);
 }
 
 
