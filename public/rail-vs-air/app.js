@@ -1,9 +1,9 @@
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights} from './model.js';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,offsetNetwork} from './model.js';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map,records=[],filtered=[],shapes={},stations={},airports={},manifest={},selected=null,shown=40;
-let colors=new Map(),networkData=null,available=false;
+let colors=new Map(),networkData=null,qualifiedData=empty(),lastRenderZoom=null,available=false;
 const color=name=>colors.get(name)||'#c1673e';
 const stationName=code=>stations[code]?.properties.StationName || code;
 const coords=code=>stations[code]?.geometry.coordinates;
@@ -28,13 +28,20 @@ function draw() {
  const qualified=filtered.filter(r=>qualifies(r,t));
  $('status').textContent=filtered.length?`${qualified.length.toLocaleString()} qualify. Directions and train services count separately.`:'No matched journeys for these filters. This is not evidence that flying is faster.';
  if(available) {
-  map.getSource('qualifying').setData(networkHighlights(qualified,shapes,networkData,color));
+  qualifiedData=networkHighlights(qualified,shapes,networkData,color);
+  renderRouteGeometry();
   // Service filters narrow comparisons, while the full route network stays visible.
   map.setFilter('network',null);
   map.setPaintProperty('network','line-opacity',1);
  }
  if(selected&&!filtered.some(r=>r.id===selected.id))closeSelection();
  shown=40;renderResults();syncURL();
+}
+function renderRouteGeometry() {
+ if(!available)return;
+ const zoom=map.getZoom();lastRenderZoom=zoom;
+ map.getSource('network').setData(offsetNetwork(networkData,zoom));
+ map.getSource('qualifying').setData(offsetNetwork(qualifiedData,zoom));
 }
 function renderResults() {
  $('results').innerHTML=filtered.slice(0,shown).map(r=>`<button class="journey" data-id="${r.id}" aria-pressed="${selected?.id===r.id}"><strong>${esc(stationName(r.origin))} → ${esc(stationName(r.destination))}</strong><small>${esc(r.route)} · ${esc(r.origin)} → ${esc(r.destination)}</small><span class="duration"><span>Rail <b>${duration(r.railMinutes)}</b></span><span>Air + 3h <b>${duration(r.flightMinutes+AIRPORT_OVERHEAD)}</b></span></span><span class="badge ${qualifies(r,tolerance())?'':'slower'}">${badge(r)}</span></button>`).join('') || '<p class="help">Try another city, show all matched journeys, or expand the time tolerance.</p>';
@@ -90,10 +97,9 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
   map.on('load',()=>{
    map.addSource('network',{type:'geojson',data:routeData});
-   const offset=['interpolate',['linear'],['zoom'],3,['*',['get','lane'],3.5],7,['*',['get','lane'],5.5],11,['*',['get','lane'],7]];
-   map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,2.5,7,3.2,11,4],'line-offset':offset,'line-opacity':1}});
+   map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,2.5,7,3.2,11,4],'line-offset':0,'line-opacity':1}});
    map.addSource('qualifying',{type:'geojson',data:empty()});
-   map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':offset,'line-opacity':1}});
+   map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':0,'line-opacity':1}});
    map.addSource('selected',{type:'geojson',data:empty()});
    map.addLayer({id:'selected',type:'line',source:'selected',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#e5fff2','line-width':6}});
    map.addSource('stations',{type:'geojson',data:stationData});
@@ -105,6 +111,13 @@ async function init() {
    map.on('click','network',e=>{const name=e.features[0].properties.name;const service=records.find(r=>r.ntadName===name)?.route;if(service){$('route').value=service;draw();}else{new maplibregl.Popup().setLngLat(e.lngLat).setText(`${name}: no matched travel-time comparisons in this snapshot.`).addTo(map);}});
    for(const id of ['stations','network']){map.on('mouseenter',id,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',id,()=>map.getCanvas().style.cursor='');}
    available=true;draw();
+   // Offsets remain pixel-sized while zooming; the final frame always refreshes.
+   let geometryFrame=null;
+   map.on('zoom',()=>{
+    if(Math.abs(map.getZoom()-lastRenderZoom)<.2||geometryFrame!==null)return;
+    geometryFrame=requestAnimationFrame(()=>{geometryFrame=null;renderRouteGeometry();});
+   });
+   map.on('zoomend',renderRouteGeometry);
   });
   map.on('error',()=>{$('status').textContent='Some map resources could not load. The sourced journey list and CSV remain available.';});
  }catch(error){$('status').textContent=`Could not load the source data. ${error.message}. Please reload or read the article.`;console.error(error);}
