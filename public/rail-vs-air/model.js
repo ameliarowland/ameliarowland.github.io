@@ -143,21 +143,29 @@ export function mergedHighlights(records, shapes, color, lanes=new Map()) {
 
 // Render qualifying coverage on the base network's exact path and lane. Timetable
 // shapes identify covered sections; they do not add a second competing centerline.
+const highlightCoverageCache=new WeakMap();
 export function networkHighlights(records, shapes, network, color) {
   if(!network)return {type:'FeatureCollection',features:[]};
-  const nameByService=new Map(records.map(r=>[r.route,r.ntadName||r.route]));
-  const coverage=mergedHighlights(records,shapes,color),grid=new Map(),cell=.025;
-  for(const f of coverage.features) {
-    const name=nameByService.get(f.properties.route),points=f.geometry.coordinates;
-    for(let i=0;i<points.length-1;i++) {
-      const a=points[i],b=points[i+1];
-      for(let x=Math.floor(Math.min(a[0],b[0])/cell);x<=Math.floor(Math.max(a[0],b[0])/cell);x++)
-      for(let y=Math.floor(Math.min(a[1],b[1])/cell);y<=Math.floor(Math.max(a[1],b[1])/cell);y++) {
-        const key=name+'|'+x+'|'+y;
-        if(!grid.has(key))grid.set(key,[]);grid.get(key).push([a,b]);
+  let cache=highlightCoverageCache.get(shapes);if(!cache){cache=new Map();highlightCoverageCache.set(shapes,cache);}
+  const signature=records.map(r=>r.id??`${r.route}:${r.shapeId}:${r.shapeRange}`).join(',');
+  let prepared=cache.get(signature);
+  if(!prepared) {
+    const nameByService=new Map(records.map(r=>[r.route,r.ntadName||r.route]));
+    const coverage=mergedHighlights(records,shapes,color),grid=new Map(),cell=.025,seen=new Set();
+    for(const f of coverage.features) {
+      const name=nameByService.get(f.properties.route),points=f.geometry.coordinates;
+      for(let i=0;i<points.length-1;i++) {
+        const a=points[i],b=points[i+1],segmentKey=name+'|'+[a.join(','),b.join(',')].sort().join('|');
+        if(seen.has(segmentKey))continue;seen.add(segmentKey);
+        for(let x=Math.floor(Math.min(a[0],b[0])/cell);x<=Math.floor(Math.max(a[0],b[0])/cell);x++)
+        for(let y=Math.floor(Math.min(a[1],b[1])/cell);y<=Math.floor(Math.max(a[1],b[1])/cell);y++) {
+          const key=name+'|'+x+'|'+y;if(!grid.has(key))grid.set(key,[]);grid.get(key).push([a,b]);
+        }
       }
     }
+    prepared={grid,cell};cache.set(signature,prepared);if(cache.size>4)cache.delete(cache.keys().next().value);
   }
+  const {grid,cell}=prepared;
   function covered(name,a,b) {
     const p=[(a[0]+b[0])/2,(a[1]+b[1])/2],cos=Math.cos(p[1]*Math.PI/180),gx=Math.floor(p[0]/cell),gy=Math.floor(p[1]/cell);
     for(let x=gx-1;x<=gx+1;x++)for(let y=gy-1;y<=gy+1;y++)for(const [u,v] of grid.get(name+'|'+x+'|'+y)||[]) {
@@ -285,7 +293,7 @@ const stationAnchorCache=new WeakMap();
 // those anchors with every route using that edge. Offsets still retain their
 // separate lanes; anchoring does not pinch a bundle into one station point.
 export function anchorStationGeometry(collection,stations) {
-  if(!stations)return collection;
+  if(!stations||collection.stationAnchorAssociations)return collection;
   const cached=stationAnchorCache.get(collection);
   if(cached?.stations===stations)return cached.result;
   const grid=new Map(),cell=.05,anchors=new Map(),keys=new Set(),stationAnchorAssociations=[];
@@ -331,25 +339,8 @@ export function anchorStationGeometry(collection,stations) {
 // kept for every route or removed for every route. Country overviews permit
 // 3 pixels of generalization; zoom 13 restores detail. Station anchors are fixed.
 export function simplifyDisplayGeometry(collection,zoom) {
-  const tolerance=zoom<=4?3:zoom<7?3-(zoom-4)*.6:zoom<10?1.2-(zoom-7)*.85/3:zoom<13?.35*(13-zoom)/3:0;
-  if(!tolerance)return collection;
-  const world=512*2**zoom,keep=new Set(collection.stationAnchorKeys||[]);
-  const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
-  for(const f of collection.features) {
-    const p=f.geometry.coordinates,xy=p.map(project),breaks=[0,...p.map((point,i)=>keep.has(coordinateKey(point))?i:-1).filter(i=>i>0&&i<p.length-1),p.length-1],stack=breaks.slice(1).map((hi,i)=>[breaks[i],hi]);
-    keep.add(coordinateKey(p[0]));keep.add(coordinateKey(p.at(-1)));
-    while(stack.length) {
-      const [lo,hi]=stack.pop(),a=xy[lo],b=xy[hi],dx=b[0]-a[0],dy=b[1]-a[1],den=dx*dx+dy*dy;
-      let index=lo,max=tolerance*tolerance;
-      for(let j=lo+1;j<hi;j++) {
-        const t=den?Math.max(0,Math.min(1,((xy[j][0]-a[0])*dx+(xy[j][1]-a[1])*dy)/den)):0;
-        const d=(xy[j][0]-a[0]-t*dx)**2+(xy[j][1]-a[1]-t*dy)**2;
-        if(d>max){max=d;index=j;}
-      }
-      if(index!==lo){keep.add(coordinateKey(p[index]));stack.push([lo,index],[index,hi]);}
-    }
-  }
-  return {type:'FeatureCollection',features:collection.features.map(f=>({...f,geometry:{type:'LineString',coordinates:f.geometry.coordinates.filter(p=>keep.has(coordinateKey(p)))}}))};
+  // User requires the original vertices at every zoom.
+  return collection;
 }
 export function offsetNetwork(collection, zoom, drawingStyle=routeDrawingStyle(collection,zoom), stations=null) {
   const world=512*2**zoom;
@@ -968,38 +959,17 @@ export function untangledNetwork(collection,zoom,style=routeDrawingStyle(collect
   for(const f of paths.features)for(let i=1;i<f.geometry.coordinates.length;i++) {
     const key=edgeKey(f.geometry.coordinates[i-1],f.geometry.coordinates[i])[0];support.set(key,(support.get(key)||0)+1);
   }
-  // Round the common centerline before offsetting when its turn radius is
-  // smaller than the displayed bundle. Every shared vertex uses one reference;
-  // the upstream engine then computes the parallel circular joins.
-  const radius=Math.max(4,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)))*3);
-  const centers=new Map();
-  for(const f of paths.features) {
-    const coords=f.geometry.coordinates,xy=coords.map(project),dist=[0];
-    for(let i=1;i<xy.length;i++)dist.push(dist.at(-1)+Math.hypot(xy[i].x-xy[i-1].x,xy[i].y-xy[i-1].y));
-    const at=t=>{
-      if(t<=0)return xy[0];if(t>=dist.at(-1))return xy.at(-1);
-      let lo=0,hi=dist.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(dist[m]<=t)lo=m;else hi=m;}
-      const u=(t-dist[lo])/(dist[hi]-dist[lo]||1);return {x:xy[lo].x+(xy[hi].x-xy[lo].x)*u,y:xy[lo].y+(xy[hi].y-xy[lo].y)*u};
-    };
-    for(let i=0;i<coords.length;i++) {
-      const key=coordinateKey(coords[i]),left=i?support.get(edgeKey(coords[i-1],coords[i])[0])||1:0,right=i+1<coords.length?support.get(edgeKey(coords[i],coords[i+1])[0])||1:0;
-      const window=Math.min(radius,dist[i],dist.at(-1)-dist[i]),quality=Math.max(left,right)*1000+Math.min(window,radius);
-      if(centers.has(key)&&centers.get(key).quality>=quality)continue;
-      const sum={x:0,y:0},weights=[1,4,6,4,1];
-      for(let j=0;j<5;j++){const q=at(dist[i]+(j-2)*window/2);sum.x+=q.x*weights[j]/16;sum.y+=q.y*weights[j]/16;}
-      centers.set(key,{point:sum,quality});
-    }
-  }
   const junctionCounts=new Map();
   for(const f of paths.features)for(const p of f.geometry.coordinates){const key=stationRouteName(f.properties.symbologyName||f.properties.name)+'|'+coordinateKey(p);junctionCounts.set(key,(junctionCounts.get(key)||0)+1);}
   const nodePoints=new Map();
   const drafts=paths.features.map(f=>{
-    const coords=f.geometry.coordinates,xy=coords.map(p=>centers.get(coordinateKey(p)).point),lanes=f.properties.edgeLanes;
+    const coords=f.geometry.coordinates,xy=coords.map(project),lanes=f.properties.edgeLanes;
     const segments=coords.slice(1).map((p,i)=>engine.offsetPointLine([xy[i],xy[i+1]],lanes[i]*spacing)[0]);
     const corners=coords.map((p,i)=>{
       if(i===0)return [segments[0].offset[0]];
       if(i===coords.length-1)return [segments.at(-1).offset[1]];
       const a=segments[i-1],b=segments[i];
+      if(lanes[i-1]===0&&lanes[i]===0)return [xy[i]];
       if(lanes[i-1]===lanes[i]) {
         const angle=engine.getSignedAngle(a.original,b.original);
         // Near-collinear station projections can differ by floating point
@@ -1057,107 +1027,8 @@ export function untangledNetwork(collection,zoom,style=routeDrawingStyle(collect
         }
       }
     }
-    return {...f,properties:{...f.properties,stationPositions},geometry:{type:'LineString',coordinates:removeOffsetLoops(points.map(p=>[p.x,p.y]),sourcePoints,protectedVertices).map(p=>unproject({x:p[0],y:p[1]}))}};
+    return {...f,properties:{...f.properties,stationPositions},geometry:{type:'LineString',coordinates:points.map(unproject)}};
   });
-  // A short terminal throat can be smaller than the pixel-wide bundle.
-  // Connect directly to the retained stop dot instead of tracing a folded
-  // offset around that tiny source corner. This applies to every terminus.
-  if(stations) {
-    const stationByCode=new Map(stations.features.map(s=>[s.properties.Code,s]));
-    const endpointCounts=new Map();
-    for(const draft of drafts)for(const p of [draft.coords[0],draft.coords.at(-1)]){const key=draft.name+'|'+coordinateKey(p);endpointCounts.set(key,(endpointCounts.get(key)||0)+1);}
-    const fans=new Map(),terminalTargets=new Map();
-    features.forEach((f,index)=>{
-      const draft=drafts[index];
-      for(const side of [0,1]) {
-        const source=side?draft.coords:[...draft.coords].reverse(),endpoint=source.at(-1);
-        if(junctionCounts.get(draft.name+'|'+coordinateKey(endpoint))>1)continue;
-        const stop=(f.properties.stationPositions||[]).find(stop=>{
-          const station=stationByCode.get(stop.Code);if(!station)return false;const p=station.geometry.coordinates;
-          return Math.hypot((endpoint[0]-p[0])*Math.cos(p[1]*Math.PI/180),endpoint[1]-p[1])*111320<750;
-        });
-        if(!stop)continue;
-        const station=stationByCode.get(stop.Code),center=project(station.geometry.coordinates),scale=40075016.686*Math.cos(station.geometry.coordinates[1]*Math.PI/180)/world;
-        const approach=[...source].reverse().find(p=>{const q=project(p);return Math.hypot(q.x-center.x,q.y-center.y)*scale>1500;})||source[0];
-        const q=project(approach),angle=Math.round(Math.atan2(q.y-center.y,q.x-center.x)/(Math.PI/3)),key=stop.Code+'|'+angle;
-        if(!fans.has(key))fans.set(key,[]);fans.get(key).push({index,side,stop,approach:q,name:draft.name});
-      }
-    });
-    for(const group of fans.values()) {
-      if(group.length<2)continue;
-      const targets=group.map(item=>project(item.stop.coordinates));
-      const center=targets.reduce((s,p)=>({x:s.x+p.x/group.length,y:s.y+p.y/group.length}),{x:0,y:0});
-      const entry=group.reduce((s,p)=>({x:s.x+p.approach.x/group.length,y:s.y+p.approach.y/group.length}),{x:0,y:0});
-      const dx=center.x-entry.x,dy=center.y-entry.y,normal={x:-dy,y:dx};
-      // Incoming route order is measured where the approaches are still
-      // separate. Matching that order to the terminal slots minimizes crossings.
-      const incoming=item=>{
-        const f=features[item.index],line=item.side?f.geometry.coordinates:[...f.geometry.coordinates].reverse();
-        const target=project(item.stop.coordinates),window=Math.max(70,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)))*4);
-        let j=line.findIndex(p=>coordinateKey(p)===coordinateKey(item.stop.coordinates)),travel=0;
-        while(j>0&&travel<window){const a=project(line[j]),b=project(line[j-1]);travel+=Math.hypot(b.x-a.x,b.y-a.y);j--;}
-        const p=project(line[Math.max(0,j)]);return p.x*normal.x+p.y*normal.y;
-      };
-      group.sort((a,b)=>incoming(a)-incoming(b)||a.name.localeCompare(b.name));
-      targets.sort((a,b)=>(a.x-b.x)*normal.x+(a.y-b.y)*normal.y);
-      group.forEach((item,i)=>terminalTargets.set(item.index+':'+item.side,unproject(targets[i])));
-    }
-    features.forEach((f,index)=>{
-      const source=drafts[index].coords,sourceXY=source.map(project),total=[0];
-      for(let i=1;i<sourceXY.length;i++)total.push(total.at(-1)+Math.hypot(sourceXY[i].x-sourceXY[i-1].x,sourceXY[i].y-sourceXY[i-1].y));
-      for(const side of [0,1]) {
-        const endpoint=source[side?source.length-1:0];
-        if(junctionCounts.get(drafts[index].name+'|'+coordinateKey(endpoint))>1)continue;
-        const stops=(f.properties.stationPositions||[]).filter(stop=>{
-          const station=stationByCode.get(stop.Code);if(!station)return false;
-          const p=station.geometry.coordinates;return Math.hypot((endpoint[0]-p[0])*Math.cos(p[1]*Math.PI/180),endpoint[1]-p[1])*111320<750;
-        });
-        if(!stops.length)continue;
-        const stop=stops.sort((a,b)=>{
-          const pa=project(a.coordinates),pb=project(b.coordinates),e=project(endpoint);return Math.hypot(pa.x-e.x,pa.y-e.y)-Math.hypot(pb.x-e.x,pb.y-e.y);
-        })[0];
-        const line=side?f.geometry.coordinates:[...f.geometry.coordinates].reverse(),target=project(terminalTargets.get(index+':'+side)||stop.coordinates);
-        let stopIndex=line.findIndex(p=>coordinateKey(p)===coordinateKey(stop.coordinates));if(stopIndex<1)continue;
-        const otherStops=new Set(f.properties.stationPositions.filter(s=>s.Code!==stop.Code).map(s=>coordinateKey(s.coordinates)));
-        const window=Math.max(70,spacing*Math.max(1,...collection.features.map(f=>Math.abs(f.properties.lane||0)))*4);
-        let startIndex=stopIndex,travel=0;
-        while(startIndex>0&&travel<window) {
-          const a=project(line[startIndex]),b=project(line[startIndex-1]);travel+=Math.hypot(b.x-a.x,b.y-a.y);startIndex--;
-          if(otherStops.has(coordinateKey(line[startIndex])))break;
-        }
-        if(startIndex===stopIndex)continue;
-        const a=project(line[startIndex]),previous=project(line[Math.max(0,startIndex-1)]);
-        let dx=a.x-previous.x,dy=a.y-previous.y,len=Math.hypot(dx,dy);
-        if(!len){dx=target.x-a.x;dy=target.y-a.y;len=Math.hypot(dx,dy)||1;}
-        const forward=Math.max(0,(target.x-a.x)*dx/len+(target.y-a.y)*dy/len);
-        const control={x:a.x+dx/len*forward*.55,y:a.y+dy/len*forward*.55},curve=[];
-        for(let j=1;j<=24;j++){const t=j/24,u=1-t;curve.push(unproject({x:u*u*a.x+2*u*t*control.x+t*t*target.x,y:u*u*a.y+2*u*t*control.y+t*t*target.y}));}
-        const joined=[...line.slice(0,startIndex+1),...curve];
-        f.geometry.coordinates=side?joined:joined.reverse();
-        stop.coordinates=unproject(target);
-      }
-    });
-  }
-  for(const f of features) {
-    const keep=new Set(f.properties.stationPositions.map(s=>coordinateKey(s.coordinates)));
-    const name=stationRouteName(f.properties.symbologyName||f.properties.name);
-    for(const [key,entry] of nodePoints)if(key.startsWith(name+'|')&&junctionCounts.get(key)>1)keep.add(coordinateKey(unproject(entry.point)));
-    let line=f.geometry.coordinates;
-    for(let pass=0;pass<12;pass++) {
-      let changed=false;
-      outer:for(let i=0;i<line.length-3;i++)for(let j=i+2;j<Math.min(line.length-1,i+96);j++) {
-        const a=project(line[i]),b=project(line[i+1]),c=project(line[j]),d=project(line[j+1]);
-        const rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y,den=rx*sy-ry*sx;if(Math.abs(den)<1e-9)continue;
-        const t=((c.x-a.x)*sy-(c.y-a.y)*sx)/den,u=((c.x-a.x)*ry-(c.y-a.y)*rx)/den;
-        if(t<=1e-6||t>=1-1e-6||u<=1e-6||u>=1-1e-6)continue;
-        const retained=line.slice(i+1,j+1).filter(p=>keep.has(coordinateKey(p)));
-        line=[...line.slice(0,i+1),unproject({x:a.x+t*rx,y:a.y+t*ry}),...retained,...line.slice(j+1)];
-        changed=true;break outer;
-      }
-      if(!changed)break;
-    }
-    f.geometry.coordinates=line;
-  }
   const brokenJunctions=[];
   drafts.forEach((draft,index)=>{
     for(const p of [draft.coords[0],draft.coords.at(-1)]) {
