@@ -1,6 +1,6 @@
-import {closestRouteAtPoint} from './hover.js?v=station-schematic-22';
-import {createSchematicEngine} from './schematic.js?v=station-schematic-22';
-import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-22';
+import {closestRouteAtPoint} from './hover.js?v=station-schematic-23';
+import {createSchematicEngine} from './schematic.js?v=station-schematic-23';
+import {AIRPORT_OVERHEAD,delta,qualifies,duration,networkHighlights,untangledNetwork,optimizeLaneOrder,alignLaneFrames,routeDrawingStyle,stationSymbols,stationRouteName,filterDisplayData} from './model.js?v=station-schematic-23';
 const $=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -62,7 +62,6 @@ function applyRouteLayout(result) {
  $('route-focus-label').textContent=activeRouteName?`Selected: ${activeRouteName==='Floridian'?'Floridian / Silver Star':activeRouteName}`:'';
  // Clip coverage from the final displayed lines, never offset a second copy.
  map.getSource('qualifying').setData(result.qualifying);
- map.setPaintProperty('network-separator','line-width',drawingStyle.laneSpacing);
  map.setPaintProperty('network','line-width',drawingStyle.baseWidth);
  map.setPaintProperty('qualified','line-width',drawingStyle.highlightWidth);
  map.setPaintProperty('route-hover','line-width',drawingStyle.hoverWidth);
@@ -135,7 +134,7 @@ async function init() {
   for(const feature of visible.routes.features)feature.properties.color=color(feature.properties.symbologyName||feature.properties.name);
   networkData=visible.routes;
   schematicEngine=createSchematicEngine(networkData,stationDataCache);
-  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-22",{type:"module"});
+  layoutWorker=new Worker("/rail-vs-air/layout-worker.js?v=station-schematic-23",{type:"module"});
   layoutWorker.onmessage=({data})=>{if(data.type==="layout")applyRouteLayout(data);else if(data.type==="error")$("status").textContent=`Map layout failed: ${data.message}`;};
   layoutWorker.onerror=event=>{$("status").textContent=`Map layout worker failed: ${event.message}`;};
   layoutWorker.postMessage({type:"init",routes:networkData,stations:stationDataCache});
@@ -152,7 +151,6 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
   map.on('load',()=>{
    map.addSource('network',{type:'geojson',tolerance:0,data:empty()});
-   map.addLayer({id:'network-separator',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#f8f5ee','line-width':3.9,'line-opacity':1}});
    map.addLayer({id:'network',type:'line',source:'network',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,2.5,7,3.2,11,4],'line-offset':0,'line-opacity':1}});
    map.addSource('qualifying',{type:'geojson',tolerance:0,data:empty()});
    map.addLayer({id:'qualified',type:'line',source:'qualifying',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','color'],'line-width':['interpolate',['linear'],['zoom'],3,3.5,7,4.2,11,5],'line-offset':0,'line-opacity':1}});
