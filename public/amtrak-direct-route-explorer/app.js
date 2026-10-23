@@ -1,5 +1,5 @@
-import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-7';
-import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-7';
+import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-8';
+import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-8';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 const state={start:null,end:null,route:null,showStations:params.get('stations')==='on'};
 let map,timetable,stations,routes,metadata,byCode,findPath=null,journeyPaths=[],allowed=null,options=[],hoveredStation='',hoveredRoute=null,popup=null,popupCode=null,closeTimer=null,insidePopup=false;
@@ -38,7 +38,7 @@ function render(){
 }
 function fitJourney(){const codes=allowed||new Set([state.start,state.end].filter(Boolean));const bounds=new maplibregl.LngLatBounds();for(const f of stations.features)if(codes.has(f.properties.Code))bounds.extend(f.geometry.coordinates);if(!bounds.isEmpty())map.fitBounds(bounds,{padding:window.innerWidth>700?{top:70,bottom:110,left:370,right:70}:{top:$('journey-panel').open?Math.min($('journey-panel').getBoundingClientRect().height+30,map.getContainer().clientHeight*.65):70,bottom:document.querySelector('.legend').getBoundingClientRect().height+50,left:35,right:55},maxZoom:10,duration:reduced()?0:650});}
 function stationPopupPosition(coordinates,width,height){
- const container=map.getContainer(),bounds=container.getBoundingClientRect(),section=container.closest('.map-section'),obstacles=[...section.querySelectorAll('#journey-panel,.legend,.map-tools,.maplibregl-ctrl-bottom-right .maplibregl-ctrl,#route-name:not([hidden])')].filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return {x:r.left-bounds.left-6,y:r.top-bounds.top-6,width:r.width+12,height:r.height+12};});
+ const container=map.getContainer(),bounds=container.getBoundingClientRect(),section=container.closest('.map-section'),obstacles=[...section.querySelectorAll('#journey-panel,.legend,.map-tools,.basemap-buttons,.maplibregl-ctrl-bottom-right .maplibregl-ctrl,#route-name:not([hidden])')].filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return {x:r.left-bounds.left-6,y:r.top-bounds.top-6,width:r.width+12,height:r.height+12};});
  const features=singleNetwork(routes).features,paths=features.map(f=>f.geometry.coordinates.map(p=>{const q=map.project(p);return [q.x,q.y];}));
  const unique=[...new Map(paths.map(path=>[path.map(p=>p.map(v=>v.toFixed(2)).join(',')).sort().join('|'),path])).values()];return corridorPopupPlacement(map.project(coordinates),{width:container.clientWidth,height:container.clientHeight,obstacles},unique,{width,height,priorityPaths:unique.filter(path=>path.some(p=>Math.hypot(p[0]-map.project(coordinates).x,p[1]-map.project(coordinates).y)<1))});
 }
@@ -60,12 +60,27 @@ async function init(){
   for(const station of [...stations.features].sort((a,b)=>a.properties.title.localeCompare(b.properties.title))){const option=document.createElement('option');option.value=station.properties.Code;option.label=station.properties.title;$('station-options').append(option);}for(const role of ['start','end'])if(byCode.has(params.get(role)))state[role]=params.get(role);if(state.start===state.end)state.end=null;if((state.start||state.end)&&params.get('stations')!=='off')state.showStations=true;const routeNames=new Set(routes.features.map(routeName));if(routeNames.has(params.get('route')))state.route=params.get('route');
   map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/fiord',bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
   map.on('load',()=>{
+   const baseLayers=new Set(map.getStyle().layers.map(l=>l.id)),baseSources=new Set(Object.keys(map.getStyle().sources));
    const empty=collection([]);for(const [id,data]of [['single',singleNetwork(routes)],['stations',stations],['focus',empty]])map.addSource(id,{type:'geojson',tolerance:0,data});
    map.addLayer({id:'single',type:'line',source:'single',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#91baa8','line-width':3}});map.addLayer({id:'route-hit',type:'line',source:'single',paint:{'line-width':16,'line-opacity':0}});
    map.addLayer({id:'focus-outline',type:'line',source:'focus',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#fffdf7','line-width':6}});map.addLayer({id:'focus',type:'line',source:'focus',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#b3e1c8','line-width':4}});
    map.addLayer({id:'stations',type:'circle',source:'stations',paint:{'circle-radius':6,'circle-color':'#183d33','circle-stroke-color':'#fffdf7','circle-stroke-width':1.2}});
    const canvas=document.createElement('canvas');canvas.width=canvas.height=48;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.beginPath();ctx.roundRect(11,5,26,31,5);ctx.fill();ctx.fillStyle='#183d33';ctx.fillRect(15,11,18,11);ctx.fillStyle='#fff';for(const x of [17,31]){ctx.beginPath();ctx.arc(x,29,2,0,Math.PI*2);ctx.fill();}ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(17,35);ctx.lineTo(12,42);ctx.moveTo(31,35);ctx.lineTo(36,42);ctx.moveTo(15,39);ctx.lineTo(33,39);ctx.stroke();map.addImage('train',ctx.getImageData(0,0,48,48));
    map.addLayer({id:'station-icons',type:'symbol',source:'stations',layout:{'icon-image':'train','icon-size':.30,'icon-allow-overlap':true,'icon-ignore-placement':true}});map.addLayer({id:'station-hit',type:'circle',source:'stations',paint:{'circle-radius':matchMedia('(pointer:coarse)').matches?22:18,'circle-opacity':0}});
+   let basemapMode='fiord';
+   const trainImage=ctx.getImageData(0,0,48,48);
+   map.on('style.load',()=>{if(!map.hasImage('train'))map.addImage('train',trainImage);render();});
+   for(const button of document.querySelectorAll('[data-basemap]'))button.onclick=async()=>{
+    const mode=button.dataset.basemap;if(mode===basemapMode)return;
+    const buttons=[...document.querySelectorAll('[data-basemap]')];buttons.forEach(b=>b.disabled=true);closePopup();
+    try{
+     const response=await fetch('https://tiles.openfreemap.org/styles/'+mode);if(!response.ok)throw Error('Basemap unavailable');
+     const base=await response.json(),current=map.getStyle(),layers=current.layers.filter(l=>!baseLayers.has(l.id)),sources=Object.fromEntries(Object.entries(current.sources).filter(([id])=>!baseSources.has(id)));
+     const light=mode==='positron';for(const layer of layers)if(['single','focus','focus-outline'].includes(layer.id))layer.paint['line-color']=layer.id==='single'?(light?'#466f5e':'#91baa8'):layer.id==='focus'?(light?'#146a5a':'#b3e1c8'):'#fffdf7';
+     baseLayers.clear();base.layers.forEach(l=>baseLayers.add(l.id));baseSources.clear();Object.keys(base.sources).forEach(id=>baseSources.add(id));
+     map.setStyle({...base,sources:{...base.sources,...sources},layers:[...base.layers,...layers]});basemapMode=mode;buttons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+    }catch(error){console.error(error);$('map-status').textContent='Basemap unavailable. Try again.';}finally{buttons.forEach(b=>b.disabled=false);}
+   };
    map.on('zoomend',closePopup);map.on('dragstart',closePopup);map.on('resize',closePopup);
    const stationAt=point=>map.queryRenderedFeatures(point,{layers:['station-hit']}).filter(f=>!allowed||allowed.has(f.properties.Code)).sort((a,b)=>{const p=map.project(a.geometry.coordinates),q=map.project(b.geometry.coordinates);return Math.hypot(p.x-point.x,p.y-point.y)-Math.hypot(q.x-point.x,q.y-point.y);})[0];
    const routeAt=point=>{const hits=map.queryRenderedFeatures(point,{layers:['route-hit']});let best=null,distance=Infinity;for(const f of hits)for(let i=1;i<f.geometry.coordinates.length;i++){const a=map.project(f.geometry.coordinates[i-1]),b=map.project(f.geometry.coordinates[i]),dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy||1))),d=Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);if(d<distance){distance=d;best=routeName(f);}}return best;};

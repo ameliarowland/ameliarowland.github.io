@@ -5,7 +5,7 @@
 <title>Amtrak direct route explorer — Amelia Rowland</title>
 <meta name="description" content="Explore Amtrak routes and stations, find direct destinations, and compare scheduled train travel times without transfers."/>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css"/>
-<link rel="stylesheet" href="/amtrak-direct-route-explorer/styles.css?v=amtrak-7"/>
+<link rel="stylesheet" href="/amtrak-direct-route-explorer/styles.css?v=amtrak-8"/>
 </head>
 <body>
 <header><a href="/">Amelia Rowland <span>/ Maps &amp; data stories</span></a><a href="/maps/amtrak-direct-route-explorer/">About this map ↗</a></header>
@@ -20,6 +20,7 @@
 <datalist id="station-options"></datalist></form>
 <p id="journey-status" role="status">Choose a station on the map or search above.</p><div id="journey-results"></div>
 </div></details>
+<div class="basemap-buttons" role="group" aria-label="Basemap"><button type="button" data-basemap="positron" aria-pressed="false">Light</button><button type="button" data-basemap="fiord" aria-pressed="true">Dark</button></div>
 <div class="map-tools"><button id="home" type="button" aria-label="Show the U.S. network" title="Show the U.S. network">⌂</button><button id="clear-route" type="button" hidden>Clear route</button><button id="fit-journey" type="button" hidden>Fit journey ↗</button></div>
 <div class="legend" aria-label="Map display"><button id="toggle-stations" class="station-toggle" type="button" aria-pressed="false" title="Show or hide all stations"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="16" rx="3"/><path d="M5 11h14M12 3v8M8 18l-3 4m11-4 3 4M7 21h10"/></svg>Stations</button><p id="map-status" role="status">Loading routes and timetable…</p></div>
 <div id="route-name" hidden aria-live="polite"></div>
@@ -27,5 +28,5 @@
 <footer><p id="source-note">Amtrak timetable snapshot · October 12–18, 2026 · Scheduled times, not live departures.</p><a href="/maps/amtrak-direct-route-explorer/">Method &amp; sources ↗</a></footer>
 <noscript>This interactive map requires JavaScript. <a href="/maps/amtrak-direct-route-explorer/">Read about the data.</a></noscript>
 </main>
-<script is:inline src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script><script is:inline type="module" src="/amtrak-direct-route-explorer/app.js?v=amtrak-7"></script>
+<script is:inline src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script><script is:inline type="module" src="/amtrak-direct-route-explorer/app.js?v=amtrak-8"></script>
 </body></html>
