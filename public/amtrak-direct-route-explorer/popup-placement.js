@@ -1,10 +1,32 @@
-// Compare side placements using the amount of visible route covered by each.
-export function corridorPopupPlacement(point,viewport,paths,{width=220,height=300,near=false}={}){
- const margin=12,gap=near?12:16,w=Math.min(width,viewport.width-2*margin),h=Math.min(height,viewport.height-2*margin);
- function covered(a,b,rect){const delta=b.map((v,i)=>v-a[i]);let lo=0,hi=1;for(let i=0;i<2;i++){const low=i?rect.y:rect.x,high=low+(i?rect.height:rect.width);if(Math.abs(delta[i])<1e-9){if(a[i]<low||a[i]>high)return 0;continue;}let t=(low-a[i])/delta[i],u=(high-a[i])/delta[i];if(t>u)[t,u]=[u,t];lo=Math.max(lo,t);hi=Math.min(hi,u);if(lo>hi)return 0;}return Math.hypot(...delta)*Math.max(0,hi-lo);}
- const obstacles=viewport.obstacles||[],overlapArea=(a,b)=>Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y));
- const candidates=['left','right'].flatMap(anchor=>{const wanted=anchor==='left'?point.x+gap:point.x-gap-w,x=Math.max(margin,Math.min(wanted,viewport.width-margin-w)),ys=[point.y-h*.5,point.y-h*.2,point.y-h*.8,...obstacles.flatMap(o=>[o.y-h-8,o.y+o.height+8])];return ys.map(wantedY=>{const y=Math.max(margin,Math.min(wantedY,viewport.height-margin-h)),rect={x,y,width:w,height:h};let overlap=0;for(const path of paths)for(let i=1;i<path.length;i++)overlap+=covered(path[i-1],path[i],rect);const clipping=Math.abs(x-wanted),controlOverlap=obstacles.reduce((sum,o)=>sum+overlapArea(rect,o),0);const tip=popupTip(point,rect),distance=Math.hypot(rect.x+tip.x-point.x,rect.y+tip.y-point.y);return {anchor,rect,score:controlOverlap*10000+overlap*(near?.02:1)+clipping*10+(near?distance*10+Math.abs(y+h/2-point.y)*.1:distance*.35+Math.abs(y+h/2-point.y)*.3),offset:[x-point.x,y-point.y],tip:popupTip(point,rect)};});});
- return candidates.sort((a,b)=>a.score-b.score)[0];
+// Clip route segments against the popup, including a little breathing room.
+function covered(a,b,rect){
+ const delta=b.map((v,i)=>v-a[i]);let lo=0,hi=1;
+ for(let i=0;i<2;i++){
+  const low=i?rect.y:rect.x,high=low+(i?rect.height:rect.width);
+  if(Math.abs(delta[i])<1e-9){if(a[i]<low||a[i]>high)return 0;continue;}
+  let t=(low-a[i])/delta[i],u=(high-a[i])/delta[i];if(t>u)[t,u]=[u,t];
+  lo=Math.max(lo,t);hi=Math.min(hi,u);if(lo>hi)return 0;
+ }
+ return Math.hypot(...delta)*Math.max(0,hi-lo);
+}
+export function corridorPopupPlacement(point,viewport,paths,{width=200,height=120,priorityPaths=paths}={}){
+ const margin=12,gap=14,w=Math.min(width,viewport.width-2*margin),h=Math.min(height,viewport.height-2*margin),obstacles=viewport.obstacles||[];
+ const clamp=(v,max)=>Math.max(margin,Math.min(v,max-margin));
+ const xs=[point.x+gap,point.x-gap-w,point.x-w/2,...obstacles.flatMap(o=>[o.x-w-8,o.x+o.width+8])];
+ const ys=[point.y-h/2,point.y+gap,point.y-gap-h,...obstacles.flatMap(o=>[o.y-h-8,o.y+o.height+8])];
+ // Sample all four sides, so a diagonal or branching route can use a clear corner.
+ for(let d=-Math.max(w,h);d<=Math.max(w,h);d+=20){xs.push(point.x-w/2+d);ys.push(point.y-h/2+d);}
+ const length=(routes,rect)=>routes.reduce((sum,path)=>sum+path.slice(1).reduce((n,p,i)=>n+covered(path[i],p,rect),0),0);
+ const candidates=[];
+ for(const wantedX of xs)for(const wantedY of ys){
+  const x=clamp(wantedX,viewport.width-w),y=clamp(wantedY,viewport.height-h),rect={x,y,width:w,height:h};
+  const controlOverlap=obstacles.reduce((sum,o)=>sum+Math.max(0,Math.min(x+w,o.x+o.width)-Math.max(x,o.x))*Math.max(0,Math.min(y+h,o.y+o.height)-Math.max(y,o.y)),0);
+  const padded={x:x-6,y:y-6,width:w+12,height:h+12},priorityOverlap=length(priorityPaths,padded),overlap=length(paths,padded),tip=popupTip(point,rect),distance=Math.hypot(x+tip.x-point.x,y+tip.y-point.y);
+  const coversStation=point.x>=padded.x&&point.x<=padded.x+padded.width&&point.y>=padded.y&&point.y<=padded.y+padded.height;
+  candidates.push({anchor:x+w/2<point.x?'right':'left',rect,tip,offset:[x-point.x,y-point.y],blocked:controlOverlap>0||coversStation,priorityOverlap,score:controlOverlap*10000+priorityOverlap*100+overlap*2+distance+Math.hypot(x+w/2-point.x,y+h/2-point.y)*.05});
+ }
+ // A clear view of the station's own route takes precedence over a shorter tether.
+ return candidates.sort((a,b)=>Number(a.blocked)-Number(b.blocked)||Number(a.priorityOverlap>0)-Number(b.priorityOverlap>0)||a.score-b.score)[0];
 }
 
 // The pointer slides along the nearest box edge, independently of placement.

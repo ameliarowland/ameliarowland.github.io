@@ -18,5 +18,18 @@ console.log('Pointer slides along all four edges without moving the box.');
 const homeView={width:1280,height:620,obstacles:[{x:1198,y:282,width:80,height:278}]},home=place({x:981,y:272},homeView,[]);for(const o of homeView.obstacles)assert(home.rect.x+home.rect.width<=o.x||home.rect.x>=o.x+o.width||home.rect.y+home.rect.height<=o.y||home.rect.y>=o.y+o.height,'Home-view popup avoids the map buttons');
 console.log('Initial/Home popup avoids map controls.');
 
-const crowded={width:1000,height:700,obstacles:[{x:850,y:400,width:100,height:200}]},stationPoint={x:500,y:350},denseRoutes=Array.from({length:30},(_,i)=>[[300,310+i*2],[800,310+i*2]]),near=place(stationPoint,crowded,denseRoutes,{width:220,height:140,near:true});assert(Math.hypot(near.rect.x+near.tip.x-stationPoint.x,near.rect.y+near.tip.y-stationPoint.y)<=13,'Station picker stays beside the marker even in a dense route network');
-console.log('Station picker stays close to its marker.');
+// Independent segment/rectangle intersection check for the route being inspected.
+function crosses(a,b,r){let low=0,high=1;for(let k=0;k<2;k++){const min=k?r.y-5:r.x-5,max=min+(k?r.height:r.width)+10,d=b[k]-a[k];if(!d){if(a[k]<min||a[k]>max)return false;}else{const t=[(min-a[k])/d,(max-a[k])/d].sort((a,b)=>a-b);low=Math.max(low,t[0]);high=Math.min(high,t[1]);}}return high>low;}
+for(const scale of [.6,1,1.8])for(const path of [
+ [[-400,0],[0,0],[400,0]],[[0,-400],[0,0],[0,400]],
+ [[-400,300],[0,0],[400,-300]],[[-400,0],[0,0],[150,-400]],
+ [[-200,-400],[0,0],[400,100]]
+]){
+ const route=path.map(([x,y])=>[p.x+x*scale,p.y+y*scale]);
+ const result=place(p,viewport,[route],{width:200,height:130,priorityPaths:[route]});
+ for(let i=1;i<route.length;i++)assert(!crosses(route[i-1],route[i],result.rect),'Keep the inspected route clear at different zoom scales and bends');
+ assert(Math.hypot(result.rect.x+result.tip.x-p.x,result.rect.y+result.tip.y-p.y)<160,'Keep the popup tether reasonably short');
+}
+const denseRoutes=Array.from({length:30},(_,i)=>[[300,310+i*2],[800,310+i*2]]),dense=place({x:500,y:350},{width:1000,height:700},denseRoutes,{width:200,height:130});
+for(const route of denseRoutes)assert(!crosses(...route,dense.rect),'Move above or below a dense corridor instead of covering it');
+console.log('Inspected horizontal, vertical, diagonal, bent and dense routes remain clear across zoom scales.');
