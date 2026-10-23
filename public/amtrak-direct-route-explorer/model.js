@@ -15,10 +15,10 @@ export function createTimetable(data){
  return {matches,options,reachable,has:code=>at.has(code)};
 }
 export function singleNetwork(routes){const seen=new Set();return collection(routes.features.filter(f=>{const key=[f.properties.from,f.properties.to].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;}));}
-export function stationPoints(stations,layout,route=null){
- const hubs=new Map((layout?.interchanges?.features||[]).filter(f=>f.properties.shape==='rounded-square').map(f=>[f.properties.Code,f.properties.center]));
- const positions=new Map();for(const dot of layout?.dots.features||[]){if(route&&!dot.properties.symbolRoutes.some(name=>routeKey(name)===routeKey(route)))continue;const code=dot.properties.Code;if(!positions.has(code))positions.set(code,[]);positions.get(code).push(dot.geometry.coordinates);}
- return collection(stations.features.filter(f=>!route||positions.has(f.properties.Code)||!layout&&(f.properties.routeNames||[]).some(name=>routeKey(name)===routeKey(route))).map(f=>{const points=positions.get(f.properties.Code),coordinates=hubs.get(f.properties.Code)|| (points?.length?[points.reduce((s,p)=>s+p[0],0)/points.length,Math.atan(Math.sinh(points.reduce((s,p)=>s+Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360)),0)/points.length))*180/Math.PI]:f.geometry.coordinates);return {...f,geometry:{type:'Point',coordinates}};}));
+export function stationPoints(stations,route=null){return collection(stations.features.filter(f=>!route||(f.properties.routeNames||[]).some(name=>routeKey(name)===routeKey(route))));}
+// Source graph paths only highlight track; travel times always come from GTFS.
+export function createRoutePaths(routes){
+ const graphs=new Map(),cache=new Map();
+ routes.features.forEach((f,id)=>{const name=routeKey(f.properties.symbologyName||f.properties.name);if(!graphs.has(name))graphs.set(name,new Map());const graph=graphs.get(name);for(const [from,to]of [[f.properties.from,f.properties.to],[f.properties.to,f.properties.from]]){if(!graph.has(from))graph.set(from,[]);graph.get(from).push({to,id,cost:f.properties.distanceKm||1});}});
+ return ({route,origin,destination})=>{const key=[routeKey(route),origin,destination].join('|');if(cache.has(key))return cache.get(key);const graph=graphs.get(routeKey(route)),costs=new Map([[origin,0]]),previous=new Map(),queue=new Set([origin]);while(queue.size){let current;for(const code of queue)if(current===undefined||costs.get(code)<costs.get(current))current=code;queue.delete(current);if(current===destination)break;for(const edge of graph?.get(current)||[]){const distance=costs.get(current)+edge.cost;if(distance<(costs.get(edge.to)??Infinity)){costs.set(edge.to,distance);previous.set(edge.to,{from:current,id:edge.id});queue.add(edge.to);}}}const ids=[];let current=destination;while(previous.has(current)){const edge=previous.get(current);ids.push(edge.id);current=edge.from;}const path=current===origin?ids.reverse():[];cache.set(key,path);return path;};
 }
-
-export const hubEnclosures=(layout,mode)=>collection(mode==='multi'?(layout?.interchanges?.features||[]).filter(f=>f.properties.shape==='rounded-square'):[]);
