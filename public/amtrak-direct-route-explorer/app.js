@@ -1,5 +1,5 @@
-import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-14';
-import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-14';
+import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-15';
+import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-15';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 document.documentElement.classList.toggle('embedded',window.self!==window.top||params.get('embed')==='1');
 const state={start:null,end:null,route:null,showStations:params.get('stations')==='on'};
@@ -13,6 +13,7 @@ function source(id,data){map.getSource(id).setData(data);}
 function closePopup(){if(popup)popup.remove();popup=null;popupCode=null;}
 function setEndpoint(role,code){if(!byCode.has(code))return;const other=role==='start'?'end':'start';if(state[role]===code)state[role]=null;else{state[role]=code;if(state[other]===code)state[other]=null;}closePopup();updateJourney();}
 function updateJourney(){
+ if(Boolean(state.start)!==Boolean(state.end)){state.route=null;hoveredRoute=null;}
  allowed=timetable.reachable(state.start,state.end);options=state.start&&state.end?timetable.options(state.start,state.end):[];if(options.length&&state.route&&!options.some(o=>routeKey(o.trip.route)===routeKey(state.route)))state.route=null;
  for(const role of ['start','end'])$(role).value=state[role]||'';
  $('journey-panel').open=true;$('journey-panel').classList.toggle('has-journey',Boolean(state.start&&state.end));$('journey-panel').scrollTop=0;const results=$('journey-results');results.replaceChildren();
