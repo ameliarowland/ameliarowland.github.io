@@ -13,3 +13,5 @@ for(const file of ['app.js','model.js'])assert(!/rail-vs-air|airports|flightMinu
 assert(!fs.readFileSync('public/amtrak-direct-route-explorer/app.js','utf8').includes('new Worker'));
 assert(!fs.existsSync('public/amtrak-direct-route-explorer/layout-worker.js'));
 console.log(`${data.trips.length} train trips; ${stations.features.length} stations; direct-only timing, overnight trips, single network and route paths pass.`);
+
+assert(synthetic.connections('A',null).some(p=>p.route==='Through'&&p.destination==='Y'));assert(!synthetic.connections('A',null).some(p=>p.route==='Restricted'),'No boarding means no outgoing highlight');assert(!synthetic.connections('A',null).some(p=>p.route==='Branch'&&p.destination==='B'),'Same-named connecting trips are not direct highlights');assert(synthetic.connections(null,'B').some(p=>p.route==='Through'&&p.origin==='X'));

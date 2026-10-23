@@ -12,7 +12,14 @@ export function createTimetable(data){
   if(start&&end){for(const {trip,from,to}of matches(start,end))for(let i=from;i<=to;i++)allowed.add(trip.stops[i]);return allowed;}
   const code=start||end;for(const {trip,index}of at.get(code)||[]){if(start&&!trip.noPickup?.includes(index))for(let i=index+1;i<trip.stops.length;i++)if(!trip.noDropoff?.includes(i))allowed.add(trip.stops[i]);if(end&&!trip.noDropoff?.includes(index))for(let i=0;i<index;i++)if(!trip.noPickup?.includes(i))allowed.add(trip.stops[i]);}return allowed;
  }
- return {matches,options,reachable,has:code=>at.has(code)};
+ function connections(start,end){
+  if(start&&end)return matches(start,end).map(({trip,from,to})=>({route:trip.route,origin:trip.stops[from],destination:trip.stops[to]}));
+  const found=[];for(const {trip,index}of at.get(start||end)||[]){
+   if(start&&!trip.noPickup?.includes(index)){let last=index;for(let i=index+1;i<trip.stops.length;i++)if(!trip.noDropoff?.includes(i))last=i;if(last>index)found.push({route:trip.route,origin:start,destination:trip.stops[last]});}
+   if(end&&!trip.noDropoff?.includes(index)){let first=index;for(let i=index-1;i>=0;i--)if(!trip.noPickup?.includes(i))first=i;if(first<index)found.push({route:trip.route,origin:trip.stops[first],destination:end});}
+  }return found;
+ }
+ return {matches,options,reachable,connections,has:code=>at.has(code)};
 }
 export function singleNetwork(routes){const seen=new Set();return collection(routes.features.filter(f=>{const key=[f.properties.from,f.properties.to].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;}));}
 export function stationPoints(stations,route=null){return collection(stations.features.filter(f=>!route||(f.properties.routeNames||[]).some(name=>routeKey(name)===routeKey(route))));}

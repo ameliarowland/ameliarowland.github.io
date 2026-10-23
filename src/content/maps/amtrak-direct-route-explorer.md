@@ -13,7 +13,7 @@ tags: [rail, transportation, travel-time, web-gis]
 
 Enter or choose stations in the left panel to update results automatically, or choose **Start** at a station to see destinations reachable on one train, or choose **End** to see direct origins. Once both endpoints are selected, the map shows the intervening stops on trains that serve that pair. The left panel lists the fastest scheduled time for each direct service; hovering another station previews a direct travel time before choosing it.
 
-The map draws the rail network in a single color. Station badges default off and appear when a route is hovered or selected; the Stations button shows all stations. Small markers have a larger invisible selection area, and nearby overlaps resolve to the closest station. Choosing an endpoint enables the station layer for direct station selection. Clearing an endpoint restores the broader set of direct destinations or origins. The URL retains endpoints, route, and station visibility. Its former display-mode parameter is ignored.
+The map draws the rail network in a single color. Station badges default off and appear when a route is hovered or selected; hovering one of those stations previews every station and route reachable without changing trains. The matching Stations button in the right-side control stack shows all stations. Small markers have a larger invisible selection area, and nearby overlaps resolve to the closest station. Choosing an endpoint reveals its direct stations without changing the all-stations toggle. Clearing an endpoint restores the broader set of direct destinations or origins. The URL retains endpoints, route, and station visibility. Its former display-mode parameter is ignored.
 
 ## Timetable and coverage
 
@@ -25,6 +25,6 @@ The explorer includes the Amtrak train services present in this feed; commuter-a
 
 ## Map sources
 
-The schematic derives from the [BTS / NTAD Amtrak routes](https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Routes/FeatureServer/0) and [train station inventory](https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Stations/FeatureServer/0). Straight segments show service relationships, not precise track alignment. Shared track is drawn once; hovering or selecting a service highlights its route. The basemap is [OpenFreeMap](https://openfreemap.org/) Fiord, using OpenStreetMap data.
+The schematic derives from the [BTS / NTAD Amtrak routes](https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Routes/FeatureServer/0) and [train station inventory](https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Amtrak_Stations/FeatureServer/0). Straight segments show service relationships, not precise track alignment. Shared track is drawn once; hovering or selecting a service highlights its route. Light and Dark buttons switch between [OpenFreeMap](https://openfreemap.org/) Positron and Fiord basemaps, using OpenStreetMap data.
 
 This is a separate rail-only app derived from the Rail vs. Air explorer. Its [source and data](https://github.com/ameliarowland/ameliarowland.github.io/tree/main/public/amtrak-direct-route-explorer) contain no flight comparison dependency. A compact trip-based timetable supports all direct rail searches independently of the older comparison dataset.
