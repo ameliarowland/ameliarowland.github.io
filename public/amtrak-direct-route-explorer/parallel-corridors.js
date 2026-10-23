@@ -426,3 +426,72 @@ export function parallelCorridors(routes,nodes,preferred,project,spacing,{circle
  return {positions,features,circles,markers};
 }
 
+export function attachOutlineStops(features,circles,positions,spacing){
+ const markers=new Map();
+ // Put stop glyphs at the intersection of their actual track and outline.
+ // Through routes retain their turns; terminals end at that intersection.
+ const cross=(a,b)=>a[0]*b[1]-a[1]*b[0];
+ const boundaryHit=(path,outline)=>{
+  let traveled=0;
+  for(let i=1;i<path.length;i++){
+   const a=path[i-1],b=path[i],v=[b[0]-a[0],b[1]-a[1]],length=Math.hypot(...v);let best;
+   for(let j=1;j<outline.length;j++){
+    const c=outline[j-1],d=outline[j],w=[d[0]-c[0],d[1]-c[1]],delta=[c[0]-a[0],c[1]-a[1]],det=cross(v,w);if(Math.abs(det)<1e-10)continue;
+    const t=cross(delta,w)/det,u=cross(delta,v)/det;
+    if(t>=-1e-8&&t<=1+1e-8&&u>=-1e-8&&u<=1+1e-8&&(!best||t<best.t))best={point:[a[0]+t*v[0],a[1]+t*v[1]],t,index:i,distance:traveled+t*length};
+   }
+   if(best)return best;traveled+=length;
+  }
+ };
+ for(const circle of circles){
+  const chosen=[],target=circle.shape==='capsule'?circle.dotAxis:circle.outline;
+  for(const name of new Set([...circle.routes,...features.filter(f=>[f.feature.properties.from,f.feature.properties.to].includes(circle.id)).map(f=>f.feature.properties.symbologyName||f.feature.properties.name)])){
+   const stopping=circle.routes.includes(name);
+   if(!stopping&&new Set(features.filter(f=>(f.feature.properties.symbologyName||f.feature.properties.name)===name&&[f.feature.properties.from,f.feature.properties.to].includes(circle.id)).map(f=>[f.feature.properties.from,f.feature.properties.to].sort().join('|'))).size!==1)continue;
+   const terminalRoute=new Set(features.filter(f=>(f.feature.properties.symbologyName||f.feature.properties.name)===name&&[f.feature.properties.from,f.feature.properties.to].includes(circle.id)).map(f=>[f.feature.properties.from,f.feature.properties.to].sort().join('|'))).size===1;
+   const candidates=[];
+   for(const f of features){if((f.feature.properties.symbologyName||f.feature.properties.name)!==name)continue;
+    for(let end=0;end<2;end++)if([f.feature.properties.from,f.feature.properties.to][end]===circle.id){
+     let path=end===0?f.points:[...f.points].reverse(),hit;
+     if(terminalRoute){const reverse=boundaryHit([...path].reverse(),target);if(reverse)hit={...reverse,index:path.length-reverse.index,t:1-reverse.t};}else hit=boundaryHit(path,target);
+     if(!hit&&circle.center){const own=new Set(features.filter(g=>(g.feature.properties.symbologyName||g.feature.properties.name)===name&&[g.feature.properties.from,g.feature.properties.to].includes(circle.id)).map(g=>[g.feature.properties.from,g.feature.properties.to].sort().join('|')));
+      if(own.size===1){const a=path[0],b=path[1],v=[b[0]-a[0],b[1]-a[1]],t=((circle.center[0]-a[0])*v[0]+(circle.center[1]-a[1])*v[1])/(v[0]*v[0]+v[1]*v[1]);path=[[a[0]+t*v[0],a[1]+t*v[1]],...path];hit=boundaryHit(path,target);if(!hit){const extent=Math.max(...circle.outline.map(p=>Math.hypot(p[0]-a[0],p[1]-a[1]))),step=1+extent/(Math.hypot(...v)||1);path=[[a[0]-step*v[0],a[1]-step*v[1]],a,...path.slice(2)];hit=boundaryHit(path,target);}}
+     }
+     if(terminalRoute&&circle.shape==='capsule'){
+      // A bar can trim a terminal's real track, but cannot move that track
+      // onto a station-row connector and cross the adjacent route lanes.
+      const original=f.body[end],n=f.stationTransition||f.feature.properties.stationTransition?null:f.normal||f.feature.properties.bodyNormal,offset=f.laneOffset??f.feature.properties.perpendicularOffset,origin=circle.stationCenter,a=n&&origin?origin.map((x,i)=>x+n[i]*offset):original,b=n? a.map((x,i)=>x+(i===0?-n[1]:n[0])):f.body[1-end],c=target[0],d=target[1],v=b.map((x,i)=>x-a[i]),w=d.map((x,i)=>x-c[i]),delta=c.map((x,i)=>x-a[i]),det=cross(v,w),index=path.findIndex(p=>Math.hypot(p[0]-original[0],p[1]-original[1])<1e-6);
+      if(Math.abs(det)>1e-8&&index>=0){const t=cross(delta,w)/det,u=cross(delta,v)/det,point=a.map((x,i)=>x+t*v[i]);if(u>=-1e-7&&u<=1+1e-7&&Math.hypot(point[0]-a[0],point[1]-a[1])<=(circle.radius||spacing*Math.max(2,circle.routes.length))*4+spacing*4)hit={point,index:index+1,distance:Math.hypot(point[0]-a[0],point[1]-a[1])};}
+     }
+     if(terminalRoute&&circle.shape==='capsule'){
+      const [a,b]=target,v=b.map((x,i)=>x-a[i]),p=path[0],length=Math.hypot(...v),u=((p[0]-a[0])*v[0]+(p[1]-a[1])*v[1])/(length*length);
+      if(length>1e-7&&Math.abs(cross(v,p.map((x,i)=>x-a[i])))/length<1e-6&&u>=0&&u<=1)hit={point:p,index:1,distance:0};
+     }
+     if(circle.id==='CHI'&&terminalRoute&&circle.fixedPorts?.has(name)){const p=circle.fixedPorts.get(name);hit={point:[circle.center[0]+p[0]*(circle.portScale||spacing),circle.center[1]+p[1]*(circle.portScale||spacing)],index:1,distance:0,fixed:true};}
+     if(hit)candidates.push({...hit,f,end,path});
+    }
+   }
+   candidates.sort((a,b)=>{const penalty=p=>chosen.some(q=>Math.hypot(p.point[0]-q[0],p.point[1]-q[1])<spacing*.55)?1e6:0;return penalty(a)-penalty(b)||a.distance-b.distance;});
+   const hit=candidates[0];if(!hit)continue;
+   if(circle.id==='CHI'&&circle.fixedPorts&&!circle.fixedPorts.has(name))circle.fixedPorts.set(name,[(hit.point[0]-circle.center[0])/(circle.portScale||spacing),(hit.point[1]-circle.center[1])/(circle.portScale||spacing)]);
+   if(stopping){markers.set(circle.id+'|'+name,hit.point);chosen.push(hit.point);}
+   const own=new Set(features.filter(f=>(f.feature.properties.symbologyName||f.feature.properties.name)===name&&[f.feature.properties.from,f.feature.properties.to].includes(circle.id)).map(f=>[f.feature.properties.from,f.feature.properties.to].sort().join('|'))),terminal=own.size===1;
+   // Insert the marker into every duplicate of this approach, but only once
+   // in the station's stop collection.
+   for(const candidate of candidates.filter(c=>[c.f.feature.properties.from,c.f.feature.properties.to].sort().join('|')===[hit.f.feature.properties.from,hit.f.feature.properties.to].sort().join('|'))){
+    const {f,end,index,path,point}=candidate;
+    const remaining=path.slice(index);
+    if(candidate.fixed&&circle.id==='CHI'){
+     if(remaining.length>1&&Math.hypot(remaining[0][0]-f.body[end][0],remaining[0][1]-f.body[end][1])<1e-6)remaining.shift();
+     const xs=circle.outline.map(p=>p[0]),ys=circle.outline.map(p=>p[1]),bounds=[Math.min(...xs),Math.max(...xs),Math.min(...ys),Math.max(...ys)];
+     while(remaining.length>1&&remaining[0][0]>=bounds[0]-1e-7&&remaining[0][0]<=bounds[1]+1e-7&&remaining[0][1]>=bounds[2]-1e-7&&remaining[0][1]<=bounds[3]+1e-7)remaining.shift();
+    }
+    const adjusted=terminal?[point,...remaining]:[...path.slice(0,index),point,...path.slice(index)];
+    f.points=end===0?adjusted:adjusted.reverse();
+    f.markerCodes||=new Map();f.markerCodes.set(point.join(','),circle.id);
+    if(terminal){if(!f.feature.properties.overviewApproach)f.body[end]=point;positions.set(circle.id+'|'+name,point);f.terminalCircleEnds||=[false,false];f.terminalCircleEnds[end]=true;}
+   }
+  }
+ }
+ return markers;
+}

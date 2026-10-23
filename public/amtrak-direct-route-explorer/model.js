@@ -16,6 +16,9 @@ export function createTimetable(data){
 }
 export function singleNetwork(routes){const seen=new Set();return collection(routes.features.filter(f=>{const key=[f.properties.from,f.properties.to].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;}));}
 export function stationPoints(stations,layout,route=null){
+ const hubs=new Map((layout?.interchanges?.features||[]).filter(f=>f.properties.shape==='rounded-square').map(f=>[f.properties.Code,f.properties.center]));
  const positions=new Map();for(const dot of layout?.dots.features||[]){if(route&&!dot.properties.symbolRoutes.some(name=>routeKey(name)===routeKey(route)))continue;const code=dot.properties.Code;if(!positions.has(code))positions.set(code,[]);positions.get(code).push(dot.geometry.coordinates);}
- return collection(stations.features.filter(f=>!route||positions.has(f.properties.Code)).map(f=>{const points=positions.get(f.properties.Code),coordinates=points?.length?[points.reduce((s,p)=>s+p[0],0)/points.length,Math.atan(Math.sinh(points.reduce((s,p)=>s+Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360)),0)/points.length))*180/Math.PI]:f.geometry.coordinates;return {...f,geometry:{type:'Point',coordinates}};}));
+ return collection(stations.features.filter(f=>!route||positions.has(f.properties.Code)||!layout&&(f.properties.routeNames||[]).some(name=>routeKey(name)===routeKey(route))).map(f=>{const points=positions.get(f.properties.Code),coordinates=hubs.get(f.properties.Code)|| (points?.length?[points.reduce((s,p)=>s+p[0],0)/points.length,Math.atan(Math.sinh(points.reduce((s,p)=>s+Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360)),0)/points.length))*180/Math.PI]:f.geometry.coordinates);return {...f,geometry:{type:'Point',coordinates}};}));
 }
+
+export const hubEnclosures=(layout,mode)=>collection(mode==='multi'?(layout?.interchanges?.features||[]).filter(f=>f.properties.shape==='rounded-square'):[]);

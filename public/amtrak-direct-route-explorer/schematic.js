@@ -1,5 +1,5 @@
-import {parallelCorridors,terminalBoxDimensions} from './parallel-corridors.js?v=amtrak-1';
-import {stationRouteName} from './model.js?v=amtrak-1';
+import {parallelCorridors,attachOutlineStops,terminalBoxDimensions} from './parallel-corridors.js?v=amtrak-5';
+import {stationRouteName} from './model.js?v=amtrak-5';
 const collection=features=>({type:'FeatureCollection',features});
 const north=['Adirondack','Borealis','Empire Service','Ethan Allen Express','Lake Shore Limited','Maple Leaf','Pennsylvanian','Keystone Service','Cardinal'];
 const south=['Acela','Vermonter','Northeast Regional'];
@@ -25,6 +25,119 @@ function fitStopGlyphs(dots,zoom,scale){
   dot.properties.outlineWidth=outlineWidth;dot.properties.radius=Math.min(dot.properties.radius,(gap-2*outlineWidth)/2);
  }
  return dots;
+}
+// A fixed Chicago box can cover nearby stations at overview zooms. Collapse
+// those drawing vertices to their Chicago port while retaining the full route
+// graph and station inventory for journey calculations.
+export function chicagoOverviewDrawing(result){
+ if(result.zoom>=8)return result;
+ const box=result.interchanges?.features.find(f=>f.properties.Code==='CHI');if(!box)return result;
+ const xs=box.geometry.coordinates.map(p=>p[0]),ys=box.geometry.coordinates.map(p=>p[1]),bounds=[Math.min(...xs),Math.max(...xs),Math.min(...ys),Math.max(...ys)];
+ const inside=p=>p[0]>bounds[0]+1e-9&&p[0]<bounds[1]-1e-9&&p[1]>bounds[2]+1e-9&&p[1]<bounds[3]-1e-9;
+ const ports=new Map(result.displayed.features.flatMap(f=>f.properties.stationPositions).filter(p=>p.Code==='CHI').map(p=>[p.name,p.coordinates]));
+ const paint=collection=>({...collection,features:collection.features.map(f=>{const port=ports.get(f.properties.symbologyName||f.properties.name);return port?{...f,geometry:{...f.geometry,coordinates:f.geometry.coordinates.map(p=>inside(p)?port:p)}}:f;})});
+ return {...result,displayed:paint(result.displayed),qualifying:paint(result.qualifying),dots:{...result.dots,features:result.dots.features.filter(f=>f.properties.Code==='CHI'||!inside(f.geometry.coordinates))},interchanges:{...result.interchanges,features:result.interchanges.features.filter(f=>f.properties.Code==='CHI'||!inside(f.properties.center))}};
+}
+// Branching bars connect approach ports; colored tracks end at the bar.
+export function stationBarDrawing(result){
+ const bars=new Map((result.interchanges?.features||[]).filter(f=>f.properties.shape==='capsule'&&f.properties.branches>=3).map(f=>[f.properties.Code,f]));if(!bars.size)return result;
+ const world=512*2**result.zoom,project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world],unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI],cross=(a,b)=>a[0]*b[1]-a[1]*b[0],stopPorts=new Map();
+ const protectedClusters=new Set();
+ const routeStops=new Map();for(const dot of result.dots.features)for(const name of dot.properties.symbolRoutes){if(!routeStops.has(name))routeStops.set(name,[]);routeStops.get(name).push({code:dot.properties.Code,point:project(dot.geometry.coordinates)});}
+ // Stations closer than one lane spacing already have protected geographic
+ // ports. Retain those paths and fit their bar to the existing contacts.
+ for(const [code,bar] of bars){const origin=project(bar.properties.stationCenter),near=(result.interchanges.features||[]).some(other=>other!==bar&&other.properties.stationCenter&&Math.hypot(...project(other.properties.stationCenter).map((v,i)=>v-origin[i]))<result.style.laneSpacing);if(!near)continue;
+  const ports=result.displayed.features.filter(f=>[f.properties.from,f.properties.to].includes(code)).map(f=>project(f.geometry.coordinates[f.properties.from===code?0:f.geometry.coordinates.length-1]));let pair=[ports[0],ports[0]],length=0;for(const a of ports)for(const b of ports){const d=Math.hypot(b[0]-a[0],b[1]-a[1]);if(d>length){pair=[a,b];length=d;}}if(length<1e-5)continue;const unit=pair[1].map((v,i)=>(v-pair[0][i])/length),normal=[-unit[1],unit[0]],mid=pair[0].map((v,i)=>(v+pair[1][i])/2),radius=Math.max(.7,result.style.laneSpacing*.1),outline=[];for(let side=0;side<2;side++)for(let i=0;i<=16;i++){const angle=(side?Math.PI/2:-Math.PI/2)+i*Math.PI/16,x=(side?-length/2:length/2)+Math.cos(angle)*radius,y=Math.sin(angle)*radius;outline.push(unproject(mid.map((v,j)=>v+unit[j]*x+normal[j]*y)));}outline.push(outline[0]);bar.properties={...bar.properties,center:unproject(mid),radiusPixels:length/2+radius,dotAxis:pair.map(unproject)};bar.geometry={...bar.geometry,coordinates:outline};bars.delete(code);protectedClusters.add(code);for(const other of result.interchanges.features)if(other.properties.stationCenter&&Math.hypot(...project(other.properties.stationCenter).map((v,i)=>v-origin[i]))<result.style.laneSpacing)protectedClusters.add(other.properties.Code);
+ }
+ // Cover every real approach before trimming. A fit based on one contact
+ // per service can miss the other side of a bend and leave its dot off-axis.
+ for(const [code,bar] of bars){const [a,b]=bar.properties.dotAxis.map(project),axis=b.map((v,i)=>v-a[i]),length=Math.hypot(...axis),unit=axis.map(v=>v/length),normal=[-unit[1],unit[0]],center=project(bar.properties.center),contacts=[a,b];
+  for(const f of result.displayed.features.filter(f=>[f.properties.from,f.properties.to].includes(code))){const [c,d]=f.properties.parallelBody.map(project),v=d.map((x,i)=>x-c[i]),delta=a.map((x,i)=>x-c[i]),det=cross(v,axis);if(Math.abs(det)<1e-8)continue;const t=cross(delta,axis)/det,p=c.map((x,i)=>x+t*v[i]);if(Math.hypot(p[0]-center[0],p[1]-center[1])<=bar.properties.radiusPixels*2)contacts.push(p);}
+  const values=contacts.map(p=>(p[0]-a[0])*unit[0]+(p[1]-a[1])*unit[1]),lo=Math.min(...values),hi=Math.max(...values);if(lo>=-1e-6&&hi<=length+1e-6)continue;
+  const radius=Math.max(...bar.geometry.coordinates.map(project).map(p=>Math.abs((p[0]-center[0])*normal[0]+(p[1]-center[1])*normal[1]))),mid=a.map((v,i)=>v+unit[i]*(lo+hi)/2),half=(hi-lo)/2,outline=[];
+  for(let side=0;side<2;side++)for(let i=0;i<=16;i++){const angle=(side?Math.PI/2:-Math.PI/2)+i*Math.PI/16,x=(side?-half:half)+Math.cos(angle)*radius,y=Math.sin(angle)*radius;outline.push(unproject(mid.map((v,j)=>v+unit[j]*x+normal[j]*y)));}outline.push(outline[0]);
+  bar.properties={...bar.properties,center:unproject(mid),radiusPixels:half+radius,dotAxis:[lo,hi].map(t=>unproject(a.map((v,i)=>v+unit[i]*t)))};bar.geometry={...bar.geometry,coordinates:outline};
+ }
+ const displayed={...result.displayed,features:result.displayed.features.map(f=>{
+  if(![f.properties.from,f.properties.to].some(code=>bars.has(code)))return f;
+  let points=f.geometry.coordinates.map(project);const name=f.properties.symbologyName||f.properties.name;
+  for(const [end,code] of [f.properties.from,f.properties.to].entries()){
+   const bar=bars.get(code);if(!bar||f.properties.stationTransition&&[f.properties.from,f.properties.to].some(c=>protectedClusters.has(c)))continue;const [c,d]=bar.properties.dotAxis.map(project),w=[d[0]-c[0],d[1]-c[1]],path=end===0?points:[...points].reverse();let hit;
+   const intersect=(a,b,infinite=false)=>{const v=[b[0]-a[0],b[1]-a[1]],delta=[c[0]-a[0],c[1]-a[1]],det=cross(v,w);if(Math.abs(det)<1e-8)return;const t=cross(delta,w)/det,u=cross(delta,v)/det;if((infinite||t>=-1e-7&&t<=1+1e-7)&&u>=-1e-7&&u<=1+1e-7)return [a[0]+t*v[0],a[1]+t*v[1]];};
+   for(let i=path.length-1;i>0;i--){const p=intersect(path[i-1],path[i]);if(p){hit={p,index:i};break;}}
+   const body=f.properties.parallelBody.map(project),bodyPath=end===0?body:[...body].reverse();const bodyPort=intersect(bodyPath[0],bodyPath[1],true);if(bodyPort)hit={p:bodyPort,index:1};
+   if(!hit&&path.length>1){const p=intersect(path[0],path[1],true);if(p&&Math.hypot(p[0]-path[0][0],p[1]-path[0][1])<=bar.properties.radiusPixels*4)hit={p,index:1};}
+   if(!hit)continue;const tail=path.slice(hit.index),center=project(bar.properties.center);while(tail.length>1&&Math.hypot(tail[0][0]-center[0],tail[0][1]-center[1])<bar.properties.radiusPixels*4&&!(routeStops.get(name)||[]).some(g=>g.code!==code&&Math.hypot(g.point[0]-tail[0][0],g.point[1]-tail[0][1])<1e-5))tail.shift();const trimmed=[hit.p,...tail];points=end===0?trimmed:trimmed.reverse();
+   const dot=result.dots.features.find(g=>g.properties.Code===code&&g.properties.symbolRoutes.includes(name));
+   if(dot){const coordinate=unproject(hit.p),key=code+'|'+name+'|'+coordinate.map(v=>v.toFixed(9)).join(',');stopPorts.set(key,{...dot,properties:{...dot.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:coordinate}});}
+  }
+  return {...f,geometry:{...f.geometry,coordinates:points.map(unproject)}};
+ })};
+ // Order New Orleans terminal ports by their approach directions. Crescent
+ // leaves north of Mardi Gras, so its port must be above that eastbound ray.
+ const newOrleans=bars.get('NOL');
+ if(newOrleans){
+  const order=['City Of New Orleans','Sunset Limited','Crescent','Amtrak Mardi Gras Service'],axis=newOrleans.properties.dotAxis.map(project),v=axis[1].map((x,i)=>x-axis[0][i]),edges=displayed.features.filter(f=>[f.properties.from,f.properties.to].includes('NOL'));
+  const ports=edges.map(f=>project(f.geometry.coordinates[f.properties.from==='NOL'?0:f.geometry.coordinates.length-1])).sort((a,b)=>(a[0]-b[0])*v[0]+(a[1]-b[1])*v[1]);
+  if(ports.length===order.length)for(const f of edges){const name=f.properties.symbologyName||f.properties.name,slot=order.indexOf(name);if(slot<0)continue;const point=unproject(ports[slot]),end=f.properties.from==='NOL'?0:f.geometry.coordinates.length-1;f.geometry.coordinates[end]=point;const dot=result.dots.features.find(g=>g.properties.Code==='NOL'&&g.properties.symbolRoutes.includes(name));if(dot){for(const [key,d] of stopPorts)if(d.properties.Code==='NOL'&&d.properties.symbolRoutes.includes(name))stopPorts.delete(key);stopPorts.set('NOL|'+name,{...dot,properties:{...dot.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:point}});}}
+ }
+ // Use one pivot for every continuation of the same service. A side
+ // branch connects to that pivot inside the station bar.
+ const families=Map.groupBy(result.displayed.features,f=>[f.properties.from,f.properties.to].sort().join('|'));
+ const familySize=f=>new Set(families.get([f.properties.from,f.properties.to].sort().join('|')).map(g=>g.properties.symbologyName||g.properties.name)).size;
+ for(const [code,bar] of bars)for(const name of bar.properties.passingRoutes){
+  const candidates=displayed.features.filter(f=>(f.properties.symbologyName||f.properties.name)===name&&[f.properties.from,f.properties.to].includes(code)).map(f=>{const end=f.properties.from===code?0:1,other=f.properties.stationPositions[1-end],center=project(bar.properties.center),p=project(other.coordinates),v=[p[0]-center[0],p[1]-center[1]],score=familySize(f)*100+Math.abs(v[1])/(Math.hypot(...v)||1);return {f,end,port:f.geometry.coordinates[end===0?0:f.geometry.coordinates.length-1],score};});
+  if(candidates.length<2)continue;candidates.sort((a,b)=>b.score-a.score||[a.f.properties.from,a.f.properties.to].sort().join('|').localeCompare([b.f.properties.from,b.f.properties.to].sort().join('|')));
+  // Allocate Albany's shared trunk ports in the explicit west-to-east order.
+  // Approach fitting at small scales must not substitute a different branch port.
+  const hudson=['Lake Shore Limited','Empire Service','Maple Leaf','Adirondack','Ethan Allen Express'].filter(route=>bar.properties.passingRoutes.includes(route)),axis=[...bar.properties.dotAxis].sort((a,b)=>a[0]-b[0]),slot=hudson.indexOf(name),t=(slot+.35)/(hudson.length-1+.7);
+  const trunk=candidates.find(c=>[c.f.properties.from,c.f.properties.to].includes('ALB')),trunkNormal=trunk?.f.properties.bodyNormal||trunk?.f.properties.corridorNormal;
+  const common=code==='SDY'&&result.zoom<5&&slot>=0&&trunkNormal?unproject(project(bar.properties.stationCenter).map((v,i)=>v+trunkNormal[i]*(slot-(hudson.length-1)/2)*result.style.laneSpacing)):code==='ALB'&&slot>=0?unproject(project(axis[0]).map((v,i)=>v+(project(axis[1])[i]-v)*t)):candidates[0].port,mainCount=familySize(candidates[0].f),degree=new Set(candidates.map(c=>[c.f.properties.from,c.f.properties.to].sort().join('|'))).size;
+  const dot=result.dots.features.find(f=>f.properties.Code===code&&f.properties.symbolRoutes.includes(name));
+  if(dot){for(const [key,d] of stopPorts)if(d.properties.Code===code&&d.properties.symbolRoutes.includes(name))stopPorts.delete(key);stopPorts.set(code+'|'+name+'|common',{...dot,properties:{...dot.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:common}});}
+  for(const {f,end,port} of candidates){const coordinates=f.geometry.coordinates,branch=degree>2&&familySize(f)<mainCount;
+   if(branch&&code==='ALB'){
+    f.properties={...f.properties,preserveStationConnector:true};
+    // Carry the eastbound branch along the station bar before it leaves
+    // the trunk, so it cannot cut across the incoming Hudson lanes.
+    const remote=coordinates[end===0?coordinates.length-1:0],exit=bar.properties.dotAxis.toSorted((a,b)=>Math.hypot(...project(a).map((v,i)=>v-project(remote)[i]))-Math.hypot(...project(b).map((v,i)=>v-project(remote)[i])))[0];
+    f.geometry.coordinates=end===0?[common,exit,...coordinates.slice(1)]:[...coordinates.slice(0,-1),exit,common];
+   }
+   else if(branch&&Math.hypot(...project(port).map((v,i)=>v-project(common)[i]))>1e-6){if(end===0)f.geometry.coordinates=[common,...coordinates];else f.geometry.coordinates=[...coordinates,common];if(dot)stopPorts.set(code+'|'+name+'|'+port.join(','),{...dot,properties:{...dot.properties,symbolRoutes:[name]},geometry:{type:'Point',coordinates:port}});}
+   else if(end===0)f.geometry.coordinates=[common,...coordinates.slice(1)];else f.geometry.coordinates=[...coordinates.slice(0,-1),common];
+  }
+ }
+ const represented=new Set([...stopPorts.values()].map(f=>f.properties.Code+'|'+f.properties.symbolRoutes[0]));
+ const dots={...result.dots,features:[...result.dots.features.filter(f=>!f.properties.symbolRoutes.every(name=>represented.has(f.properties.Code+'|'+name))),...stopPorts.values()]};fitStopGlyphs(dots,result.zoom,result.style.stationScale);
+ // Multi-direction terminal hubs use a square connection zone. Clip each
+ // real approach to its boundary; continuing services share one pivot inside.
+ for(const code of ['NOL']){const box=result.interchanges.features.find(f=>f.properties.Code===code);if(!box)continue;const edges=displayed.features.filter(f=>[f.properties.from,f.properties.to].includes(code)),center=project(box.properties.stationCenter),{halfWidth:hw,halfHeight:hh,radius}=terminalBoxDimensions(result.zoom),half=Math.max(hw,hh),extents=[hw,hh],ports=new Map(),contacts=[];
+  for(const f of edges){const end=f.properties.from===code?0:1,dir=f.properties.approachDirections[end],n=f.properties.bodyNormal,offset=f.properties.perpendicularOffset||0,origin=center.map((v,i)=>v+n[i]*offset),candidates=[];for(let i=0;i<2;i++)if(Math.abs(dir[i])>1e-8)for(const sign of [-1,1]){const t=(center[i]+sign*extents[i]-origin[i])/dir[i],point=origin.map((v,j)=>v+dir[j]*t);if(t>=0&&point.every((v,j)=>Math.abs(v-center[j])<=extents[j]+1e-5))candidates.push({t,point});}candidates.sort((a,b)=>a.t-b.t);const port=candidates[0]?.point;if(!port)continue;const name=f.properties.symbologyName||f.properties.name;if(!ports.has(name))ports.set(name,[]);ports.get(name).push({f,end,port});contacts.push(port);}
+  for(const [name,own] of ports){const main=own.toSorted((a,b)=>familySize(b.f)-familySize(a.f))[0],pivot=own.length===1?main.port:code==='SPG'&&name!=='Lake Shore Limited'?center.map((v,i)=>v+main.f.properties.bodyNormal[i]*(main.f.properties.perpendicularOffset||0)):center.map((v,i)=>v+(i===0?-half*.8:0));
+   for(const {f,end,port} of own){const path=(end===0?f.geometry.coordinates:[...f.geometry.coordinates].reverse()).map(project);let tail=path.slice(1);while(tail.length>1&&tail[0].every((v,i)=>Math.abs(v-center[i])<=half*2)&&!(routeStops.get(name)||[]).some(g=>g.code!==code&&Math.hypot(...g.point.map((v,i)=>v-tail[0][i]))<1e-5))tail.shift();const points=own.length===1?[port,...tail]:[pivot,port,...tail];f.geometry.coordinates=(end===0?points:points.reverse()).map(unproject);}
+   const coordinate=unproject(pivot);for(const dot of dots.features.filter(d=>d.properties.Code===code&&d.properties.symbolRoutes.includes(name)))dot.geometry={...dot.geometry,coordinates:coordinate};
+  }
+  const outline=[];for(const [x,y,start] of [[hw-radius,hh-radius,0],[-hw+radius,hh-radius,Math.PI/2],[-hw+radius,-hh+radius,Math.PI],[hw-radius,-hh+radius,3*Math.PI/2]])for(let i=0;i<=8;i++){const angle=start+i*Math.PI/16;outline.push(unproject([center[0]+x+Math.cos(angle)*radius,center[1]+y+Math.sin(angle)*radius]));}outline.push(outline[0]);box.geometry={...box.geometry,coordinates:outline};box.properties={...box.properties,shape:'rounded-square',center:unproject(center),radiusPixels:half,boxHalfSize:half};bars.delete(code);
+ }
+ // Springfield's dominant north-south services share one transverse row.
+ // Lake Shore connects across that row before leaving on its eastern branch.
+ const springfield=result.interchanges.features.find(f=>f.properties.Code==='SPG');
+ if(springfield){const center=project(springfield.properties.stationCenter),edges=displayed.features.filter(f=>[f.properties.from,f.properties.to].includes('SPG')),main=edges.toSorted((a,b)=>familySize(b)-familySize(a))[0],mainNames=[...new Set(edges.filter(f=>familySize(f)===familySize(main)).map(f=>f.properties.symbologyName))],points=new Map();
+  for(const name of mainNames){const f=edges.find(f=>f.properties.symbologyName===name&&familySize(f)===familySize(main)),n=f.properties.bodyNormal,d=f.properties.perpendicularOffset||0;points.set(name,[center[0]+d/n[0],center[1]]);}const xs=[...points.values()].map(p=>p[0]),left=Math.min(...xs)-result.style.laneSpacing,right=Math.max(...xs)+result.style.laneSpacing*.35,pivot=[left,center[1]];points.set('Lake Shore Limited',pivot);
+  for(const f of edges){const name=f.properties.symbologyName,end=f.properties.from==='SPG'?0:1,point=points.get(name);if(!point)continue;const path=(end===0?f.geometry.coordinates:[...f.geometry.coordinates].reverse()).map(project);let tail=path.slice(1);while(tail.length>1&&Math.hypot(...tail[0].map((v,i)=>v-center[i]))<result.style.laneSpacing*8&&!(routeStops.get(name)||[]).some(g=>g.code!=='SPG'&&Math.hypot(...g.point.map((v,i)=>v-tail[0][i]))<1e-5))tail.shift();const east=name==='Lake Shore Limited'&&tail.at(-1)[0]>center[0],line=east?[point,[right,center[1]],...tail]:[point,...tail];f.geometry.coordinates=(end===0?line:line.reverse()).map(unproject);}
+  for(const dot of dots.features.filter(d=>d.properties.Code==='SPG')){const point=points.get(dot.properties.symbolRoutes[0]);if(point)dot.geometry={...dot.geometry,coordinates:unproject(point)};}const half=(right-left)/2,mid=[(left+right)/2,center[1]],radius=Math.max(.7,result.style.laneSpacing*.1),outline=[];for(let side=0;side<2;side++)for(let i=0;i<=16;i++){const angle=(side?Math.PI/2:-Math.PI/2)+i*Math.PI/16;outline.push(unproject([mid[0]+(side?-half:half)+Math.cos(angle)*radius,mid[1]+Math.sin(angle)*radius]));}outline.push(outline[0]);springfield.geometry={...springfield.geometry,coordinates:outline};springfield.properties={...springfield.properties,shape:'capsule',center:unproject(mid),radiusPixels:half+radius,dotAxis:[[left,center[1]],[right,center[1]]].map(unproject)};bars.delete('SPG');
+ }
+ fitStopGlyphs(dots,result.zoom,result.style.stationScale);
+ // A small contact correction is allowed only inside the filled glyph.
+ // Preserve its radius and keep all colored geometry outside that glyph fixed.
+ for(const dot of dots.features){const bar=bars.get(dot.properties.Code);if(!bar)continue;const [a,b]=bar.properties.dotAxis.map(project),v=b.map((x,i)=>x-a[i]),length=Math.hypot(...v),unit=v.map(x=>x/length),p=project(dot.geometry.coordinates),t=(p[0]-a[0])*unit[0]+(p[1]-a[1])*unit[1],distance=Math.abs(cross(v,p.map((x,i)=>x-a[i])))/length;if(distance<=1e-5||distance>dot.properties.radius)continue;
+  const group=dots.features.filter(g=>g!==dot&&g.properties.Code===dot.properties.Code),candidates=[0,-.25,.25,-.5,.5].map(s=>a.map((x,i)=>x+unit[i]*(t+s*result.style.laneSpacing))),point=candidates.find(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<=dot.properties.radius&&group.every(g=>Math.hypot(...project(g.geometry.coordinates).map((x,i)=>x-q[i]))>=dot.properties.radius+g.properties.radius-1e-5));if(!point)continue;
+  const coordinate=unproject(point);for(const f of displayed.features)if(dot.properties.symbolRoutes.includes(f.properties.symbologyName||f.properties.name))f.geometry.coordinates=f.geometry.coordinates.map(q=>Math.hypot(...project(q).map((x,i)=>x-p[i]))<1e-5?coordinate:q);dot.geometry={...dot.geometry,coordinates:coordinate};
+  const position=(point[0]-a[0])*unit[0]+(point[1]-a[1])*unit[1];if(position<0||position>length){const lo=Math.min(0,position),hi=Math.max(length,position),normal=[-unit[1],unit[0]],center=project(bar.properties.center),radius=Math.max(...bar.geometry.coordinates.map(project).map(q=>Math.abs((q[0]-center[0])*normal[0]+(q[1]-center[1])*normal[1]))),mid=a.map((x,i)=>x+unit[i]*(lo+hi)/2),half=(hi-lo)/2,outline=[];for(let side=0;side<2;side++)for(let i=0;i<=16;i++){const angle=(side?Math.PI/2:-Math.PI/2)+i*Math.PI/16,x=(side?-half:half)+Math.cos(angle)*radius,y=Math.sin(angle)*radius;outline.push(unproject(mid.map((x,j)=>x+unit[j]*((side?-half:half)+Math.cos(angle)*radius)+normal[j]*y)));}outline.push(outline[0]);bar.properties={...bar.properties,center:unproject(mid),radiusPixels:half+radius,dotAxis:[lo,hi].map(t=>unproject(a.map((x,i)=>x+unit[i]*t)))};bar.geometry={...bar.geometry,coordinates:outline};}
+ }
+ // Trim the Schenectady bar to the ports actually used after branch joins.
+ const sdy=result.interchanges.features.find(f=>f.properties.Code==='SDY');if(sdy){const [a,b]=sdy.properties.dotAxis.map(project),v=b.map((x,i)=>x-a[i]),length=Math.hypot(...v),unit=v.map(x=>x/length),normal=[-unit[1],unit[0]],center=project(sdy.properties.center),contacts=displayed.features.filter(f=>[f.properties.from,f.properties.to].includes('SDY')).map(f=>project(f.geometry.coordinates[f.properties.from==='SDY'?0:f.geometry.coordinates.length-1])).filter(p=>Math.abs(cross(v,p.map((x,i)=>x-a[i])))/length<1e-5);if(contacts.length){const values=contacts.map(p=>(p[0]-a[0])*unit[0]+(p[1]-a[1])*unit[1]),lo=Math.min(...values),hi=Math.max(...values),mid=a.map((x,i)=>x+unit[i]*(lo+hi)/2),half=(hi-lo)/2,radius=Math.max(...sdy.geometry.coordinates.map(project).map(p=>Math.abs((p[0]-center[0])*normal[0]+(p[1]-center[1])*normal[1]))),outline=[];for(let side=0;side<2;side++)for(let i=0;i<=16;i++){const angle=(side?Math.PI/2:-Math.PI/2)+i*Math.PI/16,x=(side?-half:half)+Math.cos(angle)*radius,y=Math.sin(angle)*radius;outline.push(unproject(mid.map((x,j)=>x+unit[j]*((side?-half:half)+Math.cos(angle)*radius)+normal[j]*y)));}outline.push(outline[0]);sdy.geometry={...sdy.geometry,coordinates:outline};sdy.properties={...sdy.properties,center:unproject(mid),radiusPixels:half+radius,dotAxis:[lo,hi].map(t=>unproject(a.map((x,i)=>x+unit[i]*t)))};}}
+ const ids=new Set(result.qualifying.features.map(f=>f.properties.edgeId));return {...result,displayed,dots,qualifying:{...result.qualifying,features:displayed.features.filter(f=>ids.has(f.properties.edgeId))}};
 }
 export function createSchematicEngine(routes,stations) {
  const nodes=new Map(),groups=new Map(),graphs=new Map(),pathCache=new Map(),chicagoPorts=new Map(),pennPositions=new Map();
@@ -171,6 +284,36 @@ export function createSchematicEngine(routes,stations) {
   const result=node===record.origin?ids.reverse():[];pathCache.set(key,result);return result;
  }
  return {journey,render(job){
+  if(job.circleStations!==false&&job.zoom!==8&&!chicagoPorts.size)this.render({...job,zoom:8});
+  if(job.zoom<8&&!job.overviewBase){
+   const reference=this.render({...job,zoom:8}),baseline=this.render({...job,overviewBase:true,circleStations:false}),style=baseline.style,factor=style.laneSpacing/reference.style.laneSpacing;
+   const world=512*2**job.zoom,project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world],unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
+   const referenceWorld=512*2**8,referenceProject=p=>[(p[0]+180)/360*referenceWorld,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*referenceWorld];
+   const move=(p,code)=>{const center=project(nodes.get(code).coordinate),origin=referenceProject(nodes.get(code).coordinate),q=referenceProject(p);return unproject([center[0]+(q[0]-origin[0])*factor,center[1]+(q[1]-origin[1])*factor]);};
+   let features=baseline.displayed.features;
+   let displayed=collection(features);displayed.connectivityAudit={brokenJunctions:[]};
+   let dots=collection(baseline.dots.features.map(f=>({...f,properties:{...f.properties}})));
+   const stableBarCodes=new Set(['NYP','YNY','NRO','NWK','EWR']);
+   for(const symbol of reference.interchanges.features){const code=symbol.properties.Code,local=reference.displayed.features.filter(f=>[f.properties.from,f.properties.to].includes(code));if(symbol.properties.passingRoutes.every(name=>new Set(local.filter(f=>f.properties.symbologyName===name).map(f=>[f.properties.from,f.properties.to].sort().join('|'))).size===1))stableBarCodes.add(code);}
+   const moveSymbol=(p,code)=>{if(!['CHI','NYP','YNY','NRO','NWK','EWR'].includes(code))return move(p,code);const center=project(nodes.get(code).coordinate),origin=referenceProject(nodes.get(code).coordinate),q=referenceProject(p);return unproject([center[0]+(q[0]-origin[0])*2**(job.zoom-8),center[1]+(q[1]-origin[1])*2**(job.zoom-8)]);};
+   let interchanges=collection(reference.interchanges.features.map(f=>f.properties.shape==='capsule'&&!stableBarCodes.has(f.properties.Code)?baseline.symbolTemplates.features.find(g=>g.properties.Code===f.properties.Code)||f:{...f,properties:{...f.properties,portScale:f.properties.portScale*(f.properties.Code==='CHI'?2**(job.zoom-8):1),radiusPixels:f.properties.radiusPixels*(['CHI','NYP','YNY','NRO','NWK','EWR'].includes(f.properties.Code)?2**(job.zoom-8):factor),center:moveSymbol(f.properties.center,f.properties.Code),dotAxis:f.properties.dotAxis?.map(p=>moveSymbol(p,f.properties.Code))},geometry:{type:'LineString',coordinates:f.geometry.coordinates.map(p=>moveSymbol(p,f.properties.Code))}}));
+   if(job.circleStations!==false){
+    const world=512*2**job.zoom,project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world],unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];
+    // Thin station bars can share an enclosing radius without overlapping.
+    // Do not hide them based on the circular bounds used by the old symbols.
+    // Every station bar remains available; visibility is controlled at zoom 5
+    // by the map paint, without altering the station connections.
+    const layout=features.map(f=>({feature:f,points:f.geometry.coordinates.map(project),body:f.properties.parallelBody.map(project)})),ports=new Map(features.flatMap(f=>f.properties.stationPositions.map(p=>[p.Code+'|'+p.name,project(p.coordinates)])));
+    const circles=interchanges.features.map(f=>({id:f.properties.Code,fixedPorts:f.properties.Code==='CHI'?chicagoPorts:undefined,center:project(f.properties.center),stationCenter:project(f.properties.stationCenter),portScale:f.properties.portScale,shape:f.properties.shape,dotAxis:f.properties.dotAxis?.map(project),routes:f.properties.routes,outline:f.geometry.coordinates.map(project)}));
+    const markers=attachOutlineStops(layout,circles,ports,style.laneSpacing);
+    features=layout.map(f=>{const original=new Map(f.feature.geometry.coordinates.map(p=>[project(p).join(','),p]));return {...f.feature,properties:{...f.feature.properties,terminalCircleEnds:f.terminalCircleEnds,parallelBody:f.body.map((p,i)=>f.terminalCircleEnds?.[i]?unproject(p):f.feature.properties.parallelBody[i]),stationPositions:f.feature.properties.stationPositions.map((p,i)=>f.terminalCircleEnds?.[i]?{...p,coordinates:unproject(ports.get(p.Code+'|'+p.name))}:p)},geometry:{type:'LineString',coordinates:f.points.map(p=>original.get(p.join(','))||unproject(p))}};});
+    displayed=collection(features);displayed.connectivityAudit={brokenJunctions:[]};
+    dots=collection(dots.features.map(f=>{const marker=markers.get(f.properties.Code+'|'+f.properties.symbolRoutes[0]),coordinate=marker?features.filter(g=>g.properties.symbologyName===f.properties.symbolRoutes[0]&&[g.properties.from,g.properties.to].includes(f.properties.Code)).flatMap(g=>g.geometry.coordinates).find(p=>{const q=project(p);return Math.hypot(q[0]-marker[0],q[1]-marker[1])<1e-6;})||unproject(marker):f.geometry.coordinates;return {...f,properties:{...f.properties,interchange:circles.some(c=>c.id===f.properties.Code)},geometry:{type:'Point',coordinates:coordinate}};}));
+   }
+   dots=fitStopGlyphs(dots,job.zoom,style.stationScale);
+   const ids=new Set(reference.qualifying.features.map(f=>f.properties.edgeId));
+   return {...reference,id:job.id,key:'schematic|'+job.zoom+'|'+(job.circleStations!==false?'circles':'rows'),zoom:job.zoom,style:{...reference.style,...style},displayed,dots,interchanges,qualifying:collection(features.filter(f=>ids.has(f.properties.edgeId)))};
+  }
   const started=performance.now(),world=512*2**job.zoom;
   const project=p=>[(p[0]+180)/360*world,(1-Math.log(Math.tan(Math.PI/4+p[1]*Math.PI/360))/Math.PI)/2*world];
   const unproject=p=>[p[0]/world*360-180,Math.atan(Math.sinh(Math.PI*(1-2*p[1]/world)))*180/Math.PI];

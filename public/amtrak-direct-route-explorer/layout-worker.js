@@ -1,3 +1,3 @@
-import {createSchematicEngine} from './schematic.js?v=amtrak-1';
+import {createLayoutEngine} from './layout-core.js?v=amtrak-5';
 let engine;
-self.onmessage=({data})=>{try{if(data.type==='init'){engine=createSchematicEngine(data.routes,data.stations);self.postMessage({type:'ready'});}else if(engine){const result=engine.render({...data,circleStations:false,records:[]});self.postMessage({type:'layout',id:data.id,displayed:result.displayed,dots:result.dots,style:result.style,paths:(data.journeys||[]).flatMap(r=>engine.journey(r))});}}catch(error){self.postMessage({type:'error',message:error.message});}};
+self.onmessage=({data})=>{try{if(data.type==='init'){engine=createLayoutEngine(data.routes,data.stations);self.postMessage({type:'ready'});}else if(engine){const result=engine({...data,records:[]});self.postMessage({type:'layout',id:data.id,displayed:result.displayed,dots:result.dots,style:result.style,interchanges:result.interchanges,bundle:result.bundle,hubConnections:result.hubConnections,paths:(data.journeys||[]).flatMap(r=>engine.journey(r))});}}catch(error){self.postMessage({type:'error',message:error.message});}};

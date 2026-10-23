@@ -1,5 +1,6 @@
+import {createLayoutEngine} from '../public/amtrak-direct-route-explorer/layout-core.js';
 import assert from 'node:assert/strict';import fs from 'node:fs';
-import {createTimetable,duration,singleNetwork} from '../public/amtrak-direct-route-explorer/model.js';
+import {createTimetable,duration,singleNetwork,hubEnclosures} from '../public/amtrak-direct-route-explorer/model.js';
 import {createSchematicEngine} from '../public/amtrak-direct-route-explorer/schematic.js';
 const trip=(id,route,stops,arrival,departure=arrival,extra={})=>({id,route,stops,arrival,departure,dates:['2026-10-12'],...extra});
 const synthetic=createTimetable({trips:[trip('a','Through',['X','A','I','B','Y'],[0,10,30,60,80]),trip('b','Branch',['A','J','C'],[0,20,40]),trip('c','Branch',['C','B'],[60,90]),trip('d','Restricted',['A','K','B'],[0,10,20],undefined,{noPickup:[0]}),trip('e','Overnight',['N','Z'],[1430,1530])]});
@@ -11,4 +12,7 @@ assert(singleNetwork(routes).features.length<routes.features.length);const engin
 for(const zoom of [3.3,5,7.9,8.6,11,16]){const result=engine.render({id:1,zoom,circleStations:false,records:[]});assert.equal(result.interchanges.features.length,0,'No station bars or enclosures');assert(result.displayed.features.length>0);assert(result.displayed.features.every(f=>f.geometry.coordinates.every(p=>p.every(Number.isFinite))));assert(result.dots.features.length>0);}
 const html=fs.readFileSync('src/pages/amtrak-direct-route-explorer/index.astro','utf8');assert(!html.includes('<select'));assert.equal((html.match(/data-mode=/g)||[]).length,2);assert(!html.includes('toggle-airports'));assert(!html.includes('toggle-bars'));
 for(const file of ['app.js','model.js','layout-worker.js'])assert(!/rail-vs-air|airports|flightMinutes|AIRPORT_OVERHEAD/.test(fs.readFileSync('public/amtrak-direct-route-explorer/'+file,'utf8')),'Runtime is independent of the comparison app');
-console.log(`${data.trips.length} train trips; ${stations.features.length} stations; same-trip timing, directional reachability, overnight trips and geometry at six zooms pass.`);
+console.log(`${data.trips.length} train trips; ${stations.features.length} stations; same-trip timing, directional reachability, overnight trips and base geometry at six zooms pass.`);
+
+const boxed=createLayoutEngine(load('routes.geojson'),stations);for(const zoom of [3.3,5,7.9,8.6,11,16]){const result=boxed({id:2,zoom,records:[]});const hubs=hubEnclosures(result,'multi');for(const code of ['CHI','NOL','NYP','LAX','WAS','SPG'])assert(hubs.features.some(f=>f.properties.Code===code),`Rectangle ${code} survives at zoom ${zoom}`);assert(hubs.features.every(f=>f.properties.shape==='rounded-square'));assert.equal(hubEnclosures(result,'single').features.length,0);}
+console.log('Multi-color hub rectangles retained; ordinary station bars excluded; single-color boxes hidden at six zooms.');

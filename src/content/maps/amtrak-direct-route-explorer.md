@@ -11,9 +11,9 @@ tools: [MapLibre GL JS, GeoJSON, Python, JavaScript]
 tags: [rail, transportation, travel-time, web-gis]
 ---
 
-Choose **Start** at a station to see destinations reachable on one train, or choose **End** to see direct origins. Once both endpoints are selected, the map shows the intervening stops on trains that serve that pair. The left panel lists the fastest scheduled time for each direct service; hovering another station previews a direct travel time before choosing it.
+Enter or choose stations in the left panel to update results automatically, or choose **Start** at a station to see destinations reachable on one train, or choose **End** to see direct origins. Once both endpoints are selected, the map shows the intervening stops on trains that serve that pair. The left panel lists the fastest scheduled time for each direct service; hovering another station previews a direct travel time before choosing it.
 
-Switch between distinct service colors and a single network color using the two map buttons. Selecting a route highlights that service and its stations. Clearing an endpoint restores the broader set of direct destinations or origins. The URL retains the endpoints, route, and display style.
+Switch between distinct service colors and a single network color using the two map buttons. Selecting a route highlights that service and its stations. Station badges default off and appear when a route is hovered or selected. The Stations button shows all stations. Choosing an endpoint enables the station layer for direct station selection. Hub rectangles remain in multi-color mode; ordinary station bars are omitted. Clearing an endpoint restores the broader set of direct destinations or origins. The URL retains the endpoints, route, and display style.
 
 ## Timetable and coverage
 
