@@ -1,5 +1,5 @@
-import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-8';
-import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-8';
+import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-9';
+import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-9';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 const state={start:null,end:null,route:null,showStations:params.get('stations')==='on'};
 let map,timetable,stations,routes,metadata,byCode,findPath=null,journeyPaths=[],allowed=null,options=[],hoveredStation='',hoveredRoute=null,popup=null,popupCode=null,closeTimer=null,insidePopup=false;
@@ -39,8 +39,8 @@ function render(){
 function fitJourney(){const codes=allowed||new Set([state.start,state.end].filter(Boolean));const bounds=new maplibregl.LngLatBounds();for(const f of stations.features)if(codes.has(f.properties.Code))bounds.extend(f.geometry.coordinates);if(!bounds.isEmpty())map.fitBounds(bounds,{padding:window.innerWidth>700?{top:70,bottom:110,left:370,right:70}:{top:$('journey-panel').open?Math.min($('journey-panel').getBoundingClientRect().height+30,map.getContainer().clientHeight*.65):70,bottom:document.querySelector('.legend').getBoundingClientRect().height+50,left:35,right:55},maxZoom:10,duration:reduced()?0:650});}
 function stationPopupPosition(coordinates,width,height){
  const container=map.getContainer(),bounds=container.getBoundingClientRect(),section=container.closest('.map-section'),obstacles=[...section.querySelectorAll('#journey-panel,.legend,.map-tools,.basemap-buttons,.maplibregl-ctrl-bottom-right .maplibregl-ctrl,#route-name:not([hidden])')].filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return {x:r.left-bounds.left-6,y:r.top-bounds.top-6,width:r.width+12,height:r.height+12};});
- const features=singleNetwork(routes).features,paths=features.map(f=>f.geometry.coordinates.map(p=>{const q=map.project(p);return [q.x,q.y];}));
- const unique=[...new Map(paths.map(path=>[path.map(p=>p.map(v=>v.toFixed(2)).join(',')).sort().join('|'),path])).values()];return corridorPopupPlacement(map.project(coordinates),{width:container.clientWidth,height:container.clientHeight,obstacles},unique,{width,height,priorityPaths:unique.filter(path=>path.some(p=>Math.hypot(p[0]-map.project(coordinates).x,p[1]-map.project(coordinates).y)<1))});
+ const stationRoutes=new Set((byCode.get(popupCode)?.properties.routeNames||[]).map(routeKey)),features=routes.features.filter(f=>stationRoutes.has(routeKey(routeName(f)))),paths=features.map(f=>f.geometry.coordinates.map(p=>{const q=map.project(p);return [q.x,q.y];}));
+ const unique=[...new Map(paths.map(path=>[path.map(p=>p.map(v=>v.toFixed(2)).join(',')).sort().join('|'),path])).values()];return corridorPopupPlacement(map.project(coordinates),{width:container.clientWidth,height:container.clientHeight,obstacles},unique,{width,height});
 }
 function stationPopup(feature){
  const code=feature.properties.Code;if(popupCode===code&&popup)return;closePopup();popupCode=code;

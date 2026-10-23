@@ -33,3 +33,7 @@ for(const scale of [.6,1,1.8])for(const path of [
 const denseRoutes=Array.from({length:30},(_,i)=>[[300,310+i*2],[800,310+i*2]]),dense=place({x:500,y:350},{width:1000,height:700},denseRoutes,{width:200,height:130});
 for(const route of denseRoutes)assert(!crosses(...route,dense.rect),'Move above or below a dense corridor instead of covering it');
 console.log('Inspected horizontal, vertical, diagonal, bent and dense routes remain clear across zoom scales.');
+
+const own=[[[100,300],[900,300]]],unrelated=[[[510,0],[510,600]],[[490,0],[490,600]]];
+assert.deepEqual(place(p,viewport,[...own,...unrelated],{width:200,height:110,priorityPaths:own}).rect,place(p,viewport,own,{width:200,height:110}).rect,'Unrelated routes must not affect popup placement');
+console.log('Unrelated route lines do not affect placement.');

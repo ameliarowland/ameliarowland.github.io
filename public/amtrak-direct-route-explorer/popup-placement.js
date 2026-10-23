@@ -21,9 +21,9 @@ export function corridorPopupPlacement(point,viewport,paths,{width=200,height=12
  for(const wantedX of xs)for(const wantedY of ys){
   const x=clamp(wantedX,viewport.width-w),y=clamp(wantedY,viewport.height-h),rect={x,y,width:w,height:h};
   const controlOverlap=obstacles.reduce((sum,o)=>sum+Math.max(0,Math.min(x+w,o.x+o.width)-Math.max(x,o.x))*Math.max(0,Math.min(y+h,o.y+o.height)-Math.max(y,o.y)),0);
-  const padded={x:x-6,y:y-6,width:w+12,height:h+12},priorityOverlap=length(priorityPaths,padded),overlap=length(paths,padded),tip=popupTip(point,rect),distance=Math.hypot(x+tip.x-point.x,y+tip.y-point.y);
+  const padded={x:x-6,y:y-6,width:w+12,height:h+12},priorityOverlap=length(priorityPaths,padded),tip=popupTip(point,rect),distance=Math.hypot(x+tip.x-point.x,y+tip.y-point.y);
   const coversStation=point.x>=padded.x&&point.x<=padded.x+padded.width&&point.y>=padded.y&&point.y<=padded.y+padded.height;
-  candidates.push({anchor:x+w/2<point.x?'right':'left',rect,tip,offset:[x-point.x,y-point.y],blocked:controlOverlap>0||coversStation,priorityOverlap,score:controlOverlap*10000+priorityOverlap*100+overlap*2+distance+Math.hypot(x+w/2-point.x,y+h/2-point.y)*.05});
+  candidates.push({anchor:x+w/2<point.x?'right':'left',rect,tip,offset:[x-point.x,y-point.y],blocked:controlOverlap>0||coversStation,priorityOverlap,score:controlOverlap*10000+priorityOverlap*100+distance+Math.hypot(x+w/2-point.x,y+h/2-point.y)*.05});
  }
  // A clear view of the station's own route takes precedence over a shorter tether.
  return candidates.sort((a,b)=>Number(a.blocked)-Number(b.blocked)||Number(a.priorityOverlap>0)-Number(b.priorityOverlap>0)||a.score-b.score)[0];
