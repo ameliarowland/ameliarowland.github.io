@@ -1,16 +1,15 @@
-import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-11';
-import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-11';
+import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-12';
+import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-12';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 const state={start:null,end:null,route:null,showStations:params.get('stations')==='on'};
-let map,timetable,stations,routes,metadata,byCode,findPath=null,journeyPaths=[],allowed=null,options=[],hoveredStation='',hoveredRoute=null,popup=null,popupCode=null,closeTimer=null,insidePopup=false;
+let map,timetable,stations,routes,metadata,byCode,findPath=null,journeyPaths=[],allowed=null,options=[],hoveredStation='',hoveredRoute=null,popup=null,popupCode=null;
 const routeName=f=>f.properties.symbologyName||f.properties.name;
 const title=code=>byCode.get(code)?.properties.title||code;
 const color=name=>metadata.routeColors[name]||Object.entries(metadata.routeColors).find(([key])=>routeKey(key)===routeKey(name))?.[1]||'#e9bc4c';
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function syncURL(){const p=new URLSearchParams();for(const field of ['start','end','route'])if(state[field])p.set(field,state[field]);if(state.showStations)p.set('stations','on');else if(state.start||state.end)p.set('stations','off');history.replaceState(null,'',location.pathname+(p.size?'?'+p:''));}
 function source(id,data){map.getSource(id).setData(data);}
-function closePopup(){clearTimeout(closeTimer);if(popup)popup.remove();popup=null;popupCode=null;insidePopup=false;}
-function scheduleClose(){if(!closeTimer)closeTimer=setTimeout(()=>{closeTimer=null;if(!insidePopup)closePopup();},180);}
+function closePopup(){if(popup)popup.remove();popup=null;popupCode=null;}
 function setEndpoint(role,code){if(!byCode.has(code))return;state.showStations=true;const other=role==='start'?'end':'start';if(state[role]===code)state[role]=null;else{state[role]=code;if(state[other]===code)state[other]=null;}closePopup();updateJourney();}
 function updateJourney(){
  allowed=timetable.reachable(state.start,state.end);options=state.start&&state.end?timetable.options(state.start,state.end):[];if(options.length&&state.route&&!options.some(o=>routeKey(o.trip.route)===routeKey(state.route)))state.route=null;
@@ -52,7 +51,7 @@ function stationPopup(feature){
  }else{const note=document.createElement('p');note.className='station-message';note.textContent='Route stop shown; scheduled travel times are unavailable in this timetable snapshot.';div.append(note);}
  const placement=stationPopupPosition(feature.geometry.coordinates,200,110);
  popup=new maplibregl.Popup({closeOnClick:false,focusAfterOpen:false,anchor:'top-left',offset:placement.offset,maxWidth:'200px',className:'station-popup'}).setLngLat(feature.geometry.coordinates).setDOMContent(div).addTo(map);
- const element=popup.getElement(),size=element.querySelector('.maplibregl-popup-content').getBoundingClientRect(),fitted=stationPopupPosition(feature.geometry.coordinates,size.width,size.height);popup.setOffset(fitted.offset);element.dataset.tipSide=fitted.tip.side;element.style.setProperty('--station-tip-x',fitted.tip.x+'px');element.style.setProperty('--station-tip-y',fitted.tip.y+'px');element.addEventListener('mouseenter',()=>{insidePopup=true;clearTimeout(closeTimer);closeTimer=null;});element.addEventListener('mouseleave',()=>{insidePopup=false;scheduleClose();});popup.on('close',()=>{popup=null;popupCode=null;insidePopup=false;});
+ const element=popup.getElement(),size=element.querySelector('.maplibregl-popup-content').getBoundingClientRect(),fitted=stationPopupPosition(feature.geometry.coordinates,size.width,size.height);popup.setOffset(fitted.offset);element.dataset.tipSide=fitted.tip.side;element.style.setProperty('--station-tip-x',fitted.tip.x+'px');element.style.setProperty('--station-tip-y',fitted.tip.y+'px');popup.on('close',()=>{popup=null;popupCode=null;});
 }
 async function init(){
  try{
@@ -84,8 +83,8 @@ async function init(){
    map.on('zoomend',closePopup);map.on('dragstart',closePopup);map.on('resize',closePopup);
    const stationAt=point=>map.queryRenderedFeatures(point,{layers:['station-hit']}).filter(f=>!allowed||allowed.has(f.properties.Code)).sort((a,b)=>{const p=map.project(a.geometry.coordinates),q=map.project(b.geometry.coordinates);return Math.hypot(p.x-point.x,p.y-point.y)-Math.hypot(q.x-point.x,q.y-point.y);})[0];
    const routeAt=point=>{const hits=map.queryRenderedFeatures(point,{layers:['route-hit']});let best=null,distance=Infinity;for(const f of hits)for(let i=1;i<f.geometry.coordinates.length;i++){const a=map.project(f.geometry.coordinates[i-1]),b=map.project(f.geometry.coordinates[i]),dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy||1))),d=Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);if(d<distance){distance=d;best=routeName(f);}}return best;};
-   map.on('mousemove',event=>{const station=stationAt(event.point),code=station?.properties.Code||'',route=station?(!state.showStations?hoveredRoute:null):routeAt(event.point);map.getCanvas().style.cursor=station||route?'pointer':'';if(code!==hoveredStation||route!==hoveredRoute){hoveredStation=code;hoveredRoute=route;render();}if(station){clearTimeout(closeTimer);closeTimer=null;stationPopup(station);}else scheduleClose();});
-   map.getCanvas().addEventListener('mouseleave',()=>{hoveredStation='';hoveredRoute=null;render();scheduleClose();});
+   map.on('mousemove',event=>{const station=stationAt(event.point),code=station?.properties.Code||'',route=station?(!state.showStations?hoveredRoute:null):routeAt(event.point);map.getCanvas().style.cursor=station||route?'pointer':'';if(code!==hoveredStation||route!==hoveredRoute){hoveredStation=code;hoveredRoute=route;render();}if(station)stationPopup(station);});
+   map.getCanvas().addEventListener('mouseleave',()=>{hoveredStation='';hoveredRoute=null;render();});
    map.on('click',event=>{const station=stationAt(event.point);if(station){stationPopup(station);return;}closePopup();const name=routeAt(event.point);state.route=state.route===name?null:name;hoveredRoute=null;syncURL();render();});
    updateJourney();
   });
