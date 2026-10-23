@@ -1,5 +1,5 @@
-import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-9';
-import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-9';
+import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-10';
+import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-10';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 const state={start:null,end:null,route:null,showStations:params.get('stations')==='on'};
 let map,timetable,stations,routes,metadata,byCode,findPath=null,journeyPaths=[],allowed=null,options=[],hoveredStation='',hoveredRoute=null,popup=null,popupCode=null,closeTimer=null,insidePopup=false;
@@ -38,7 +38,7 @@ function render(){
 }
 function fitJourney(){const codes=allowed||new Set([state.start,state.end].filter(Boolean));const bounds=new maplibregl.LngLatBounds();for(const f of stations.features)if(codes.has(f.properties.Code))bounds.extend(f.geometry.coordinates);if(!bounds.isEmpty())map.fitBounds(bounds,{padding:window.innerWidth>700?{top:70,bottom:110,left:370,right:70}:{top:$('journey-panel').open?Math.min($('journey-panel').getBoundingClientRect().height+30,map.getContainer().clientHeight*.65):70,bottom:document.querySelector('.legend').getBoundingClientRect().height+50,left:35,right:55},maxZoom:10,duration:reduced()?0:650});}
 function stationPopupPosition(coordinates,width,height){
- const container=map.getContainer(),bounds=container.getBoundingClientRect(),section=container.closest('.map-section'),obstacles=[...section.querySelectorAll('#journey-panel,.legend,.map-tools,.basemap-buttons,.maplibregl-ctrl-bottom-right .maplibregl-ctrl,#route-name:not([hidden])')].filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return {x:r.left-bounds.left-6,y:r.top-bounds.top-6,width:r.width+12,height:r.height+12};});
+ const container=map.getContainer(),bounds=container.getBoundingClientRect(),section=container.closest('.map-section'),obstacles=[...section.querySelectorAll('#journey-panel,.legend,.map-tools,.map-controls,.maplibregl-ctrl-bottom-right .maplibregl-ctrl,#route-name:not([hidden])')].filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return {x:r.left-bounds.left-6,y:r.top-bounds.top-6,width:r.width+12,height:r.height+12};});
  const stationRoutes=new Set((byCode.get(popupCode)?.properties.routeNames||[]).map(routeKey)),features=routes.features.filter(f=>stationRoutes.has(routeKey(routeName(f)))),paths=features.map(f=>f.geometry.coordinates.map(p=>{const q=map.project(p);return [q.x,q.y];}));
  const unique=[...new Map(paths.map(path=>[path.map(p=>p.map(v=>v.toFixed(2)).join(',')).sort().join('|'),path])).values()];return corridorPopupPlacement(map.project(coordinates),{width:container.clientWidth,height:container.clientHeight,obstacles},unique,{width,height});
 }
@@ -58,7 +58,7 @@ async function init(){
  try{
   const [stationData,routeData,times,manifest]=await Promise.all(['stations.geojson','routes.geojson','timetable.json','manifest.json'].map(async file=>{const response=await fetch(base+'data/'+file);if(!response.ok)throw Error('Could not load '+file);return response.json();}));stations=stationData;routes=routeData;metadata=manifest;routes.features.forEach((f,i)=>f.properties.edgeId=i);findPath=createRoutePaths(routes);byCode=new Map(stations.features.map(f=>[f.properties.Code,f]));timetable=createTimetable(times);
   for(const station of [...stations.features].sort((a,b)=>a.properties.title.localeCompare(b.properties.title))){const option=document.createElement('option');option.value=station.properties.Code;option.label=station.properties.title;$('station-options').append(option);}for(const role of ['start','end'])if(byCode.has(params.get(role)))state[role]=params.get(role);if(state.start===state.end)state.end=null;if((state.start||state.end)&&params.get('stations')!=='off')state.showStations=true;const routeNames=new Set(routes.features.map(routeName));if(routeNames.has(params.get('route')))state.route=params.get('route');
-  map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/fiord',bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+  map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/fiord',bounds:[[-125,24],[-66,50]],fitBoundsOptions:{padding:35},maxZoom:16});$('zoom-in').onclick=()=>map.zoomIn();$('zoom-out').onclick=()=>map.zoomOut();
   map.on('load',()=>{
    const baseLayers=new Set(map.getStyle().layers.map(l=>l.id)),baseSources=new Set(Object.keys(map.getStyle().sources));
    const empty=collection([]);for(const [id,data]of [['single',singleNetwork(routes)],['stations',stations],['focus',empty]])map.addSource(id,{type:'geojson',tolerance:0,data});
