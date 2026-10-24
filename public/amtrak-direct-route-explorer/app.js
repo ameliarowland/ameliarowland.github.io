@@ -1,5 +1,5 @@
-import {stationControlPlacement} from './popup-placement.js?v=amtrak-18';
-import {collection,createTimetable,duration,routeKey,singleNetwork,createRoutePaths,stationAction} from './model.js?v=amtrak-18';
+import {stationControlPlacement} from './popup-placement.js?v=amtrak-19';
+import {collection,createTimetable,duration,routeKey,singleNetwork,createRoutePaths,stationAction} from './model.js?v=amtrak-19';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 document.documentElement.classList.toggle('embedded',window.self!==window.top||params.get('embed')==='1');
 const state={start:null,end:null,route:null};
@@ -31,12 +31,14 @@ function render(){
  const selected=['any',['==',['get','Code'],state.start||''],['==',['get','Code'],state.end||'']],reachable=allowed?['in',['get','Code'],['literal',[...allowed]]]:true;
  map.setPaintProperty('stations','circle-radius',['interpolate',['linear'],['zoom'],3,['case',selected,5.5,['==',['get','Code'],hoveredStation],5,3],8,['case',selected,6,['==',['get','Code'],hoveredStation],6,4.5]]);
  map.setPaintProperty('stations','circle-color',['case',['==',['get','Code'],state.start||''],'#146a5a',['==',['get','Code'],state.end||''],'#b75634',basemapMode==='positron'?'#fffdf7':'#43516b']);
- map.setPaintProperty('stations','circle-stroke-color',['case',selected,'#fffdf7',basemapMode==='positron'?'#466f5e':'#c2dfd0']);
- map.setPaintProperty('stations','circle-stroke-width',['case',selected,1.8,1.3]);
- map.setPaintProperty('stations','circle-opacity',['case',reachable,1,.3]);map.setPaintProperty('stations','circle-stroke-opacity',['case',reachable,1,.35]);
+  map.setPaintProperty('stations','circle-stroke-width',['case',selected,1.8,1.3]);
+ map.setPaintProperty('stations','circle-opacity',['case',selected,1,0]);map.setPaintProperty('stations','circle-stroke-opacity',['case',reachable,1,.35]);
  syncEndpointMarkers();
  const features=routes.features,journeyIds=new Set(journeyPaths),selectedOptions=state.route?options.filter(o=>routeKey(o.trip.route)===routeKey(state.route)):options;
  const selectedNames=new Set(selectedOptions.map(o=>routeKey(o.trip.route)));const highlighted=active&&!(state.start&&state.end)?features.filter(f=>journeyIds.has(f.properties.edgeId)):state.start&&state.end?features.filter(f=>journeyIds.has(f.properties.edgeId)&&(!state.route||selectedNames.has(routeKey(routeName(f))))):focus?features.filter(f=>routeKey(routeName(f))===routeKey(focus)):[];
+ const highlightedCodes=new Set(highlighted.flatMap(f=>[f.properties.from,f.properties.to])),highlightedStation=['in',['get','Code'],['literal',[...highlightedCodes]]];
+ map.setPaintProperty('stations','circle-stroke-color',['case',selected,'#fffdf7',highlightedStation,basemapMode==='positron'?'#146a5a':'#b3e1c8',basemapMode==='positron'?'#466f5e':'#91baa8']);
+ map.setPaintProperty('single','line-opacity',active?.35:1);
  source('focus',collection(highlighted));
  $('clear-route').hidden=!state.route;$('fit-journey').hidden=!state.start||!state.end;$('route-name').hidden=!focus;$('route-name').textContent=focus||'';if(focus)$('route-name').style.setProperty('--route-color',color(focus));
  $('map-status').textContent=state.start&&state.end?`${allowed.size} stations on direct trains between your endpoints`:allowed?`${Math.max(0,allowed.size-1)} directly accessible stations`:focus?`${focus} · route highlighted`:`${stations.features.length} stations · Tap a circle to add Start, then End`;

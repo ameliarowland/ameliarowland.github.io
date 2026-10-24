@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 import {collection,routeKey} from '../public/amtrak-direct-route-explorer/model.js';
-const stations=collection(['A','B','C'].map(Code=>({type:'Feature',properties:{Code,title:Code},geometry:{type:'Point',coordinates:[-80,40]}}))),routes=collection([{type:'Feature',properties:{name:'Blue',edgeId:0},geometry:{type:'LineString',coordinates:[[-80,40],[-79,40]]}}]),state={start:null,end:null,route:null};
+const stations=collection(['A','B','C'].map(Code=>({type:'Feature',properties:{Code,title:Code},geometry:{type:'Point',coordinates:[-80,40]}}))),routes=collection([{type:'Feature',properties:{name:'Blue',edgeId:0,from:'A',to:'B'},geometry:{type:'LineString',coordinates:[[-80,40],[-79,40]]}}]),state={start:null,end:null,route:null};
 const sources=new Map(),paint=new Map(),filters=new Map(),elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,{style:{setProperty(){}},setAttribute(){}});return elements.get(id);};
 const context={state,map:{getSource:()=>({}),setPaintProperty(id,key,value){paint.set(key,value);},setFilter(id,value){filters.set(id,value);}},journeyPaths:[],stations,routes,hoveredRoute:null,hoveredStation:'',allowed:null,options:[],basemapMode:'fiord',syncEndpointMarkers(){},collection,routeKey,routeName:f=>f.properties.name,color:()=> '#123456',source:(id,data)=>sources.set(id,data),$:element};
 const app=fs.readFileSync('public/amtrak-direct-route-explorer/app.js','utf8'),render=app.slice(app.indexOf('function render(){'),app.indexOf('function fitJourney()'));vm.createContext(context);vm.runInContext(render,context);
@@ -14,3 +14,5 @@ assert(app.includes('!action.remove&&(!allowed||allowed.has(code))'),'Circle tap
 assert(app.includes('offset:[14,-13]'),'Removal controls stay attached to selected stations');
 const radius=app.match(/id:'station-hit'[^\n]+/)[0];assert(radius.includes('matches?22:18'),'Selection areas remain larger than the circles');
 console.log('Always-visible circles, name-only hover, filled endpoint circles, direct-path highlights and persistent removal controls pass.');
+
+assert.equal(paint.get('circle-opacity').at(-1),0,'Unselected circles have transparent interiors');assert(paint.get('circle-stroke-color').includes('#91baa8'),'Ordinary circle outlines match the network line');assert(paint.get('circle-stroke-color').includes('#b3e1c8'),'Highlighted circle outlines match the highlighted line');
