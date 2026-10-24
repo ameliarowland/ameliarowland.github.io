@@ -1,5 +1,5 @@
-import {stationControlPlacement} from './popup-placement.js?v=amtrak-19';
-import {collection,createTimetable,duration,routeKey,singleNetwork,createRoutePaths,stationAction} from './model.js?v=amtrak-19';
+import {stationControlPlacement} from './popup-placement.js?v=amtrak-21';
+import {collection,createTimetable,duration,routeKey,singleNetwork,createRoutePaths,stationAction} from './model.js?v=amtrak-21';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 document.documentElement.classList.toggle('embedded',window.self!==window.top||params.get('embed')==='1');
 const state={start:null,end:null,route:null};
@@ -32,7 +32,8 @@ function render(){
  map.setPaintProperty('stations','circle-radius',['interpolate',['linear'],['zoom'],3,['case',selected,5.5,['==',['get','Code'],hoveredStation],5,3],8,['case',selected,6,['==',['get','Code'],hoveredStation],6,4.5]]);
  map.setPaintProperty('stations','circle-color',['case',['==',['get','Code'],state.start||''],'#146a5a',['==',['get','Code'],state.end||''],'#b75634',basemapMode==='positron'?'#fffdf7':'#43516b']);
   map.setPaintProperty('stations','circle-stroke-width',['case',selected,1.8,1.3]);
- map.setPaintProperty('stations','circle-opacity',['case',selected,1,0]);map.setPaintProperty('stations','circle-stroke-opacity',['case',reachable,1,.35]);
+ // An opaque basemap-colored interior cuts the route out beneath the ring.
+ map.setPaintProperty('stations','circle-opacity',1);map.setPaintProperty('stations','circle-stroke-opacity',['case',reachable,1,.35]);
  syncEndpointMarkers();
  const features=routes.features,journeyIds=new Set(journeyPaths),selectedOptions=state.route?options.filter(o=>routeKey(o.trip.route)===routeKey(state.route)):options;
  const selectedNames=new Set(selectedOptions.map(o=>routeKey(o.trip.route)));const highlighted=active&&!(state.start&&state.end)?features.filter(f=>journeyIds.has(f.properties.edgeId)):state.start&&state.end?features.filter(f=>journeyIds.has(f.properties.edgeId)&&(!state.route||selectedNames.has(routeKey(routeName(f))))):focus?features.filter(f=>routeKey(routeName(f))===routeKey(focus)):[];
@@ -85,7 +86,7 @@ async function init(){
      const base=await response.json(),current=map.getStyle(),layers=current.layers.filter(l=>!baseLayers.has(l.id)),sources=Object.fromEntries(Object.entries(current.sources).filter(([id])=>!baseSources.has(id)));
      const light=mode==='positron';for(const layer of layers)if(['single','focus','focus-outline'].includes(layer.id))layer.paint['line-color']=layer.id==='single'?(light?'#466f5e':'#91baa8'):layer.id==='focus'?(light?'#146a5a':'#b3e1c8'):'#fffdf7';
      baseLayers.clear();base.layers.forEach(l=>baseLayers.add(l.id));baseSources.clear();Object.keys(base.sources).forEach(id=>baseSources.add(id));
-     map.setStyle({...base,sources:{...base.sources,...sources},layers:[...base.layers,...layers]});basemapMode=mode;buttons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+     map.setStyle({...base,sources:{...base.sources,...sources},layers:[...base.layers,...layers]});basemapMode=mode;render();buttons.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
     }catch(error){console.error(error);$('map-status').textContent='Basemap unavailable. Try again.';}finally{buttons.forEach(b=>b.disabled=false);}
    };
    map.on('zoomend',closePopup);map.on('dragstart',closePopup);map.on('resize',closePopup);
