@@ -29,3 +29,12 @@ export function createRoutePaths(routes){
  routes.features.forEach((f,id)=>{const name=routeKey(f.properties.symbologyName||f.properties.name);if(!graphs.has(name))graphs.set(name,new Map());const graph=graphs.get(name);for(const [from,to]of [[f.properties.from,f.properties.to],[f.properties.to,f.properties.from]]){if(!graph.has(from))graph.set(from,[]);graph.get(from).push({to,id,cost:f.properties.distanceKm||1});}});
  return ({route,origin,destination})=>{const key=[routeKey(route),origin,destination].join('|');if(cache.has(key))return cache.get(key);const graph=graphs.get(routeKey(route)),costs=new Map([[origin,0]]),previous=new Map(),queue=new Set([origin]);while(queue.size){let current;for(const code of queue)if(current===undefined||costs.get(code)<costs.get(current))current=code;queue.delete(current);if(current===destination)break;for(const edge of graph?.get(current)||[]){const distance=costs.get(current)+edge.cost;if(distance<(costs.get(edge.to)??Infinity)){costs.set(edge.to,distance);previous.set(edge.to,{from:current,id:edge.id});queue.add(edge.to);}}}const ids=[];let current=destination;while(previous.has(current)){const edge=previous.get(current);ids.push(edge.id);current=edge.from;}const path=current===origin?ids.reverse():[];cache.set(key,path);return path;};
 }
+
+// Fill the vacant endpoint; removing a selected station always clears its own role.
+export function stationAction(state,code){
+ if(state.start===code)return {role:'start',remove:true};
+ if(state.end===code)return {role:'end',remove:true};
+ if(!state.start)return {role:'start',remove:false};
+ if(!state.end)return {role:'end',remove:false};
+ return null;
+}

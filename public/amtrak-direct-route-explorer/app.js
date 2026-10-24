@@ -1,5 +1,5 @@
-import {corridorPopupPlacement} from './popup-placement.js?v=amtrak-15';
-import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths} from './model.js?v=amtrak-15';
+import {stationControlPlacement} from './popup-placement.js?v=amtrak-17';
+import {collection,createTimetable,duration,routeKey,singleNetwork,stationPoints,createRoutePaths,stationAction} from './model.js?v=amtrak-17';
 const $=id=>document.getElementById(id),base='/amtrak-direct-route-explorer/',params=new URLSearchParams(location.search);
 document.documentElement.classList.toggle('embedded',window.self!==window.top||params.get('embed')==='1');
 const state={start:null,end:null,route:null,showStations:params.get('stations')==='on'};
@@ -48,22 +48,32 @@ function fitNetwork(){
  const panel=$('journey-panel'),wide=map.getContainer().clientWidth>650,padding=wide?{left:panel.getBoundingClientRect().width+30,right:110,top:30,bottom:45}:{left:20,right:95,top:panel.open?panel.getBoundingClientRect().height+25:65,bottom:45};
  map.fitBounds(bounds,{padding,duration:0});
 }
-function stationPopupPosition(coordinates,width,height){
- const container=map.getContainer(),bounds=container.getBoundingClientRect(),section=container.closest('.map-section'),obstacles=[...section.querySelectorAll('#journey-panel,.map-tools,.map-controls,.maplibregl-ctrl-bottom-right .maplibregl-ctrl,#route-name:not([hidden])')].filter(el=>el.getClientRects().length).map(el=>{const r=el.getBoundingClientRect();return {x:r.left-bounds.left-6,y:r.top-bounds.top-6,width:r.width+12,height:r.height+12};});
- const stationRoutes=new Set((byCode.get(popupCode)?.properties.routeNames||[]).map(routeKey)),features=routes.features.filter(f=>stationRoutes.has(routeKey(routeName(f)))),paths=features.map(f=>f.geometry.coordinates.map(p=>{const q=map.project(p);return [q.x,q.y];}));
- const unique=[...new Map(paths.map(path=>[path.map(p=>p.map(v=>v.toFixed(2)).join(',')).sort().join('|'),path])).values()];return corridorPopupPlacement(map.project(coordinates),{width:container.clientWidth,height:container.clientHeight,obstacles},unique,{width,height});
+function withinStationControl(point){
+ if(!popup||!popupCode)return false;
+ const button=popup.getElement().querySelector('button');if(!button)return false;
+ const bounds=map.getContainer().getBoundingClientRect(),rect=button.getBoundingClientRect(),station=map.project(byCode.get(popupCode).geometry.coordinates);
+ return point.x>=Math.min(station.x-18,rect.left-bounds.left-10)&&point.x<=Math.max(station.x+18,rect.right-bounds.left+10)&&point.y>=Math.min(station.y-18,rect.top-bounds.top-10)&&point.y<=Math.max(station.y+18,rect.bottom-bounds.top+10);
 }
 function stationPopup(feature){
  const code=feature.properties.Code;if(popupCode===code&&popup)return;closePopup();popupCode=code;
- const div=document.createElement('div'),heading=document.createElement('h2'),detail=document.createElement('p');heading.textContent=title(code);detail.className='station-code';detail.textContent=code;div.append(heading,detail);
- const pending=state.start&&!state.end&&code!==state.start?'end':state.end&&!state.start&&code!==state.end?'start':null;
- if(pending){const options=timetable.options(pending==='start'?code:state.start,pending==='end'?code:state.end),best=options[0],time=document.createElement('p');time.className='station-time';time.textContent=best?`${duration(best.minutes)} ${pending==='end'?'from '+state.start:'to '+state.end}`:'No direct train in this snapshot';if(best){const service=document.createElement('small');service.textContent=`${best.trip.route} · fastest scheduled train`;time.append(service);}div.append(time);}
+ const element=document.createElement('div');element.className='station-control';
+ const action=timetable.has(code)?stationAction(state,code):null;
  if(timetable.has(code)){
-  const actions=document.createElement('div');actions.className='endpoint-buttons';for(const role of ['start','end']){const button=document.createElement('button'),label=role==='start'?'Start':'End';button.type='button';button.innerHTML='<svg viewBox="0 0 24 28" aria-hidden="true"><path d="M12 26S2 15 2 11a10 10 0 0 1 20 0c0 4-10 15-10 15Z" fill="currentColor"/><circle cx="12" cy="11" r="5" fill="#fffdf7"/></svg>';button.append(document.createTextNode(state[role]===code?'Remove':label));button.setAttribute('aria-label',`${state[role]===code?'Remove':'Set'} ${role} at ${code}`);button.setAttribute('aria-pressed',String(state[role]===code));button.onclick=()=>setEndpoint(role,code);actions.append(button);}div.append(actions);
- }else{const note=document.createElement('p');note.className='station-message';note.textContent='Route stop shown; scheduled travel times are unavailable in this timetable snapshot.';div.append(note);}
- const placement=stationPopupPosition(feature.geometry.coordinates,200,110);
- popup=new maplibregl.Popup({closeOnClick:false,focusAfterOpen:false,anchor:'top-left',offset:placement.offset,maxWidth:'200px',className:'station-popup'}).setLngLat(feature.geometry.coordinates).setDOMContent(div).addTo(map);
- const element=popup.getElement(),size=element.querySelector('.maplibregl-popup-content').getBoundingClientRect(),fitted=stationPopupPosition(feature.geometry.coordinates,size.width,size.height);popup.setOffset(fitted.offset);element.dataset.tipSide=fitted.tip.side;element.style.setProperty('--station-tip-x',fitted.tip.x+'px');element.style.setProperty('--station-tip-y',fitted.tip.y+'px');popup.on('close',()=>{popup=null;popupCode=null;render();});
+  const button=document.createElement('button');button.type='button';button.className='station-add';button.textContent=action?.remove?'−':'+';button.disabled=!action;
+  const label=action?`${action.remove?'Remove':'Add'} ${code} as ${action.role}`:'Remove a selected station before adding '+code;
+  button.setAttribute('aria-label',label);button.title=action?`${action.remove?'Remove':'Set as'} ${action.role}`:'Remove Start or End first';
+  button.dataset.role=action?.role||'';button.dataset.remove=String(Boolean(action?.remove));
+  button.onclick=event=>{event.stopPropagation();if(!action)return;setEndpoint(action.role,code);stationPopup(feature);render();};
+  element.append(button);
+ }
+ const label=document.createElement('div');label.className='station-label';
+ const heading=document.createElement('strong'),detail=document.createElement('span');heading.textContent=title(code);detail.textContent=code+(state.start===code?' · Start':state.end===code?' · End':'');label.append(heading,detail);element.append(label);
+ // Marker controls stay attached to their point; route geometry never moves them away.
+ const point=map.project(feature.geometry.coordinates),container=map.getContainer();
+ label.style.maxWidth=Math.max(80,Math.min(document.documentElement.classList.contains('embedded')?144:174,Math.max(point.x,container.clientWidth-point.x)-66))+'px';
+ element.style.position='absolute';element.style.visibility='hidden';container.append(element);const size=element.getBoundingClientRect();
+ const place=stationControlPlacement(point,{width:container.clientWidth,height:container.clientHeight},size);element.classList.toggle('opens-left',place.anchor==='right');
+ popup=new maplibregl.Marker({element,anchor:place.anchor,offset:place.offset}).setLngLat(feature.geometry.coordinates).addTo(map);element.style.visibility='';render();
 }
 async function init(){
  try{
@@ -95,7 +105,7 @@ async function init(){
    map.on('zoomend',closePopup);map.on('dragstart',closePopup);map.on('resize',closePopup);
    const stationAt=point=>map.queryRenderedFeatures(point,{layers:['station-hit']}).filter(f=>!allowed||allowed.has(f.properties.Code)).sort((a,b)=>{const p=map.project(a.geometry.coordinates),q=map.project(b.geometry.coordinates);return Math.hypot(p.x-point.x,p.y-point.y)-Math.hypot(q.x-point.x,q.y-point.y);})[0];
    const routeAt=point=>{const hits=map.queryRenderedFeatures(point,{layers:['route-hit']});let best=null,distance=Infinity;for(const f of hits)for(let i=1;i<f.geometry.coordinates.length;i++){const a=map.project(f.geometry.coordinates[i-1]),b=map.project(f.geometry.coordinates[i]),dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy||1))),d=Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);if(d<distance){distance=d;best=routeName(f);}}return best;};
-   map.on('mousemove',event=>{const station=stationAt(event.point),code=station?.properties.Code||'',route=station?(!state.showStations?hoveredRoute:null):routeAt(event.point);map.getCanvas().style.cursor=station||route?'pointer':'';if(code!==hoveredStation||route!==hoveredRoute){hoveredStation=code;hoveredRoute=route;render();}if(station)stationPopup(station);});
+   map.on('mousemove',event=>{if(withinStationControl(event.point))return;const station=stationAt(event.point),code=station?.properties.Code||'',route=station?(!state.showStations?hoveredRoute:null):routeAt(event.point);map.getCanvas().style.cursor=station||route?'pointer':'';if(code!==hoveredStation||route!==hoveredRoute){hoveredStation=code;hoveredRoute=route;render();}if(station)stationPopup(station);});
    map.getCanvas().addEventListener('mouseleave',()=>{hoveredStation='';hoveredRoute=null;render();});
    map.on('click',event=>{const station=stationAt(event.point);if(station){stationPopup(station);return;}closePopup();const name=routeAt(event.point);state.route=state.route===name?null:name;hoveredRoute=null;syncURL();render();});
    updateJourney();if(state.start&&state.end)fitJourney();else if(!state.start&&!state.end)fitNetwork();
