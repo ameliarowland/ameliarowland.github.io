@@ -11,9 +11,9 @@ tools: [MapLibre GL JS, GeoJSON, Python, JavaScript]
 tags: [rail, transportation, travel-time, web-gis]
 ---
 
-Enter or choose stations in the left panel to update results automatically, or use the **+** beside a station: the first adds Start and the second adds End. A selected station shows **−** to remove it. You can also enter End first in the left panel to explore direct origins. Once both endpoints are selected, the map shows the intervening stops on trains that serve that pair. The left panel lists the fastest scheduled time for each direct service; hovering another station previews its direct connections. A small label shows the station name and code; journey times appear in the left panel.
+Tap the small circles along the route lines: the first station becomes Start, and the second becomes End. Selected circles fill in and show a small **−** beside them to remove that endpoint. Hovering shows only the station name. You can also enter or swap endpoints in the left panel, where direct train times and source evidence appear automatically.
 
-The map draws the rail network in a single color. Station badges default off and appear when a route is hovered or selected; hovering one of those stations previews every station and route reachable without changing trains. The matching Stations button in the right-side control stack shows all stations. Small markers have a larger invisible selection area, and nearby overlaps resolve to the closest station. Choosing an endpoint reveals its direct stations without changing the all-stations toggle. Clearing an endpoint restores the broader set of direct destinations or origins. The URL retains endpoints, route, and station visibility. Its former display-mode parameter is ignored.
+Station circles are always visible. Selecting an endpoint highlights routes reachable on one train; stations outside the direct network stay visible but become muted and cannot be added to that journey. With both endpoints chosen, the highlighted paths show matching direct trains and their intervening stops. Remove an endpoint to explore alternatives. The former station visibility setting is ignored and removed from shared URLs. Small circles retain larger invisible selection areas; overlapping targets resolve to the nearest station.
 
 ## Timetable and coverage
 
